@@ -37,13 +37,35 @@ recipes-app-monorepo/
 All apps follow **domain-driven architecture**.
 
 ### API (backend)
-Custom HTTP API via Supabase Edge Functions + Hono router. Each domain has:
-- **routes** — HTTP endpoint definitions
-- **controller** — request handling, validation
-- **service** — business logic, DB queries via Supabase admin client
-- **types** — request/response shapes, domain models
+Custom HTTP API via Supabase Edge Functions + Hono router. Split by role:
 
+```
+apps/api/src/
+├── admin/              # Admin-facing endpoints (web panel)
+│   ├── auth/           # POST /api/admin/auth/login
+│   ├── users/          # GET /api/admin/users/all
+│   └── router.ts       # authMiddleware + adminMiddleware applied globally
+├── client/             # User-facing endpoints (mobile app)
+│   ├── auth/           # POST /api/auth/login, /api/auth/register
+│   ├── users/          # GET /api/users/me
+│   └── router.ts
+├── shared/
+│   ├── services/       # Shared business logic (AuthService, UserService)
+│   ├── middleware/      # authMiddleware, adminMiddleware
+│   ├── helpers/        # response.helper.ts
+│   └── supabase.ts     # Admin client (service_role)
+├── router.ts           # Main router: / → client, /admin → admin
+└── types/database.ts   # Auto-generated DB types
+```
+
+Each domain folder has: `domain.controller.ts`, `domain.routes.ts`, `index.ts`.
+Services are shared — business logic lives in `shared/services/`, not duplicated per role.
 Clients never query DB directly — all data goes through the API.
+
+### Roles
+- **USER** — mobile app user (default on register)
+- **ADMIN** — admin panel access
+- **SUPER_ADMIN** — full access
 
 ### Mobile & Web (frontend)
 Layered separation:
@@ -115,8 +137,16 @@ Fonts:
 ## Knowledge
 
 See `.claude/knowledge/` for project context:
+
+### General
 - `01-project-description.md` — product vision, version roadmap (V1/V2/V3), design principles, typography, colors, navigation
-- `02-domains.md` — domain breakdown across all versions with data/state/view layers per domain
+
+### Domain features (each feature = separate file)
+- `auth/` — login.md, register.md
+- `user/` — get-me.md, get-all.md, settings.md, weight.md
+- `nutrition/` — set-goal.md, get-daily.md
+
+Each feature file describes: endpoints, request/response, logic flow (controller → service → DB), middleware, DB relationships.
 
 ## Skills
 
@@ -141,8 +171,8 @@ See `.claude/skills/` for coding patterns per app:
 - `callstack-skills/` — GitHub & GitHub Actions best practices
 
 ### api/
-- `architecture/` — Custom API via Edge Functions + Hono. Domain structure: routes → controller → service → Supabase admin client
-- `naming-conventions/` — domain files (domain.controller.ts, domain.service.ts, domain.routes.ts), DB objects (snake_case), migrations (NNNNN_verb_noun.sql)
+- `architecture/` — Custom API via Edge Functions + Hono. Role-based split: admin/ + client/ + shared/services/
+- `naming-conventions/` — domain files (domain.controller.ts, domain.routes.ts, domain.admin-routes.ts), DB objects (snake_case), migrations (NNNNN_verb_noun.sql)
 
 ### web/
 - `architecture/` — Next.js App Router with same data/state/view separation as mobile

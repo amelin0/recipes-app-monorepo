@@ -2,11 +2,33 @@
   "permissions": {
     "allow": [
       "Edit(/.claude/skills/api/**)",
-      "Edit(/.claude/skills/mobile/**)"
+      "Edit(/.claude/skills/mobile/**)",
+      "Bash(npx -y @anthropic-ai/mcp-supabase --help)",
+      "Bash(cp /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/mcp.json /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/mcp.json)",
+      "Bash(cp /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/mcp.json.example /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/mcp.json.example)",
+      "Bash(rm /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/mcp.json /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/mcp.json.example)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__deploy_edge_function",
+      "mcp__claude_ai_Supabase__search_docs",
+      "Bash(curl -s https://sctetzydpkkmbjbuanls.supabase.co/functions/v1/api/api/health)",
+      "Bash(curl -s https://sctetzydpkkmbjbuanls.supabase.co/functions/v1/api/health)",
+      "Bash(curl -s -X POST https://sctetzydpkkmbjbuanls.supabase.co/functions/v1/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"test@dns.app\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"test123456\"\"\"\",\"\"\"\"full_name\"\"\"\":\"\"\"\"Test User\"\"\"\"}')",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(curl -s -X POST https://sctetzydpkkmbjbuanls.supabase.co/functions/v1/api/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"test@dns.app\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"test123456\"\"\"\"}')",
+      "Bash(TOKEN=\"eyJhbGciOiJFUzI1NiIsImtpZCI6ImMxZjBlMDE4LTlmYzYtNGY4NS1hMTE0LWIwZGQ0NTE5OGQ0OSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3NjdGV0enlkcGtrbWJqYnVhbmxzLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIwYTNiYzUwYi0xZDU4LTQ0MjktOWI4OS1jOWYyNjdlMjhhZDUiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc0Mjc4MDkxLCJpYXQiOjE3NzQyNzQ0OTEsImVtYWlsIjoidGVzdEBkbnMuYXBwIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbCI6InRlc3RAZG5zLmFwcCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZnVsbF9uYW1lIjoiVGVzdCBVc2VyIiwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJzdWIiOiIwYTNiYzUwYi0xZDU4LTQ0MjktOWI4OS1jOWYyNjdlMjhhZDUifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc3NDI3NDQ5MX1dLCJzZXNzaW9uX2lkIjoiNmQ0NWIyMWEtYTZhNi00YzQ2LTllZWItN2JkOWM5NDFkMDU5IiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.W3MWKoHtirvcdsPMQNgNpJks-gODn6_MEVc-YHDGDavEdFs-FVQZTauMdK5GFeB1G_soC6My2P6YWrxJEjFfRA\")",
+      "Bash(curl -s https://sctetzydpkkmbjbuanls.supabase.co/functions/v1/api/users/me -H \"Authorization: Bearer $TOKEN\")",
+      "Bash(curl -s https://sctetzydpkkmbjbuanls.supabase.co/functions/v1/api/admin/users/all -H \"Authorization: Bearer $TOKEN\")",
+      "mcp__claude_ai_Supabase__generate_typescript_types"
     ],
     "additionalDirectories": [
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
-      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile"
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile",
+      "/Users/serhiiamelin/Library/Application Support/Code/User",
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo",
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.vscode",
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/knowledge"
     ]
   }
 }

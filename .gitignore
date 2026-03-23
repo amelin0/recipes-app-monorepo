@@ -3,3 +3,4 @@ node_modules
 .expo
 .env
 .env.local
+.claude/mcp.json
