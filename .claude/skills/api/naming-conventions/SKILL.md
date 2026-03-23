@@ -1,13 +1,13 @@
 ---
-name: api-naming-conventions
-description: Defines consistent naming patterns for the Supabase API package — migrations, Edge Functions, types, and database objects.
+name: naming-conventions
+description: Defines consistent naming patterns for the API package — domain files (controllers, services, routes, types), migrations, database objects.
 ---
 
 # API Naming Conventions Skill
 
 ## Purpose
 
-Defines consistent naming patterns for the Supabase API package.
+Defines consistent naming patterns for the API package.
 
 ---
 
@@ -112,18 +112,56 @@ Defines consistent naming patterns for the Supabase API package.
 
 ---
 
-## Edge Functions
+## Domain Files (src/domains/)
 
-**`domain-action/index.ts` (kebab-case):**
+### Folders
+
+**`kebab-case`:**
 
 ```
-✅ recipe-create/index.ts
-✅ recipe-calculate-nutrition/index.ts
-✅ meal-plan-generate/index.ts
-✅ ingredient-import/index.ts
+✅ src/domains/auth/
+✅ src/domains/recipe/
+✅ src/domains/meal-plan/
+✅ src/domains/shopping-list/
 
-❌ createRecipe/index.ts
-❌ recipe_create/index.ts
+❌ src/domains/MealPlan/
+❌ src/domains/shoppingList/
+```
+
+### Files
+
+**`domain.type.ts` pattern:**
+
+```
+✅ recipe.routes.ts
+✅ recipe.controller.ts
+✅ recipe.service.ts
+✅ recipe.types.ts
+
+❌ RecipeController.ts
+❌ recipe-controller.ts
+❌ recipeService.ts
+```
+
+### Export Names (PascalCase objects)
+
+```typescript
+// recipe.controller.ts → RecipeController
+export const RecipeController = { getAll, getById, create, ... }
+
+// recipe.service.ts → RecipeService
+export const RecipeService = { getAll, getById, create, ... }
+
+// recipe.routes.ts → recipeRoutes (Hono instance)
+export const recipeRoutes = new Hono()
+```
+
+### Middleware & Helpers
+
+```
+✅ auth.middleware.ts      → authMiddleware
+✅ response.helper.ts      → success(), error()
+✅ validation.helper.ts    → validate()
 ```
 
 ---
@@ -163,11 +201,17 @@ export type RecipeWithIngredients = Recipe & {
 
 | Type | Pattern | Example |
 |------|---------|---------|
+| Domain folders | `kebab-case` | `meal-plan/` |
+| Routes | `domain.routes.ts` | `recipe.routes.ts` |
+| Controllers | `domain.controller.ts` | `recipe.controller.ts` |
+| Services | `domain.service.ts` | `recipe.service.ts` |
+| Types | `domain.types.ts` | `recipe.types.ts` |
+| Middleware | `name.middleware.ts` | `auth.middleware.ts` |
+| Helpers | `name.helper.ts` | `response.helper.ts` |
 | Tables | `snake_case` plural | `recipes` |
 | Columns | `snake_case` | `created_at` |
 | RLS Policies | `table_action_policy` | `recipes_select_policy` |
 | Indexes | `idx_table_column` | `idx_recipes_user_id` |
 | Migrations | `NNNNN_verb_noun.sql` | `00001_create_recipes.sql` |
-| Edge Functions | `domain-action/` | `recipe-create/` |
 | TS Row types | `PascalCase` singular | `Recipe` |
 | TS Insert types | `PascalCaseInsert` | `RecipeInsert` |

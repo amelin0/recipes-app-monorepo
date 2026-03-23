@@ -14,7 +14,7 @@ recipes-app-monorepo/
 └── .claude/
     ├── skills/
     │   ├── mobile/   # React Native / Expo skills (from bidel-mobile-app)
-    │   ├── api/      # Supabase / Edge Functions skills
+    │   ├── api/      # Custom API (Hono + Edge Functions) skills
     │   └── web/      # Next.js admin panel skills
     ├── knowledge/    # Domain knowledge
     └── commands/     # Custom Claude commands
@@ -24,7 +24,7 @@ recipes-app-monorepo/
 
 | App | Stack |
 |-----|-------|
-| `@dns/api` | Supabase (PostgreSQL, Edge Functions, Auth, RLS) |
+| `@dns/api` | Supabase (PostgreSQL, Auth, Storage), Hono (API router), Edge Functions, Deno |
 | `@dns/web` | Next.js 16, React 19, Tailwind CSS v4, TypeScript |
 | `@dns/mobile` | Expo SDK 55, React Native 0.83, TypeScript |
 
@@ -34,10 +34,21 @@ recipes-app-monorepo/
 
 ## Architecture
 
-All apps follow **domain-driven architecture** with layered separation:
+All apps follow **domain-driven architecture**.
 
-- **data/** — API calls + types (no business logic)
-- **state/** — React Query hooks + Zustand slices (data fetching + caching)
+### API (backend)
+Custom HTTP API via Supabase Edge Functions + Hono router. Each domain has:
+- **routes** — HTTP endpoint definitions
+- **controller** — request handling, validation
+- **service** — business logic, DB queries via Supabase admin client
+- **types** — request/response shapes, domain models
+
+Clients never query DB directly — all data goes through the API.
+
+### Mobile & Web (frontend)
+Layered separation:
+- **data/** — HTTP calls to API (no direct Supabase queries)
+- **state/** — React Query hooks + Zustand slices
 - **view/** — Screens/pages (presentation only)
 - **shared/** — Cross-cutting: UI components, helpers, hooks, services
 
@@ -47,6 +58,7 @@ All apps follow **domain-driven architecture** with layered separation:
 2. **Domain-driven** — code organized by business domain (recipe, ingredient, user, etc.)
 3. **Barrel exports** — every folder has `index.ts`
 4. **No business logic in routing layer** — route files only import screens from `view/`
+5. **API-first** — mobile/web call our API, not Supabase SDK directly
 
 ### File Naming
 
@@ -115,7 +127,7 @@ See `.claude/skills/` for coding patterns per app:
 - `react-native-best-practices/` — performance, bundle, animations
 - `vercel-react-rules/` — React Native rules from Vercel
 - `native-modules/` — Expo modules, Turbo Modules
-- `styles/` — Uniwind/Tailwind patterns
+- `styles/` — React Native Unistyles 3 (theme, breakpoints, variants)
 - `widgets/` — composed UI components
 - `upgrading-expo/` — Expo SDK upgrade guides
 - `expo-deployment/` — EAS Build, App Store, Play Store
@@ -124,11 +136,11 @@ See `.claude/skills/` for coding patterns per app:
 - `callstack-skills/` — GitHub & GitHub Actions best practices
 
 ### api/
-- `architecture/` — Supabase project structure (migrations, Edge Functions, RLS, type generation)
-- `naming-conventions/` — DB objects (snake_case tables/columns), migrations (NNNNN_verb_noun.sql), Edge Functions (domain-action/)
+- `architecture/` — Custom API via Edge Functions + Hono. Domain structure: routes → controller → service → Supabase admin client
+- `naming-conventions/` — domain files (domain.controller.ts, domain.service.ts, domain.routes.ts), DB objects (snake_case), migrations (NNNNN_verb_noun.sql)
 
 ### web/
 - `architecture/` — Next.js App Router with same data/state/view separation as mobile
 - `naming-conventions/` — mirrors mobile conventions adapted for Next.js routes
-- `data-layer/` — Supabase queries (domain.api.ts with supabase.from().select())
+- `data-layer/` — HTTP calls to API (domain.api.ts via HttpService)
 - `state-management/` — React Query hooks + optional Zustand for UI state

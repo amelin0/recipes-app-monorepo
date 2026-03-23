@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/.claude/skills/api/**)",
+      "Edit(/.claude/skills/mobile/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile"
+    ]
+  }
+}
