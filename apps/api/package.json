@@ -1,0 +1,9 @@
+{
+  "name": "@dns/api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4"
+  }
+}
