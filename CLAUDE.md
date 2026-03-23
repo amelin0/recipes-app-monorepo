@@ -78,12 +78,17 @@ Layered separation:
 ## Environment Variables
 
 All env vars defined in `.env.example`:
+
+**Supabase keys (API backend only):**
 - `SUPABASE_URL` — Supabase project URL
 - `SUPABASE_ANON_KEY` — Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (Edge Functions)
 
-Web uses `NEXT_PUBLIC_SUPABASE_*` prefix.
-Mobile uses `EXPO_PUBLIC_SUPABASE_*` prefix.
+**API URL (clients):**
+- `NEXT_PUBLIC_API_URL` — API URL for web (Next.js)
+- `EXPO_PUBLIC_API_URL` — API URL for mobile (Expo)
+
+Mobile and web do NOT use Supabase SDK directly — they call our API via HTTP.
 
 ## Common Commands
 

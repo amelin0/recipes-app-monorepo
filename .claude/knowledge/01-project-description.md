@@ -67,7 +67,11 @@ Bottom tabs:
 
 - **Mobile:** Expo React Native (iOS + Android)
 - **Web:** Next.js admin panel (управління рецептами, інгредієнтами, категоріями)
-- **Backend:** Supabase (PostgreSQL, Auth, Edge Functions, Storage)
+- **Backend:** Custom API via Supabase Edge Functions + Hono router (PostgreSQL, Auth, Storage)
+
+## Architecture
+
+**API-first:** Mobile та Web не використовують Supabase SDK напряму. Усі запити йдуть через наш custom HTTP API (Edge Functions + Hono). API має domain-driven структуру: routes → controller → service → Supabase admin client.
 
 ## Tech Stack
 
@@ -75,8 +79,10 @@ Bottom tabs:
 |-----------|---------|
 | Expo SDK 55 + React Native 0.83 | Cross-platform mobile |
 | Next.js 16 + Tailwind CSS v4 | Admin panel |
-| Supabase | Backend (DB, Auth, Functions, Storage) |
+| Supabase Edge Functions + Hono | Custom HTTP API |
+| Supabase | DB (PostgreSQL), Auth, Storage |
+| Unistyles 3 | Mobile styling |
 | TypeScript | Type safety across all apps |
-| React Query | Server state |
-| Zustand | Client state |
+| React Query | Server state (mobile + web) |
+| Zustand | Client state (mobile + web) |
 | i18next | Internationalization (uk, en, es) |

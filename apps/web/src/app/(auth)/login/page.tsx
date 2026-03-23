@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,25 +10,28 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      window.location.href = "/";
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+      } else {
+        localStorage.setItem("access_token", data.data.access_token);
+        window.location.href = "/";
+      }
+    } catch {
+      setError("Network error");
     }
 
     setLoading(false);
