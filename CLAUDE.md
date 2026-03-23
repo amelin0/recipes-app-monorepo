@@ -126,13 +126,26 @@ pnpm db:reset         # Reset local database
 
 ## Design System
 
-Colors:
-- **olive**: primary green palette (50–800)
-- **peach**: accent warm palette (50–800)
+Semantic token system — identical naming across web (Tailwind CSS vars) and mobile (Unistyles theme objects).
 
-Fonts:
-- **Manrope** — headings
-- **Inter** — body text
+Full token reference: `.claude/knowledge/design-tokens.md`
+
+### Key colors
+- **primary** (olive green `#6B8F3C`) — buttons, active states, links, progress rings
+- **accent** (peach `#D4956A`) — highlights, carbs indicator
+- **macro** — protein `#6B8F3C`, carbs `#D4956A`, fats `#5B9BD5`, calories `#8BA651`
+
+### Usage patterns
+- Web: `bg-primary-default`, `text-text-secondary`, `border-border-default`
+- Mobile: `colors.primary.default`, `colors.text.secondary`, `colors.border.default`
+
+### Files
+- Web: `apps/web/src/app/globals.css` — Tailwind `@theme` with CSS custom properties
+- Mobile: `apps/mobile/src/shared/ui/theme/` — `colors.ts`, `typography.ts`, `sizes.ts`
+
+### Fonts
+- **Manrope** — headings (`--font-heading`)
+- **Inter** — body text (`--font-sans`)
 
 ## Knowledge
 
@@ -147,6 +160,7 @@ See `.claude/knowledge/` for project context:
 - `nutrition/` — set-goal.md, get-daily.md
 - `recipe/` — overview.md (CRUD, tags, ingredients, filters, i18n translations)
 - `shopping-list/` — overview.md (add recipe → auto-aggregate ingredients, toggle checked)
+- `meal-plan/` — overview.md (weekly plan by day_of_week + meal_type, copy day, to-shopping-list)
 
 Each feature file describes: endpoints, request/response, logic flow (controller → service → DB), middleware, DB relationships.
 

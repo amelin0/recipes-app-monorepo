@@ -1,24 +1,160 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-olive-50: #F5F5F0;
-  --color-olive-100: #E8E8DC;
-  --color-olive-200: #D4D4C4;
-  --color-olive-400: #8B9A6B;
-  --color-olive-600: #6B7A4B;
-  --color-olive-800: #4A5A2B;
+  /* ===== DNS Semantic Tokens ===== */
+  --color-primary-default: #6B8F3C;
+  --color-primary-active: #567230;
+  --color-primary-on-primary: #FFFFFF;
+  --color-primary-subtle: #E8F0D8;
+  --color-primary-on-subtle: #3D5221;
+  --color-primary-link: #6B8F3C;
 
-  --color-peach-50: #FFF5F0;
-  --color-peach-100: #FFE8DC;
-  --color-peach-200: #FFD4C0;
-  --color-peach-400: #D4956A;
-  --color-peach-600: #B4754A;
-  --color-peach-800: #8A5530;
+  --color-secondary-default: #FFFFFF;
+  --color-secondary-active: #F2F2F2;
+  --color-secondary-on-secondary: #595959;
 
-  --font-sans: var(--font-inter);
+  --color-accent-default: #D4956A;
+  --color-accent-active: #B4754A;
+  --color-accent-subtle: #FFF5F0;
+  --color-accent-on-accent: #FFFFFF;
+
+  --color-error-default: #D02512;
+  --color-error-active: #A41D0E;
+  --color-error-subtle: #F9BFB9;
+  --color-error-on-error: #FFFFFF;
+
+  --color-success-default: #4CAF50;
+  --color-success-active: #388E3C;
+  --color-success-subtle: #E8F5E9;
+  --color-success-on-success: #1A1A1A;
+
+  --color-warning-default: #D58000;
+  --color-warning-active: #B26B00;
+  --color-warning-subtle: #FFEBCC;
+  --color-warning-on-warning: #1A1A1A;
+
+  --color-info-default: #EAECF5;
+  --color-info-subtle: #FCFCFC;
+  --color-info-on-info: #1A1A1A;
+
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #595959;
+  --color-text-tertiary: #8C8C8C;
+  --color-text-error: #D02512;
+  --color-text-link: #6B8F3C;
+  --color-text-inverse: #FCFCFC;
+
+  --color-bg-canvas: #FFFFFF;
+  --color-bg-surface: #F8F9FC;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-overlay: rgba(25, 25, 29, 0.7);
+  --color-bg-inverse: #383838;
+
+  --color-border-default: #E6E6E6;
+  --color-border-subtle: #F2F2F2;
+  --color-border-strong: #1A1A1A;
+  --color-border-focus: #6B8F3C;
+  --color-border-error: #D02512;
+
+  --color-icon-default: #595959;
+  --color-icon-inverse: #E6E6E6;
+
+  --color-disabled-background: #E6E6E6;
+  --color-disabled-content: #8C8C8C;
+  --color-disabled-border: #D9D9D9;
+
+  --color-macro-protein: #6B8F3C;
+  --color-macro-carbs: #D4956A;
+  --color-macro-fats: #5B9BD5;
+  --color-macro-calories: #8BA651;
+
   --font-heading: var(--font-manrope);
+
+  /* shadcn theme tokens mapped to DNS */
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-body {
-  font-family: var(--font-sans);
+:root {
+  /* shadcn vars → DNS colors */
+  --background: #FFFFFF;
+  --foreground: #1A1A1A;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  --primary: #1A1A1A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F2F2;
+  --secondary-foreground: #383838;
+  --muted: #F8F9FC;
+  --muted-foreground: #595959;
+  --accent: #E8F0D8;
+  --accent-foreground: #3D5221;
+  --destructive: #D02512;
+  --border: #E6E6E6;
+  --input: #C5C5C5;
+  --ring: #6B8F3C;
+  --chart-1: #6B8F3C;
+  --chart-2: #D4956A;
+  --chart-3: #5B9BD5;
+  --chart-4: #8BA651;
+  --chart-5: #D58000;
+  --radius: 0.5rem;
+  --sidebar: #383838;
+  --sidebar-foreground: #FCFCFC;
+  --sidebar-primary: #6B8F3C;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #4A4A4A;
+  --sidebar-accent-foreground: #E6E6E6;
+  --sidebar-border: #4A4A4A;
+  --sidebar-ring: #6B8F3C;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

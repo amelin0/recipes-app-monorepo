@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import { Manrope, Inter } from "next/font/google";
-import { Sidebar } from "@/components/Sidebar";
+import { Manrope, Inter, Geist } from "next/font/google";
+import { QueryProvider } from "@/shared/services/query-client/query-client.service";
 import "./globals.css";
+import { cn } from "@/shared/utils/utils";
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -26,11 +29,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${inter.variable} h-full antialiased`}
+      className={cn("h-full antialiased", manrope.variable, inter.variable, geist.variable, "font-sans")}
     >
-      <body className="min-h-full flex">
-        <Sidebar />
-        <main className="flex-1 p-8">{children}</main>
+      <body className="min-h-full">
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

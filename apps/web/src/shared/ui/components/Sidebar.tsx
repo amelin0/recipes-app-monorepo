@@ -7,7 +7,6 @@ const navItems = [
   { label: "Dashboard", href: "/" },
   { label: "Recipes", href: "/recipes" },
   { label: "Ingredients", href: "/ingredients" },
-  { label: "Categories", href: "/categories" },
   { label: "Tags", href: "/tags" },
   { label: "Meal Plans", href: "/meal-plans" },
   { label: "Users", href: "/users" },
@@ -17,9 +16,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 min-h-screen bg-olive-800 text-white flex flex-col">
+    <aside className="w-64 min-h-screen bg-bg-inverse text-text-inverse flex flex-col">
       <div className="p-6">
-        <h1 className="font-[family-name:var(--font-manrope)] text-lg font-bold">
+        <h1 className="font-[family-name:var(--font-heading)] text-lg font-bold">
           DNS Admin
         </h1>
       </div>
@@ -33,8 +32,8 @@ export function Sidebar() {
                   href={item.href}
                   className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-olive-600 text-white"
-                      : "text-olive-100 hover:bg-olive-600/50"
+                      ? "bg-primary-default text-primary-on-primary"
+                      : "text-icon-inverse hover:bg-primary-default/30"
                   }`}
                 >
                   {item.label}

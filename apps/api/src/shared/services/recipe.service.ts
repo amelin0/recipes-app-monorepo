@@ -266,6 +266,7 @@ function formatRecipe(raw: any) {
     carbs_g: raw.carbs_g,
     fats_g: raw.fats_g,
     servings: raw.servings,
+    cooking_time_minutes: raw.cooking_time_minutes,
     cooking_instructions: translation.cooking_instructions ?? [],
     ingredients: (raw.recipe_ingredients || []).map((ri: any) => ({
       id: ri.ingredients?.id,
