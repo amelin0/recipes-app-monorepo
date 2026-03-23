@@ -1,3 +1,5 @@
 export { AuthService } from './auth.service.ts'
 export { UserService } from './user.service.ts'
 export { NutritionService } from './nutrition.service.ts'
+export { RecipeService } from './recipe.service.ts'
+export { ShoppingListService } from './shopping-list.service.ts'

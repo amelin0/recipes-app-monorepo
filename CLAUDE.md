@@ -145,6 +145,8 @@ See `.claude/knowledge/` for project context:
 - `auth/` — login.md, register.md
 - `user/` — get-me.md, get-all.md, settings.md, weight.md
 - `nutrition/` — set-goal.md, get-daily.md
+- `recipe/` — overview.md (CRUD, tags, ingredients, filters, i18n translations)
+- `shopping-list/` — overview.md (add recipe → auto-aggregate ingredients, toggle checked)
 
 Each feature file describes: endpoints, request/response, logic flow (controller → service → DB), middleware, DB relationships.
 
