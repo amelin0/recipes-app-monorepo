@@ -26,7 +26,9 @@
       "Bash(npx shadcn@latest init -d)",
       "Bash(npx shadcn@latest add input label -y)",
       "Bash(mv LoginScreen.tsx LoginPage.tsx)",
-      "Bash(mv useLoginScreen.ts useLoginPage.ts)"
+      "Bash(mv useLoginScreen.ts useLoginPage.ts)",
+      "Bash(npx shadcn@latest add collapsible separator avatar -y)",
+      "Bash(npx shadcn@latest add collapsible separator avatar -y -c apps/web)"
     ],
     "additionalDirectories": [
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
