@@ -14,7 +14,7 @@ export function LoginPage() {
         <div className="relative z-10 flex flex-col items-center gap-4">
           <div className="w-[118px] h-[118px] rounded-[32px] bg-gradient-to-t from-black to-[#666] flex items-center justify-center">
             <span className="font-[family-name:var(--font-heading)] text-white text-lg font-bold tracking-wide">
-              DNS
+              RF
             </span>
           </div>
         </div>

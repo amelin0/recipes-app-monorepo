@@ -80,10 +80,10 @@ export function Sidebar() {
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary-default flex items-center justify-center">
-              <span className="text-primary-on-primary text-xs font-bold">DN</span>
+              <span className="text-primary-on-primary text-xs font-bold">RF</span>
             </div>
             <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-text-primary">
-              Digital Nutrition
+              Ratio Fit
             </span>
           </div>
         )}

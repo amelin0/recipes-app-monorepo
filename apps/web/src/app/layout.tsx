@@ -17,8 +17,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Digital Nutrition Studio",
-  description: "Admin panel for Digital Nutrition Studio",
+  title: "Ratio Fit",
+  description: "Admin panel for Ratio Fit",
 };
 
 export default function RootLayout({
