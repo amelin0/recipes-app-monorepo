@@ -42,7 +42,8 @@
       "Read(//private/tmp/vercel-agent-skills/skills/web-design-guidelines/**)",
       "Bash(cp -r /tmp/vercel-agent-skills/skills/react-best-practices /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/react-best-practices)",
       "Bash(cp -r /tmp/vercel-agent-skills/skills/composition-patterns /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/composition-patterns)",
-      "Bash(cp /tmp/vercel-agent-skills/skills/web-design-guidelines/SKILL.md /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/web-design-guidelines.md)"
+      "Bash(cp /tmp/vercel-agent-skills/skills/web-design-guidelines/SKILL.md /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/web-design-guidelines.md)",
+      "Bash(git status:*)"
     ],
     "additionalDirectories": [
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
@@ -52,7 +53,8 @@
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.vscode",
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/knowledge",
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/apps/web/src/components/ui",
-      "/private/tmp/vercel-agent-skills"
+      "/private/tmp/vercel-agent-skills",
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/apps/web/.git"
     ]
   }
 }
