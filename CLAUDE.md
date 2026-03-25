@@ -192,6 +192,9 @@ See `.claude/skills/` for coding patterns per app:
 
 ### web/
 - `architecture/` — Next.js App Router with same data/state/view separation as mobile
-- `naming-conventions/` — mirrors mobile conventions adapted for Next.js routes
+- `naming-conventions/` — mirrors mobile conventions adapted for Next.js routes (Page instead of Screen)
 - `data-layer/` — HTTP calls to API (domain.api.ts via HttpService)
-- `state-management/` — React Query hooks + optional Zustand for UI state
+- `state-management/` — React Query hooks + Zustand for auth/UI state
+- `react-best-practices/` — 65 Vercel rules: waterfalls, bundle, SSR, re-renders, JS perf (from vercel-labs/agent-skills)
+- `composition-patterns/` — compound components, avoid boolean props, React 19 patterns (from vercel-labs/agent-skills)
+- `web-design-guidelines.md` — 100+ UI audit rules: a11y, forms, animations, i18n (from vercel-labs/agent-skills)

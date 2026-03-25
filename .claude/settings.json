@@ -28,7 +28,21 @@
       "Bash(mv LoginScreen.tsx LoginPage.tsx)",
       "Bash(mv useLoginScreen.ts useLoginPage.ts)",
       "Bash(npx shadcn@latest add collapsible separator avatar -y)",
-      "Bash(npx shadcn@latest add collapsible separator avatar -y -c apps/web)"
+      "Bash(npx shadcn@latest add collapsible separator avatar -y -c apps/web)",
+      "Bash(pnpm add:*)",
+      "Bash(npx vercel:*)",
+      "Bash(pnpm --filter @dns/web add zustand)",
+      "Bash(pnpm build:web)",
+      "Bash(pnpm dev:web)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//private/tmp/vercel-agent-skills/skills/**)",
+      "Read(//private/tmp/vercel-agent-skills/skills/react-best-practices/**)",
+      "Read(//private/tmp/vercel-agent-skills/skills/composition-patterns/**)",
+      "Read(//private/tmp/vercel-agent-skills/skills/web-design-guidelines/**)",
+      "Bash(cp -r /tmp/vercel-agent-skills/skills/react-best-practices /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/react-best-practices)",
+      "Bash(cp -r /tmp/vercel-agent-skills/skills/composition-patterns /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/composition-patterns)",
+      "Bash(cp /tmp/vercel-agent-skills/skills/web-design-guidelines/SKILL.md /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/web-design-guidelines.md)"
     ],
     "additionalDirectories": [
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
@@ -37,7 +51,8 @@
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo",
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.vscode",
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/knowledge",
-      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/apps/web/src/components/ui"
+      "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/apps/web/src/components/ui",
+      "/private/tmp/vercel-agent-skills"
     ]
   }
 }

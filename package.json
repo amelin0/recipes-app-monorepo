@@ -8,6 +8,11 @@
     "build:web": "pnpm --filter @dns/web build",
     "generate:types": "pnpm --filter @dns/api supabase gen types --lang=typescript --local > apps/api/src/types/database.ts",
     "db:push": "pnpm --filter @dns/api supabase db push",
-    "db:reset": "pnpm --filter @dns/api supabase db reset"
+    "db:reset": "pnpm --filter @dns/api supabase db reset",
+    "deploy:web": "vercel --prod",
+    "deploy:web:preview": "vercel"
+  },
+  "devDependencies": {
+    "vercel": "^50.37.0"
   }
 }
