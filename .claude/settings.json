@@ -43,7 +43,8 @@
       "Bash(cp -r /tmp/vercel-agent-skills/skills/react-best-practices /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/react-best-practices)",
       "Bash(cp -r /tmp/vercel-agent-skills/skills/composition-patterns /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/composition-patterns)",
       "Bash(cp /tmp/vercel-agent-skills/skills/web-design-guidelines/SKILL.md /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/web-design-guidelines.md)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(git push:*)"
     ],
     "additionalDirectories": [
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
