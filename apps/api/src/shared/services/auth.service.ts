@@ -8,7 +8,8 @@ interface LoginParams {
 interface RegisterParams {
   email: string
   password: string
-  full_name: string
+  first_name: string
+  last_name?: string
 }
 
 export const AuthService = {
@@ -21,7 +22,7 @@ export const AuthService = {
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('full_name, role')
+      .select('first_name, last_name, role')
       .eq('id', data.user.id)
       .single()
 
@@ -31,18 +32,19 @@ export const AuthService = {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        full_name: profile?.full_name ?? '',
+        first_name: profile?.first_name ?? '',
+        last_name: profile?.last_name ?? '',
         role: profile?.role ?? 'USER',
       },
     }
   },
 
-  register: async ({ email, password, full_name }: RegisterParams) => {
+  register: async ({ email, password, first_name, last_name }: RegisterParams) => {
     const { data, error } = await supabaseAuth.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name },
+        data: { first_name, last_name: last_name ?? '' },
       },
     })
     if (error) throw error
@@ -53,7 +55,8 @@ export const AuthService = {
       user: {
         id: data.user!.id,
         email: data.user!.email!,
-        full_name,
+        first_name,
+        last_name: last_name ?? '',
         role: 'USER',
       },
     }

@@ -20,8 +20,8 @@ export const AuthController = {
   register: async (c: Context) => {
     try {
       const body = await c.req.json()
-      if (!body.email || !body.password || !body.full_name) {
-        return error(c, 'Email, password and full_name are required')
+      if (!body.email || !body.password || !body.first_name) {
+        return error(c, 'Email, password and first_name are required')
       }
       const data = await AuthService.register(body)
       return success(c, data, 201)

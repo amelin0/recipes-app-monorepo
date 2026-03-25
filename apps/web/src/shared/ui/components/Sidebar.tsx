@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   HelpCircle,
+  Bell,
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
@@ -75,7 +76,7 @@ export function Sidebar() {
         collapsed ? "w-16" : "w-64"
       }`}
     >
-      {/* Logo */}
+      {/* Logo + Notifications */}
       <div className="flex items-center justify-between px-4 py-5">
         {!collapsed && (
           <div className="flex items-center gap-2">
@@ -87,12 +88,21 @@ export function Sidebar() {
             </span>
           </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded-md hover:bg-secondary-active text-icon-default cursor-pointer"
-        >
-          {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/notifications"
+            className="p-1.5 rounded-md hover:bg-secondary-active text-icon-default relative"
+            title="Notifications"
+          >
+            <Bell size={18} />
+          </Link>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-md hover:bg-secondary-active text-icon-default cursor-pointer"
+          >
+            {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
       </div>
 
       {/* Main navigation */}

@@ -5,6 +5,8 @@ export enum Queries {
   // ─── User ─────────────────────────────────────────────
   USER_ME = 'user-me',
   WEIGHT_HISTORY = 'weight-history',
+  ADMIN_USERS = 'admin-users',
+  ADMIN_USER = 'admin-user',
 
   // ─── Nutrition ────────────────────────────────────────
   NUTRITION_GOAL = 'nutrition-goal',
@@ -18,6 +20,9 @@ export enum Queries {
 
   // ─── Shopping List ────────────────────────────────────
   SHOPPING_LIST = 'shopping-list',
+
+  // ─── Dashboard ───────────────────────────────────────
+  REGISTRATION_STATS = 'registration-stats',
 
   // ─── Meal Plan ────────────────────────────────────────
   MEAL_PLAN_WEEK = 'meal-plan-week',

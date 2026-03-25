@@ -1,10 +1,27 @@
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '')
 
 const TOKEN_KEY = 'access_token'
+const TOKEN_EXPIRES_KEY = 'access_token_expires'
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 const getToken = () => {
   if (typeof window === 'undefined') return null
+
+  const expires = localStorage.getItem(TOKEN_EXPIRES_KEY)
+  if (expires && Date.now() > Number(expires)) {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_EXPIRES_KEY)
+    return null
+  }
+
   return localStorage.getItem(TOKEN_KEY)
+}
+
+const handleUnauthorized = () => {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_EXPIRES_KEY)
+  localStorage.removeItem('app-storage')
+  window.location.href = '/login'
 }
 
 const request = async <T = unknown>(
@@ -12,6 +29,12 @@ const request = async <T = unknown>(
   options: RequestInit = {},
 ): Promise<T> => {
   const token = getToken()
+
+  if (!token && !url.includes('/auth/')) {
+    handleUnauthorized()
+    throw new Error('Unauthorized')
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
@@ -20,6 +43,11 @@ const request = async <T = unknown>(
 
   const res = await fetch(`${BASE_URL}${url}`, { ...options, headers })
   const json = await res.json()
+
+  if (res.status === 401) {
+    handleUnauthorized()
+    throw new Error('Unauthorized')
+  }
 
   if (!res.ok) {
     throw new Error(json.error || `Request failed: ${res.status}`)
@@ -43,7 +71,13 @@ export const HttpService = {
   delete: <T = unknown>(url: string) =>
     request<T>(url, { method: 'DELETE' }),
 
-  setAccessToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clearTokens: () => localStorage.removeItem(TOKEN_KEY),
+  setAccessToken: (token: string) => {
+    localStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(TOKEN_EXPIRES_KEY, String(Date.now() + TOKEN_TTL_MS))
+  },
+  clearTokens: () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_EXPIRES_KEY)
+  },
   getAccessToken: () => getToken(),
 }
