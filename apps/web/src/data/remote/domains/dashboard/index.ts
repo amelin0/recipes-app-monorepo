@@ -1,2 +1,9 @@
 export { DashboardApi } from './dashboard.api'
-export type { RegistrationStats } from './dashboard.types'
+export type {
+  RegistrationStats,
+  TopFavoritedRecipe,
+  FavoriteStatsRecipe,
+  FavoriteStatsUser,
+  PaginatedFavoriteStats,
+  Demographics,
+} from './dashboard.types'

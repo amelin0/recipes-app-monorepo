@@ -1,0 +1,1 @@
+export { FavoriteStatisticsPage } from './FavoriteStatisticsPage'

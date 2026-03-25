@@ -23,6 +23,16 @@ export enum Queries {
 
   // ─── Dashboard ───────────────────────────────────────
   REGISTRATION_STATS = 'registration-stats',
+  TOP_FAVORITED = 'top-favorited',
+  FAVORITE_STATS = 'favorite-stats',
+
+  // ─── Support ─────────────────────────────────────────
+  SUPPORT_MESSAGES = 'support-messages',
+  SUPPORT_MESSAGE = 'support-message',
+
+  // ─── Notifications ──────────────────────────────────
+  NOTIFICATIONS = 'notifications',
+  UNREAD_COUNT = 'unread-count',
 
   // ─── Meal Plan ────────────────────────────────────────
   MEAL_PLAN_WEEK = 'meal-plan-week',

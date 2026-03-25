@@ -11,12 +11,15 @@ import {
   Settings,
   HelpCircle,
   Bell,
+  LogOut,
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/components/collapsible"
 import { Separator } from "@/shared/ui/components/separator"
+import { useLogout } from "@/state/domains/auth"
+import { useUnreadCount } from "@/state/domains/notifications"
 
 interface NavItem {
   label: string
@@ -57,6 +60,7 @@ const navigation: NavEntry[] = [
     icon: <Users size={20} />,
     items: [
       { label: "Users", href: "/users" },
+      { label: "Support Messages", href: "/support-messages" },
     ],
   },
 ]
@@ -69,6 +73,8 @@ const bottomNav: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const { logout } = useLogout()
+  const { unreadCount } = useUnreadCount()
 
   return (
     <aside
@@ -95,6 +101,11 @@ export function Sidebar() {
             title="Notifications"
           >
             <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-primary-default text-[10px] font-bold text-primary-on-primary px-1">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -140,20 +151,19 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* User */}
-      {!collapsed && (
-        <div className="px-3 py-4 border-t border-border-default">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary-subtle flex items-center justify-center">
-              <span className="text-xs font-medium text-primary-on-subtle">A</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">Admin</p>
-              <p className="text-xs text-text-tertiary truncate">admin@dns.app</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Logout */}
+      <div className="px-3 py-3 border-t border-border-default">
+        <button
+          onClick={logout}
+          className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-error-default hover:bg-error-subtle transition-colors cursor-pointer ${
+            collapsed ? "justify-center" : ""
+          }`}
+          title={collapsed ? "Logout" : undefined}
+        >
+          <LogOut size={20} />
+          {!collapsed && <span>Logout</span>}
+        </button>
+      </div>
     </aside>
   )
 }

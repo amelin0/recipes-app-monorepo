@@ -5,6 +5,8 @@ import { nutritionRoutes } from './nutrition/index.ts'
 import { recipeRoutes } from './recipes/index.ts'
 import { shoppingListRoutes } from './shopping-list/index.ts'
 import { mealPlanRoutes } from './meal-plan/index.ts'
+import { favoritesRoutes } from './favorites/index.ts'
+import { supportRoutes } from './support/index.ts'
 
 const clientRouter = new Hono()
 
@@ -14,5 +16,7 @@ clientRouter.route('/nutrition', nutritionRoutes)
 clientRouter.route('/recipes', recipeRoutes)
 clientRouter.route('/shopping-list', shoppingListRoutes)
 clientRouter.route('/meal-plan', mealPlanRoutes)
+clientRouter.route('/favorites', favoritesRoutes)
+clientRouter.route('/support-messages', supportRoutes)
 
 export { clientRouter }
