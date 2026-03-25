@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Inter, Geist } from "next/font/google";
 import { QueryProvider } from "@/shared/services/query-client/query-client.service";
+import { AuthGate } from "@/shared/ui/components/AuthGate";
 import "./globals.css";
 import { cn } from "@/shared/utils/utils";
 
@@ -32,7 +33,9 @@ export default function RootLayout({
       className={cn("h-full antialiased", manrope.variable, inter.variable, geist.variable, "font-sans")}
     >
       <body className="min-h-full">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <AuthGate>{children}</AuthGate>
+        </QueryProvider>
       </body>
     </html>
   );

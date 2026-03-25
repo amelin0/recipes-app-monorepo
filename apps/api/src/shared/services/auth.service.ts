@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '../supabase.ts'
+import { supabaseAdmin, supabaseAuth } from '../supabase.ts'
 
 interface LoginParams {
   email: string
@@ -13,7 +13,7 @@ interface RegisterParams {
 
 export const AuthService = {
   login: async ({ email, password }: LoginParams) => {
-    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+    const { data, error } = await supabaseAuth.auth.signInWithPassword({
       email,
       password,
     })
@@ -38,7 +38,7 @@ export const AuthService = {
   },
 
   register: async ({ email, password, full_name }: RegisterParams) => {
-    const { data, error } = await supabaseAdmin.auth.signUp({
+    const { data, error } = await supabaseAuth.auth.signUp({
       email,
       password,
       options: {
