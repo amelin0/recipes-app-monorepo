@@ -44,7 +44,7 @@ const navigation: NavEntry[] = [
     icon: <BookOpen size={20} />,
     items: [
       { label: "Recipes", href: "/recipes" },
-      { label: "Ingredients", href: "/ingredients" },
+      { label: "Products", href: "/products" },
       { label: "Tags", href: "/tags" },
     ],
   },

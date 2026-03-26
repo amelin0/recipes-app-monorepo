@@ -6,6 +6,9 @@ import { recipeRoutes } from './recipes/index.ts'
 import { favoritesRoutes } from './favorites/index.ts'
 import { supportRoutes } from './support/index.ts'
 import { notificationsRoutes } from './notifications/index.ts'
+import { languageRoutes } from './languages/index.ts'
+import { uploadRoutes } from './upload/index.ts'
+import { productRoutes } from './products/index.ts'
 
 const adminRouter = new Hono()
 
@@ -19,5 +22,8 @@ adminRouter.route('/recipes', recipeRoutes)
 adminRouter.route('/favorites', favoritesRoutes)
 adminRouter.route('/support-messages', supportRoutes)
 adminRouter.route('/notifications', notificationsRoutes)
+adminRouter.route('/languages', languageRoutes)
+adminRouter.route('/upload', uploadRoutes)
+adminRouter.route('/products', productRoutes)
 
 export { adminRouter }

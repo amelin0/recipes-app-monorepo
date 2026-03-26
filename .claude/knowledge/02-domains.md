@@ -55,6 +55,22 @@
 
 ---
 
+### Product Domain
+- База продуктів з нутриціологічними даними (КБЖВ на 100г) та мультимовними назвами (20 мов)
+- Два типи: global (272 prefilled з USDA, verified) та custom (user-created, одна мова)
+- Пошук по назві з фільтрацією по мові юзера (inner join на product_translations)
+- Формула калорій: Б×4 + В×4 + Ж×9
+- Адмін може редагувати КБЖВ + переклади для всіх 20 мов, верифікувати custom продукти
+
+**Data:** product.api.ts, product.types.ts (Product, ProductDetail, UpdateProductParams)
+**State:** hooks (useGetProducts, useGetProduct, useUpdateProduct, useVerifyProduct)
+**View (mobile):** пошук продуктів при додаванні в рецепт або ручному логуванні
+**View (web):** ProductsPage (таблиця + пошук + фільтр по типу), ProductDetailPanel (view + edit mode у Sheet)
+**DB:** products, product_translations
+**Knowledge:** `.claude/knowledge/product/overview.md`
+
+---
+
 ### Category Domain
 - Категорії рецептів: Сніданок, Обід, Вечеря, Перекус, Напої, Десерти тощо
 - Горизонтальний скрол на екрані рецептів
@@ -148,12 +164,14 @@
 |--------|---------|---------------|-----------|-----------|
 | auth | V1 | SignIn, SignUp | Login | profiles |
 | user | V1 | Profile, Settings | Users | profiles |
-| recipe | V1 | Recipes, RecipeDetail | Recipes CRUD | recipes, recipe_ingredients |
-| ingredient | V1 | (search widget) | Ingredients CRUD | ingredients |
+| recipe | V1 | Recipes, RecipeDetail | Recipes CRUD | recipes, recipe_ingredients, recipe_translations |
+| ingredient | V1 | (search widget) | Ingredients CRUD | ingredients, ingredient_translations |
+| product | V1 | (search widget) | Products list + edit | products, product_translations |
 | category | V1 | (filter on Recipes) | Categories CRUD | categories |
-| tag | V1 | (chips on Recipes) | Tags CRUD | tags, recipe_tags |
+| tag | V1 | (chips on Recipes) | Tags CRUD | tags, tag_translations, recipe_tags |
 | meal-plan | V1 | Home, MealPlan, WeeklyCalendar | MealPlans CRUD | meal_plans, meal_plan_items |
 | shopping-list | V1 | ShoppingList | — | shopping_lists, shopping_list_items |
+| language | V1 | — | — | languages (20 rows) |
 | tracking | V2 | TrackingDashboard, AddFood | — | daily_tracking, food_logs |
 | progress | V2 | Progress | — | weight_logs, progress_photos |
 | scanner | V3 | ScannerCamera | — | — |

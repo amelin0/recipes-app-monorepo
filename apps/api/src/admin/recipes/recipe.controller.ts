@@ -1,4 +1,5 @@
 import type { Context } from 'hono'
+import { parse } from '@std/csv'
 import { RecipeService } from '../../shared/services/index.ts'
 import { success, error } from '../../shared/helpers/response.helper.ts'
 
@@ -115,6 +116,38 @@ export const AdminRecipeController = {
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to create ingredient'
       return error(c, message)
+    }
+  },
+
+  importCsv: async (c: Context) => {
+    try {
+      const userId = c.get('userId')
+      const body = await c.req.parseBody()
+      const file = body['file']
+
+      if (!file || typeof file === 'string') {
+        return error(c, 'CSV file is required')
+      }
+
+      const text = await file.text()
+      const rows = parse(text, { skipFirstRow: true })
+
+      const data = await RecipeService.importBatch(userId, rows as any[])
+      return success(c, data)
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'CSV import failed'
+      return error(c, message)
+    }
+  },
+
+  getByIdFull: async (c: Context) => {
+    try {
+      const id = c.req.param('id')
+      const data = await RecipeService.getByIdAllTranslations(id)
+      return success(c, data)
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Recipe not found'
+      return error(c, message, 404)
     }
   },
 }

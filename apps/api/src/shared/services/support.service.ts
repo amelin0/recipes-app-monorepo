@@ -16,14 +16,12 @@ export const SupportService = {
       .single()
     if (error) throw error
 
-    // Get user info for notification
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('first_name, last_name, email')
       .eq('id', userId)
       .single()
 
-    // Create notification for admin
     await NotificationService.create({
       type: 'SUPPORT_MESSAGE',
       title: `New support message: ${params.title}`,
@@ -46,25 +44,42 @@ export const SupportService = {
 
     const { data, error, count } = await supabaseAdmin
       .from('support_messages')
-      .select('*, profiles!inner(first_name, last_name, email)', { count: 'exact' })
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
     if (error) throw error
 
-    const messages = (data || []).map((m: any) => ({
-      id: m.id,
-      title: m.title,
-      description: m.description,
-      photo_url: m.photo_url,
-      status: m.status,
-      created_at: m.created_at,
-      user: {
-        id: m.user_id,
-        first_name: m.profiles.first_name,
-        last_name: m.profiles.last_name,
-        email: m.profiles.email,
-      },
-    }))
+    // Fetch profiles for all user_ids
+    const userIds = [...new Set((data || []).map((m: any) => m.user_id))]
+    let profilesMap: Record<string, any> = {}
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', userIds)
+      for (const p of profiles || []) {
+        profilesMap[p.id] = p
+      }
+    }
+
+    const messages = (data || []).map((m: any) => {
+      const profile = profilesMap[m.user_id]
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        photo_url: m.photo_url,
+        status: m.status,
+        created_at: m.created_at,
+        user: {
+          id: m.user_id,
+          first_name: profile?.first_name ?? '',
+          last_name: profile?.last_name ?? '',
+          email: profile?.email ?? '',
+        },
+      }
+    })
 
     return { data: messages, total: count ?? 0, page, limit }
   },
@@ -72,10 +87,16 @@ export const SupportService = {
   getById: async (id: string) => {
     const { data, error } = await supabaseAdmin
       .from('support_messages')
-      .select('*, profiles!inner(first_name, last_name, email)')
+      .select('*')
       .eq('id', id)
       .single()
     if (error) throw error
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', data.user_id)
+      .single()
 
     return {
       id: data.id,
@@ -87,9 +108,9 @@ export const SupportService = {
       updated_at: data.updated_at,
       user: {
         id: data.user_id,
-        first_name: (data as any).profiles.first_name,
-        last_name: (data as any).profiles.last_name,
-        email: (data as any).profiles.email,
+        first_name: profile?.first_name ?? '',
+        last_name: profile?.last_name ?? '',
+        email: profile?.email ?? '',
       },
     }
   },

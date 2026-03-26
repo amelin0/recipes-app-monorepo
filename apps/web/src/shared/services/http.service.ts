@@ -35,8 +35,9 @@ const request = async <T = unknown>(
     throw new Error('Unauthorized')
   }
 
+  const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -70,6 +71,9 @@ export const HttpService = {
 
   delete: <T = unknown>(url: string) =>
     request<T>(url, { method: 'DELETE' }),
+
+  upload: <T = unknown>(url: string, formData: FormData) =>
+    request<T>(url, { method: 'POST', body: formData }),
 
   setAccessToken: (token: string) => {
     localStorage.setItem(TOKEN_KEY, token)

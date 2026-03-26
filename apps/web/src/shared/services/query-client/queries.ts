@@ -15,8 +15,14 @@ export enum Queries {
   // ─── Recipes ──────────────────────────────────────────
   RECIPES = 'recipes',
   RECIPE = 'recipe',
+  RECIPE_FULL = 'recipe-full',
   TAGS = 'tags',
   INGREDIENTS = 'ingredients',
+  LANGUAGES = 'languages',
+
+  // ─── Products ────────────────────────────────────────
+  PRODUCTS = 'products',
+  PRODUCT = 'product',
 
   // ─── Shopping List ────────────────────────────────────
   SHOPPING_LIST = 'shopping-list',

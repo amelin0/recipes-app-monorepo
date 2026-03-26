@@ -53,7 +53,7 @@ export function UsersPage() {
           />
         </div>
 
-        <Select value={gender ?? ''} onValueChange={(v) => setGender(v === '_all' ? undefined : v)}>
+        <Select value={gender ?? ''} onValueChange={(v) => setGender(!v || v === '_all' ? undefined : v)}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All genders" />
           </SelectTrigger>
@@ -65,7 +65,7 @@ export function UsersPage() {
           </SelectContent>
         </Select>
 
-        <Select value={country ?? ''} onValueChange={(v) => setCountry(v === '_all' ? undefined : v)}>
+        <Select value={country ?? ''} onValueChange={(v) => setCountry(!v || v === '_all' ? undefined : v)}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="All countries" />
           </SelectTrigger>
@@ -77,7 +77,7 @@ export function UsersPage() {
           </SelectContent>
         </Select>
 
-        <Select value={language ?? ''} onValueChange={(v) => setLanguage(v === '_all' ? undefined : v)}>
+        <Select value={language ?? ''} onValueChange={(v) => setLanguage(!v || v === '_all' ? undefined : v)}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="All languages" />
           </SelectTrigger>

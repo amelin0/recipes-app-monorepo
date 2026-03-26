@@ -159,6 +159,7 @@ See `.claude/knowledge/` for project context:
 - `user/` — get-me.md, get-all.md, settings.md, weight.md
 - `nutrition/` — set-goal.md, get-daily.md
 - `recipe/` — overview.md (CRUD, tags, ingredients, filters, i18n translations)
+- `product/` — overview.md (272 USDA products × 20 langs, custom products, admin CRUD + edit translations, search by user language)
 - `shopping-list/` — overview.md (add recipe → auto-aggregate ingredients, toggle checked)
 - `meal-plan/` — overview.md (weekly plan by day_of_week + meal_type, copy day, to-shopping-list)
 
