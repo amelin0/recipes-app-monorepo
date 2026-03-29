@@ -119,9 +119,15 @@ pnpm dev:web          # Start Next.js dev server
 pnpm dev:mobile       # Start Expo dev server
 pnpm dev:api          # Start local Supabase
 pnpm build:web        # Build Next.js
+pnpm deploy:web       # Deploy web to Vercel (production)
 pnpm generate:types   # Regenerate Supabase DB types
 pnpm db:push          # Push migrations to Supabase
 pnpm db:reset         # Reset local database
+```
+
+### Deploy API (Edge Functions)
+```bash
+cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json
 ```
 
 ## Design System

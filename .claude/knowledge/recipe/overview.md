@@ -52,6 +52,8 @@ Enum `measurement_unit`: `g`, `ml`, `tsp`, `tbsp`, `cup`, `pcs`
 | GET | `/api/admin/recipes/:id` | ADMIN+ | Деталі |
 | POST | `/api/admin/recipes` | SUPER_ADMIN | Створити рецепт |
 | PUT | `/api/admin/recipes/:id` | SUPER_ADMIN | Оновити рецепт |
+| POST | `/api/admin/recipes/delete` | SUPER_ADMIN | Bulk delete (`{ ids: string[] }`) |
+| GET | `/api/admin/recipes/:id/full` | ADMIN+ | Рецепт з усіма перекладами |
 | GET | `/api/admin/recipes/tags/all` | ADMIN+ | Всі теги |
 | POST | `/api/admin/recipes/tags` | SUPER_ADMIN | Створити тег |
 | GET | `/api/admin/recipes/ingredients/all` | ADMIN+ | Всі інгредієнти |
@@ -117,6 +119,19 @@ Enum `measurement_unit`: `g`, `ml`, `tsp`, `tbsp`, `cup`, `pcs`
 
 Відповідь завжди повертається мовою юзера — nested translations flattened в `formatRecipe()`.
 
+## Калорії (авто-розрахунок)
+
+Калорії вираховуються автоматично на фронті:
+- 1г білків = 4 ккал
+- 1г вуглеводів = 4 ккал
+- 1г жирів = 9 ккал
+- `calories = proteins_g * 4 + carbs_g * 4 + fats_g * 9`
+
 ## Seed теги
 
 Health, Vegetarian, Keto, Breakfast, Lunch, Dinner — вже є в БД з перекладами на uk/en/ru/es.
+
+## Deploy
+
+- **API**: `cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json`
+- **Web**: `pnpm deploy:web` (Vercel)
