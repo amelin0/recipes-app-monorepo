@@ -411,6 +411,16 @@ export const RecipeService = {
     return { imported: imported.length, errors }
   },
 
+  deleteMany: async (ids: string[]) => {
+    // Cascade: recipe_translations, recipe_ingredients, recipe_tags have FK ON DELETE CASCADE
+    const { error } = await supabaseAdmin
+      .from('recipes')
+      .delete()
+      .in('id', ids)
+    if (error) throw error
+    return { deleted: ids.length }
+  },
+
   getByIdAllTranslations: async (id: string) => {
     const { data, error } = await supabaseAdmin
       .from('recipes')

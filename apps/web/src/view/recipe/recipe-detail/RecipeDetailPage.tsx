@@ -71,7 +71,9 @@ export function RecipeDetailPage({ id }: { id: string }) {
           <div className="flex flex-wrap gap-1.5">
             {recipe.recipe_tags?.map((rt) => (
               <Badge key={rt.tag_id} variant="outline">
-                {rt.tags?.tag_translations?.[0]?.name ?? rt.tag_id}
+                {rt.tags?.tag_translations?.find((t) => t.language === activeTab)?.name
+                  ?? rt.tags?.tag_translations?.[0]?.name
+                  ?? rt.tag_id}
               </Badge>
             ))}
           </div>
@@ -128,7 +130,9 @@ export function RecipeDetailPage({ id }: { id: string }) {
           {recipe.recipe_ingredients?.map((ri, i) => (
             <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-bg-surface text-sm">
               <span className="text-text-primary">
-                {ri.ingredients?.ingredient_translations?.[0]?.name ?? 'Unknown'}
+                {ri.ingredients?.ingredient_translations?.find((t) => t.language === activeTab)?.name
+                  ?? ri.ingredients?.ingredient_translations?.[0]?.name
+                  ?? 'Unknown'}
               </span>
               <span className="text-text-secondary font-medium">
                 {ri.amount} {ri.unit}

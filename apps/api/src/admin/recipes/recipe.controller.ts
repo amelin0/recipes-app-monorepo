@@ -140,6 +140,20 @@ export const AdminRecipeController = {
     }
   },
 
+  deleteMany: async (c: Context) => {
+    try {
+      const { ids } = await c.req.json()
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return error(c, 'ids array is required')
+      }
+      const data = await RecipeService.deleteMany(ids)
+      return success(c, data)
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to delete recipes'
+      return error(c, message)
+    }
+  },
+
   getByIdFull: async (c: Context) => {
     try {
       const id = c.req.param('id')

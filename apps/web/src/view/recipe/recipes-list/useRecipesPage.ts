@@ -1,16 +1,21 @@
 'use client'
 
 import { useState, useDeferredValue } from 'react'
-import { useRouter } from 'next/navigation'
-import { useGetRecipes, useGetTags, useImportRecipes } from '@/state/domains/recipe'
+import { useGetRecipes, useGetTags, useImportRecipes, useGetRecipeFull, useDeleteRecipes } from '@/state/domains/recipe'
 import type { RecipeFilters } from '@/data'
 
 export const useRecipesPage = () => {
-  const router = useRouter()
   const [search, setSearch] = useState('')
   const [tagFilter, setTagFilter] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+
+  // Selection for bulk delete
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   const debouncedSearch = useDeferredValue(search)
 
@@ -24,6 +29,8 @@ export const useRecipesPage = () => {
   const { recipes, total, isLoading } = useGetRecipes(filters)
   const { tags } = useGetTags()
   const { importRecipes, isPending: isImporting } = useImportRecipes()
+  const { recipe: selectedRecipe, isLoading: isDetailLoading } = useGetRecipeFull(selectedId ?? '')
+  const { deleteRecipes, isPending: isDeleting } = useDeleteRecipes()
 
   const totalPages = Math.ceil(total / 20)
 
@@ -32,8 +39,22 @@ export const useRecipesPage = () => {
     setPage(1)
   }
 
-  const handleRowClick = (id: string) => router.push(`/recipes/${id}`)
-  const handleAddRecipe = () => router.push('/recipes/new')
+  const handleRowClick = (id: string) => {
+    if (selectedIds.size > 0) return // don't open detail while selecting
+    setSelectedId(id)
+    setIsDetailOpen(true)
+  }
+
+  const handleCloseDetail = (open: boolean) => {
+    if (!open) {
+      setIsDetailOpen(false)
+      setSelectedId(null)
+    }
+  }
+
+  const handleAddRecipe = () => setIsCreateOpen(true)
+  const handleCloseCreate = (open: boolean) => { if (!open) setIsCreateOpen(false) }
+  const handleCreated = () => setIsCreateOpen(false)
 
   const handleImport = async (file: File) => {
     const result = await importRecipes(file)
@@ -46,13 +67,44 @@ export const useRecipesPage = () => {
     setPage(1)
   }
 
+  // Selection handlers
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.size === recipes.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(recipes.map((r) => r.id)))
+    }
+  }
+
+  const handleClearSelection = () => setSelectedIds(new Set())
+
+  const handleDeleteSelected = async () => {
+    await deleteRecipes(Array.from(selectedIds))
+    setSelectedIds(new Set())
+    setIsDeleteDialogOpen(false)
+  }
+
   return {
     search, handleSearchChange,
     tagFilter, setTagFilter,
     page, totalPages, total,
     recipes, tags, isLoading,
     isImportOpen, setIsImportOpen, isImporting, handleImport,
-    handleRowClick, handleAddRecipe, handleClearFilters,
+    selectedRecipe, isDetailLoading, isDetailOpen,
+    isCreateOpen, handleCloseCreate, handleCreated,
+    handleRowClick, handleCloseDetail, handleAddRecipe, handleClearFilters,
     setPage,
+    // Selection & delete
+    selectedIds, handleToggleSelect, handleToggleSelectAll, handleClearSelection,
+    isDeleteDialogOpen, setIsDeleteDialogOpen, handleDeleteSelected, isDeleting,
   }
 }

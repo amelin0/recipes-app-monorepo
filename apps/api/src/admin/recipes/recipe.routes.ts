@@ -8,6 +8,7 @@ const recipeRoutes = new Hono()
 recipeRoutes.get('/', AdminRecipeController.getAll)
 recipeRoutes.post('/', superAdminMiddleware, AdminRecipeController.create)
 recipeRoutes.post('/import', superAdminMiddleware, AdminRecipeController.importCsv)
+recipeRoutes.post('/delete', superAdminMiddleware, AdminRecipeController.deleteMany)
 
 // Tags
 recipeRoutes.get('/tags/all', AdminRecipeController.getTags)

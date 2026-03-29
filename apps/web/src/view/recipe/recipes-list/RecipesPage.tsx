@@ -1,13 +1,17 @@
 'use client'
 
 import { useRecipesPage } from './useRecipesPage'
+import { RecipeDetailPanel, RecipeCreatePanel } from './components/RecipeDetailPanel'
 import { ImportCsvDialog } from './components/ImportCsvDialog'
 import { Input } from '@/shared/ui/components/input'
 import { Button } from '@/shared/ui/components/button'
 import { Badge } from '@/shared/ui/components/badge'
+import { Checkbox } from '@/shared/ui/components/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/components/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/components/select'
-import { Search, Plus, Upload, X, ChevronLeft, ChevronRight, Clock, Heart } from 'lucide-react'
+import { Sheet, SheetContent } from '@/shared/ui/components/sheet'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/ui/components/dialog'
+import { Search, Plus, Upload, X, ChevronLeft, ChevronRight, Clock, Heart, Trash2 } from 'lucide-react'
 
 export function RecipesPage() {
   const {
@@ -16,11 +20,17 @@ export function RecipesPage() {
     page, totalPages, total,
     recipes, tags, isLoading,
     isImportOpen, setIsImportOpen, isImporting, handleImport,
-    handleRowClick, handleAddRecipe, handleClearFilters,
+    selectedRecipe, isDetailLoading, isDetailOpen,
+    isCreateOpen, handleCloseCreate, handleCreated,
+    handleRowClick, handleCloseDetail, handleAddRecipe, handleClearFilters,
     setPage,
+    selectedIds, handleToggleSelect, handleToggleSelectAll, handleClearSelection,
+    isDeleteDialogOpen, setIsDeleteDialogOpen, handleDeleteSelected, isDeleting,
   } = useRecipesPage()
 
   const hasFilters = search || tagFilter
+  const hasSelection = selectedIds.size > 0
+  const allSelected = recipes.length > 0 && selectedIds.size === recipes.length
 
   return (
     <div className="space-y-6">
@@ -31,12 +41,25 @@ export function RecipesPage() {
           <p className="text-sm text-text-secondary mt-1">{total} recipe{total !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-            <Upload size={16} className="mr-1.5" /> Import CSV
-          </Button>
-          <Button onClick={handleAddRecipe}>
-            <Plus size={16} className="mr-1.5" /> Add Recipe
-          </Button>
+          {hasSelection ? (
+            <>
+              <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+                <X size={14} className="mr-1" /> Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                <Trash2 size={16} className="mr-1.5" /> Delete ({selectedIds.size})
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                <Upload size={16} className="mr-1.5" /> Import CSV
+              </Button>
+              <Button onClick={handleAddRecipe}>
+                <Plus size={16} className="mr-1.5" /> Add Recipe
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -71,6 +94,12 @@ export function RecipesPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-bg-surface">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleToggleSelectAll}
+                />
+              </TableHead>
               <TableHead className="w-12">Photo</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Calories</TableHead>
@@ -83,12 +112,22 @@ export function RecipesPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-12 text-text-tertiary">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-12 text-text-tertiary">Loading...</TableCell></TableRow>
             ) : recipes.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-12 text-text-tertiary">No recipes found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-12 text-text-tertiary">No recipes found</TableCell></TableRow>
             ) : (
               recipes.map((recipe) => (
-                <TableRow key={recipe.id} onClick={() => handleRowClick(recipe.id)} className="cursor-pointer hover:bg-bg-surface transition-colors">
+                <TableRow
+                  key={recipe.id}
+                  className={`cursor-pointer hover:bg-bg-surface transition-colors ${selectedIds.has(recipe.id) ? 'bg-primary-subtle/30' : ''}`}
+                  onClick={() => handleRowClick(recipe.id)}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(recipe.id)}
+                      onCheckedChange={() => handleToggleSelect(recipe.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     {recipe.photo_url ? (
                       <img src={recipe.photo_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
@@ -138,6 +177,40 @@ export function RecipesPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} recipe{selectedIds.size !== 1 ? 's' : ''}?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. All translations, ingredients, and tags linked to {selectedIds.size === 1 ? 'this recipe' : 'these recipes'} will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteSelected} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : `Delete ${selectedIds.size} recipe${selectedIds.size !== 1 ? 's' : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Panel */}
+      <Sheet open={isDetailOpen} onOpenChange={handleCloseDetail}>
+        <SheetContent className="w-[560px] sm:max-w-xl overflow-y-auto p-8">
+          <RecipeDetailPanel recipe={selectedRecipe ?? null} isLoading={isDetailLoading} />
+        </SheetContent>
+      </Sheet>
+
+      {/* Create Panel */}
+      <Sheet open={isCreateOpen} onOpenChange={handleCloseCreate}>
+        <SheetContent className="w-[560px] sm:max-w-xl overflow-y-auto p-8">
+          <RecipeCreatePanel onCreated={handleCreated} onCancel={() => handleCloseCreate(false)} />
+        </SheetContent>
+      </Sheet>
 
       {/* Import Dialog */}
       <ImportCsvDialog open={isImportOpen} onOpenChange={setIsImportOpen} onImport={handleImport} isImporting={isImporting} />

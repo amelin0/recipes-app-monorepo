@@ -30,6 +30,9 @@ export const RecipeApi = {
   update: (id: string, data: Partial<CreateRecipeParams>) =>
     HttpService.put<Recipe>(`/admin/recipes/${id}`, data),
 
+  deleteMany: (ids: string[]) =>
+    HttpService.post<{ deleted: number }>('/admin/recipes/delete', { ids }),
+
   getTags: () =>
     HttpService.get<Tag[]>('/admin/recipes/tags/all'),
 
