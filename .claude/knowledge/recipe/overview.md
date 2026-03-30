@@ -133,5 +133,5 @@ Health, Vegetarian, Keto, Breakfast, Lunch, Dinner — вже є в БД з пе
 
 ## Deploy
 
-- **API**: `cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json`
+- **API**: `cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json --no-verify-jwt`
 - **Web**: `pnpm deploy:web` (Vercel)

@@ -127,7 +127,7 @@ pnpm db:reset         # Reset local database
 
 ### Deploy API (Edge Functions)
 ```bash
-cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json
+cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json --no-verify-jwt
 ```
 
 ## Design System
