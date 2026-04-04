@@ -72,6 +72,7 @@ export const colors = {
     elevated: '#FFFFFF',
     overlay: 'rgba(25, 25, 29, 0.7)',
     inverse: '#383838',
+    transparent: 'transparent',
   },
 
   // Border
@@ -103,4 +104,4 @@ export const colors = {
     fats: '#5B9BD5',
     calories: '#8BA651',
   },
-} as const
+} as const;
