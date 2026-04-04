@@ -1,113 +1,97 @@
 export const fontFamily = {
-  sans: 'Figtree',
+  heading: 'Nunito',
+  body: 'PTSans',
 } as const;
 
 export const fontWeight = {
   regular: '400',
-  medium: '500',
-  semibold: '600',
   bold: '700',
+  extraBold: '800',
+  black: '900',
 } as const;
 
 export const typography = {
-  // text/display
-  displayLg: {
-    fontFamily: fontFamily.sans,
-    fontSize: 40,
-    fontWeight: fontWeight.bold,
-    lineHeight: 48,
-    letterSpacing: -0.8,
-  },
-  displayMd: {
-    fontFamily: fontFamily.sans,
+  // Headings — Nunito
+  h1: {
+    fontFamily: fontFamily.heading,
     fontSize: 32,
-    fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.black,
     lineHeight: 48,
-    letterSpacing: -0.48,
+    letterSpacing: 0,
   },
-
-  // text/title
-  titleLg: {
-    fontFamily: fontFamily.sans,
-    fontSize: 28,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 36,
-    letterSpacing: -0.28,
-  },
-  titleMd: {
-    fontFamily: fontFamily.sans,
+  h2: {
+    fontFamily: fontFamily.heading,
     fontSize: 24,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 32,
-    letterSpacing: -0.12,
+    fontWeight: fontWeight.extraBold,
+    lineHeight: 36,
+    letterSpacing: 0,
   },
-  titleSm: {
-    fontFamily: fontFamily.sans,
-    fontSize: 20,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 28,
-    letterSpacing: -0.05,
+  h3: {
+    fontFamily: fontFamily.heading,
+    fontSize: 16,
+    fontWeight: fontWeight.extraBold,
+    lineHeight: 24,
+    letterSpacing: 0,
   },
 
-  // text/body
+  // Body Regular — PT Sans
   bodyLg: {
-    fontFamily: fontFamily.sans,
+    fontFamily: fontFamily.body,
     fontSize: 16,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.regular,
     lineHeight: 24,
     letterSpacing: 0,
   },
   bodyMd: {
-    fontFamily: fontFamily.sans,
+    fontFamily: fontFamily.body,
     fontSize: 14,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.regular,
     lineHeight: 20,
     letterSpacing: 0,
   },
   bodySm: {
-    fontFamily: fontFamily.sans,
-    fontSize: 14,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
     fontWeight: fontWeight.regular,
-    lineHeight: 20,
+    lineHeight: 18,
     letterSpacing: 0,
   },
 
-  // text/supporting
-  caption: {
-    fontFamily: fontFamily.sans,
-    fontSize: 12,
-    fontWeight: fontWeight.regular,
-    lineHeight: 16,
-    letterSpacing: 0.048,
+  // Body Bold — PT Sans Bold
+  bodyLgBold: {
+    fontFamily: fontFamily.body,
+    fontSize: 16,
+    fontWeight: fontWeight.bold,
+    lineHeight: 24,
+    letterSpacing: 0,
   },
-  overline: {
-    fontFamily: fontFamily.sans,
-    fontSize: 10,
-    fontWeight: fontWeight.medium,
-    lineHeight: 14,
-    letterSpacing: 0.06,
-    textTransform: 'uppercase' as const,
+  bodyMdBold: {
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    fontWeight: fontWeight.bold,
+    lineHeight: 20,
+    letterSpacing: 0,
+  },
+  bodySmBold: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    fontWeight: fontWeight.bold,
+    lineHeight: 18,
+    letterSpacing: 0,
   },
 
-  // text/button
+  // Button
   buttonLg: {
-    fontFamily: fontFamily.sans,
-    fontSize: 14,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 20,
+    fontFamily: fontFamily.body,
+    fontSize: 16,
+    fontWeight: fontWeight.bold,
+    lineHeight: 24,
     letterSpacing: 0,
   },
   buttonSm: {
-    fontFamily: fontFamily.sans,
-    fontSize: 12,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 16,
-    letterSpacing: 0,
-  },
-  buttonLink: {
-    fontFamily: fontFamily.sans,
+    fontFamily: fontFamily.body,
     fontSize: 14,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.bold,
     lineHeight: 20,
     letterSpacing: 0,
   },

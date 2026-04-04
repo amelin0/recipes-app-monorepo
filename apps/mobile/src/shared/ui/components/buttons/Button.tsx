@@ -5,111 +5,115 @@ import {
   type PressableProps,
   type StyleProp,
   Text,
-  View,
   type ViewStyle,
 } from 'react-native';
 
-import { colors } from '../../theme';
+import { StyleSheet } from 'react-native-unistyles';
 
-type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'success' | 'ghost';
-type ButtonSize = 'large' | 'medium' | 'small';
+type ButtonVariant = 'primary' | 'secondary';
 
 interface ButtonProps extends Omit<PressableProps, 'style'> {
-  title?: string;
+  title: string;
   variant?: ButtonVariant;
-  size?: ButtonSize;
   disabled?: boolean;
   isLoading?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-const variantStyles: Record<ButtonVariant, { bg: string; activeBg: string; text: string }> = {
-  primary: {
-    bg: colors.primary.default,
-    activeBg: colors.primary.active,
-    text: colors.primary.onPrimary,
-  },
-  secondary: {
-    bg: colors.primary.subtle,
-    activeBg: colors.secondary.active,
-    text: colors.primary.onSubtle,
-  },
-  destructive: {
-    bg: colors.error.default,
-    activeBg: colors.error.active,
-    text: colors.error.onError,
-  },
-  success: {
-    bg: colors.success.default,
-    activeBg: colors.success.active,
-    text: colors.success.onSuccess,
-  },
-  ghost: { bg: 'transparent', activeBg: colors.secondary.active, text: colors.primary.onSubtle },
-};
-
-const sizeStyles: Record<
-  ButtonSize,
-  { minHeight: number; paddingH: number; paddingV: number; fontSize: number }
-> = {
-  large: { minHeight: 52, paddingH: 16, paddingV: 8, fontSize: 15 },
-  medium: { minHeight: 44, paddingH: 14, paddingV: 6, fontSize: 14 },
-  small: { minHeight: 32, paddingH: 12, paddingV: 4, fontSize: 13 },
-};
-
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
   variant = 'primary',
-  size = 'large',
   disabled = false,
   isLoading = false,
   style,
+  children,
   ...rest
 }) => {
-  const v = variantStyles[variant];
-  const s = sizeStyles[size];
-
-  const bg = disabled ? colors.disabled.background : v.bg;
-  const textColor = disabled ? colors.disabled.content : v.text;
+  const isPrimary = variant === 'primary';
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || isLoading}
       style={({ pressed }) => [
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: s.minHeight,
-          paddingHorizontal: s.paddingH,
-          paddingVertical: s.paddingV,
-          borderRadius: 9999,
-          backgroundColor: pressed ? v.activeBg : bg,
-          gap: 8,
-        },
+        styles.base,
+        isPrimary ? styles.primaryBg : styles.secondaryBg,
+        pressed && (isPrimary ? styles.primaryPressed : styles.secondaryPressed),
+        disabled && (isPrimary ? styles.primaryDisabled : styles.secondaryDisabled),
         style as ViewStyle,
       ]}
-      {...rest}>
+      {...rest}
+    >
       {isLoading ? (
-        <ActivityIndicator size="small" color={textColor} />
+        <ActivityIndicator
+          size="small"
+          color={
+            disabled
+              ? styles.disabledText.color
+              : isPrimary
+                ? styles.primaryText.color
+                : styles.secondaryText.color
+          }
+        />
       ) : (
-        title && (
-          <View style={{ paddingHorizontal: 4 }}>
-            <Text
-              style={{
-                fontFamily: 'Inter',
-                fontWeight: '600',
-                fontSize: s.fontSize,
-                lineHeight: s.fontSize + 6,
-                color: textColor,
-                textAlign: 'center',
-              }}>
-              {title}
-            </Text>
-          </View>
-        )
+        <>
+          <Text
+            style={[
+              styles.text,
+              isPrimary ? styles.primaryText : styles.secondaryText,
+              disabled && styles.disabledText,
+            ]}>
+            {title}
+          </Text>
+          {children}
+        </>
       )}
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create(({ colors, typography }) => ({
+  base: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  text: {
+    ...typography.h3,
+    textAlign: 'center',
+  },
+  primaryBg: {
+    backgroundColor: colors.primary[100],
+  },
+  primaryPressed: {
+    backgroundColor: colors.gray[100],
+  },
+  primaryDisabled: {
+    backgroundColor: colors.gray[30],
+  },
+  primaryText: {
+    color: colors.gray[0],
+  },
+  secondaryBg: {
+    backgroundColor: colors.secondary.default,
+  },
+  secondaryPressed: {
+    backgroundColor: colors.secondary.default,
+    opacity: 0.8,
+  },
+  secondaryDisabled: {
+    backgroundColor: colors.gray[10],
+  },
+  secondaryText: {
+    color: colors.gray[100],
+  },
+  disabledText: {
+    color: colors.gray[60],
+  },
+}));

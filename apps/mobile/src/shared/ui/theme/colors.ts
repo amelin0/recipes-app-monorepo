@@ -1,107 +1,107 @@
 export const colors = {
-  // Semantic / Primary (Brand — Olive Green)
+  // Primary (Dark Teal)
   primary: {
-    default: '#6B8F3C',
-    active: '#567230',
+    100: '#00343E',
+    80: '#0A5F6D',
+    60: '#0092A1',
+    default: '#0092A1',
     onPrimary: '#FFFFFF',
-    subtle: '#E8F0D8',
-    onSubtle: '#3D5221',
-    link: '#6B8F3C',
   },
 
-  // Semantic / Secondary (Neutral)
+  // Secondary (Light Green)
   secondary: {
-    default: '#FFFFFF',
-    active: '#F2F2F2',
-    onSecondary: '#595959',
+    default: '#EBF9B0',
+    onSecondary: '#00343E',
   },
 
-  // Semantic / Accent (Peach/Warm)
-  accent: {
-    default: '#D4956A',
-    active: '#B4754A',
-    subtle: '#FFF5F0',
-    onAccent: '#FFFFFF',
+  // Gray
+  gray: {
+    100: '#101010',
+    80: '#404040',
+    60: '#707070',
+    30: '#B8B8B8',
+    20: '#CFCFCF',
+    10: '#E8E8E8',
+    0: '#FFFFFF',
   },
 
-  // Semantic / Error
+  // System
   error: {
-    default: '#D02512',
-    active: '#A41D0E',
-    subtle: '#F9BFB9',
+    default: '#E32727',
+    dark: '#8C0E0E',
+    subtle: '#FDE8E8',
     onError: '#FFFFFF',
   },
 
-  // Semantic / Success
-  success: {
-    default: '#4CAF50',
-    active: '#388E3C',
-    subtle: '#E8F5E9',
-    onSuccess: '#1A1A1A',
-  },
-
-  // Semantic / Warning
-  warning: {
-    default: '#D58000',
-    active: '#B26B00',
-    subtle: '#FFEBCC',
-    onWarning: '#1A1A1A',
-  },
-
-  // Semantic / Info
   info: {
-    default: '#EAECF5',
-    subtle: '#FCFCFC',
-    onInfo: '#1A1A1A',
+    default: '#2747E3',
+    dark: '#0E3C8B',
+    subtle: '#E8EEFE',
+    onInfo: '#FFFFFF',
+  },
+
+  warning: {
+    default: '#FFBC2C',
+    dark: '#E5C600',
+    subtle: '#FFF8E8',
+    onWarning: '#101010',
+  },
+
+  success: {
+    default: '#47C43B',
+    dark: '#1D8B0E',
+    subtle: '#E8F9E6',
+    onSuccess: '#FFFFFF',
+  },
+
+  // Additional
+  additional: {
+    blue: '#B0D1F9',
+    pink: '#F9B0E9',
+    orange: '#F9CBB0',
+    purple: '#CEB0F9',
   },
 
   // Text
   text: {
-    primary: '#1A1A1A',
-    secondary: '#595959',
-    tertiary: '#8C8C8C',
-    error: '#D02512',
-    link: '#6B8F3C',
-    inverse: '#FCFCFC',
+    primary: '#101010',
+    secondary: '#404040',
+    tertiary: '#707070',
+    disabled: '#B8B8B8',
+    inverse: '#FFFFFF',
+    error: '#E32727',
+    link: '#0092A1',
   },
 
   // Background
   bg: {
     canvas: '#FFFFFF',
-    surface: '#F8F9FC',
+    surface: '#FAFAFA',
     elevated: '#FFFFFF',
-    overlay: 'rgba(25, 25, 29, 0.7)',
-    inverse: '#383838',
+    overlay: 'rgba(16, 16, 16, 0.7)',
+    inverse: '#101010',
     transparent: 'transparent',
   },
 
   // Border
   border: {
-    default: '#E6E6E6',
-    subtle: '#F2F2F2',
-    strong: '#1A1A1A',
-    focus: '#6B8F3C',
-    error: '#D02512',
+    default: '#E8E8E8',
+    subtle: '#CFCFCF',
+    strong: '#101010',
+    focus: '#0092A1',
+    error: '#E32727',
   },
 
   // Icon
   icon: {
-    default: '#595959',
-    inverse: '#E6E6E6',
+    default: '#707070',
+    inverse: '#FFFFFF',
   },
 
   // Disabled
   disabled: {
-    background: '#E6E6E6',
-    content: '#8C8C8C',
-    border: '#D9D9D9',
-  },
-
-  // Nutrition-specific
-  macro: {
-    protein: '#6B8F3C',
-    carbs: '#D4956A',
-    fats: '#5B9BD5',
-    calories: '#8BA651',
+    background: '#E8E8E8',
+    content: '#B8B8B8',
+    border: '#CFCFCF',
   },
 } as const;
