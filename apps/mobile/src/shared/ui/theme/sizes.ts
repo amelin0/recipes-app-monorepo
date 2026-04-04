@@ -12,7 +12,7 @@ export const spacing = {
   12: 48,
   16: 64,
   20: 80,
-} as const
+} as const;
 
 export const radius = {
   sm: 8,
@@ -20,7 +20,7 @@ export const radius = {
   lg: 16,
   xl: 24,
   full: 9999,
-} as const
+} as const;
 
 export const shadow = {
   sm: {
@@ -44,7 +44,7 @@ export const shadow = {
     shadowRadius: 50,
     elevation: 6,
   },
-} as const
+} as const;
 
 export const iconSize = {
   xs: 16,
@@ -52,4 +52,4 @@ export const iconSize = {
   md: 24,
   lg: 32,
   xl: 48,
-} as const
+} as const;
