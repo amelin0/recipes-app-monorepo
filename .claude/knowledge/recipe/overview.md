@@ -15,7 +15,7 @@ recipes                    — числові дані
 ingredients                — базова сутність
 ├── ingredient_translations — name per language
 
-tags                       — базова сутність
+tags                       — базова сутність (окремий domain)
 ├── tag_translations        — name per language
 
 recipe_ingredients         — junction (recipe ↔ ingredient + amount + unit)
@@ -33,8 +33,9 @@ Enum `measurement_unit`: `g`, `ml`, `tsp`, `tbsp`, `cup`, `pcs`
 | GET recipes | + | + | + |
 | POST recipe | - | - | + |
 | PUT recipe | - | - | + |
-| POST tag | - | - | + |
-| POST ingredient | - | - | + |
+| DELETE recipes | - | - | + |
+| Tag CRUD | - | read | + |
+| Assign/Remove tags | - | - | + |
 
 ## Endpoints
 
@@ -45,19 +46,29 @@ Enum `measurement_unit`: `g`, `ml`, `tsp`, `tbsp`, `cup`, `pcs`
 | GET | `/api/recipes/tags` | Всі теги (поточна мова) |
 | GET | `/api/recipes/:id` | Деталі рецепту |
 
-### Admin (web)
+### Admin — Recipes (web)
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
 | GET | `/api/admin/recipes` | ADMIN+ | Список рецептів |
 | GET | `/api/admin/recipes/:id` | ADMIN+ | Деталі |
+| GET | `/api/admin/recipes/:id/full` | ADMIN+ | Рецепт з усіма перекладами |
 | POST | `/api/admin/recipes` | SUPER_ADMIN | Створити рецепт |
 | PUT | `/api/admin/recipes/:id` | SUPER_ADMIN | Оновити рецепт |
-| POST | `/api/admin/recipes/delete` | SUPER_ADMIN | Bulk delete (`{ ids: string[] }`) |
-| GET | `/api/admin/recipes/:id/full` | ADMIN+ | Рецепт з усіма перекладами |
-| GET | `/api/admin/recipes/tags/all` | ADMIN+ | Всі теги |
-| POST | `/api/admin/recipes/tags` | SUPER_ADMIN | Створити тег |
+| POST | `/api/admin/recipes/delete` | SUPER_ADMIN | Bulk delete `{ ids: string[] }` |
+| POST | `/api/admin/recipes/import` | SUPER_ADMIN | CSV import (multipart/form-data) |
+| GET | `/api/admin/recipes/tags/all` | ADMIN+ | Всі теги (legacy, для фільтра) |
 | GET | `/api/admin/recipes/ingredients/all` | ADMIN+ | Всі інгредієнти |
-| POST | `/api/admin/recipes/ingredients` | SUPER_ADMIN | Створити інгредієнт |
+
+### Admin — Tags (web)
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| GET | `/api/admin/tags` | ADMIN+ | Список тегів з recipe_count та усіма перекладами |
+| GET | `/api/admin/tags/:id` | ADMIN+ | Деталі тегу |
+| POST | `/api/admin/tags` | SUPER_ADMIN | Створити тег `{ translations: [{language, name}] }` |
+| PUT | `/api/admin/tags/:id` | SUPER_ADMIN | Оновити переклади тегу |
+| DELETE | `/api/admin/tags/:id` | SUPER_ADMIN | Видалити тег (каскадно з recipe_tags) |
+| POST | `/api/admin/tags/assign` | SUPER_ADMIN | Додати теги до рецептів `{ recipe_ids, tag_ids }` |
+| POST | `/api/admin/tags/remove` | SUPER_ADMIN | Зняти теги з рецептів `{ recipe_ids, tag_ids }` |
 
 ## Фільтри (GET /recipes)
 
@@ -127,9 +138,12 @@ Enum `measurement_unit`: `g`, `ml`, `tsp`, `tbsp`, `cup`, `pcs`
 - 1г жирів = 9 ккал
 - `calories = proteins_g * 4 + carbs_g * 4 + fats_g * 9`
 
-## Seed теги
+## Теги
 
-Health, Vegetarian, Keto, Breakfast, Lunch, Dinner — вже є в БД з перекладами на uk/en/ru/es.
+Теги — окремий domain (`admin/tags/`). Мають переклади на 20 мов (як рецепти).
+Створюються і менеджаться з адмінки (сторінка `/tags`).
+При CSV імпорті теги створюються автоматично з перекладами по індексу.
+Якщо тег вже існує (за назвою першої мови) — перевикористовується і додаються відсутні переклади.
 
 ## Deploy
 

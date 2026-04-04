@@ -2,6 +2,7 @@
 
 import { useState, useDeferredValue } from 'react'
 import { useGetRecipes, useGetTags, useImportRecipes, useGetRecipeFull, useDeleteRecipes } from '@/state/domains/recipe'
+import { useGetAllTags, useAssignTags, useRemoveTags } from '@/state/domains/tag'
 import type { RecipeFilters } from '@/data'
 
 export const useRecipesPage = () => {
@@ -31,6 +32,13 @@ export const useRecipesPage = () => {
   const { importRecipes, isPending: isImporting } = useImportRecipes()
   const { recipe: selectedRecipe, isLoading: isDetailLoading } = useGetRecipeFull(selectedId ?? '')
   const { deleteRecipes, isPending: isDeleting } = useDeleteRecipes()
+  const { tags: allTags } = useGetAllTags()
+  const { assignTags, isPending: isAssigning } = useAssignTags()
+  const { removeTags, isPending: isRemoving } = useRemoveTags()
+
+  // Tag assign/remove dialogs
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
 
   const totalPages = Math.ceil(total / 20)
 
@@ -103,8 +111,11 @@ export const useRecipesPage = () => {
     isCreateOpen, handleCloseCreate, handleCreated,
     handleRowClick, handleCloseDetail, handleAddRecipe, handleClearFilters,
     setPage,
-    // Selection & delete
+    // Selection & actions
     selectedIds, handleToggleSelect, handleToggleSelectAll, handleClearSelection,
     isDeleteDialogOpen, setIsDeleteDialogOpen, handleDeleteSelected, isDeleting,
+    // Tag assign/remove
+    allTags, isAssignDialogOpen, setIsAssignDialogOpen, isRemoveDialogOpen, setIsRemoveDialogOpen,
+    assignTags, removeTags, isAssigning, isRemoving,
   }
 }

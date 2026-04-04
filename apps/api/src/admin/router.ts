@@ -9,6 +9,7 @@ import { notificationsRoutes } from './notifications/index.ts'
 import { languageRoutes } from './languages/index.ts'
 import { uploadRoutes } from './upload/index.ts'
 import { productRoutes } from './products/index.ts'
+import { tagRoutes } from './tags/index.ts'
 
 const adminRouter = new Hono()
 
@@ -25,5 +26,6 @@ adminRouter.route('/notifications', notificationsRoutes)
 adminRouter.route('/languages', languageRoutes)
 adminRouter.route('/upload', uploadRoutes)
 adminRouter.route('/products', productRoutes)
+adminRouter.route('/tags', tagRoutes)
 
 export { adminRouter }
