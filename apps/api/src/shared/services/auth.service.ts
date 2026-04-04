@@ -12,6 +12,12 @@ interface RegisterParams {
 }
 
 export const AuthService = {
+  checkEmail: async (email: string) => {
+    const { data } = await supabaseAdmin.auth.admin.listUsers()
+    const exists = (data?.users ?? []).some((u) => u.email === email)
+    return { exists }
+  },
+
   login: async ({ email, password }: LoginParams) => {
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email,

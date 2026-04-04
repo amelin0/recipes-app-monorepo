@@ -44,7 +44,22 @@
       "Bash(cp -r /tmp/vercel-agent-skills/skills/composition-patterns /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/composition-patterns)",
       "Bash(cp /tmp/vercel-agent-skills/skills/web-design-guidelines/SKILL.md /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/web/web-design-guidelines.md)",
       "Bash(git status:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(find /Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/apps/mobile -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"useStyles\\\\|createStyleSheet\" {} \\\\;)",
+      "Bash(pnpm --filter @dns/mobile add zustand @tanstack/react-query expo-secure-store)",
+      "Bash(pnpm --filter @dns/mobile add @react-native-async-storage/async-storage)",
+      "Bash(curl -sI \"https://www.figma.com/api/mcp/asset/7b28834f-805f-402a-9e27-a27bf7cfc554\")",
+      "Bash(curl -sL -o /tmp/test-icon.svg \"https://www.figma.com/api/mcp/asset/2847e22b-4651-4db1-af97-298068ee2136\")",
+      "Read(//tmp/**)",
+      "Bash(curl -sL -o tab-health-inactive.svg \"https://www.figma.com/api/mcp/asset/2847e22b-4651-4db1-af97-298068ee2136\")",
+      "Bash(curl -sL -o tab-diary-inactive.svg \"https://www.figma.com/api/mcp/asset/40623bf4-ac9d-4e86-82be-25df69882dad\")",
+      "Bash(curl -sL -o tab-stats-inactive.svg \"https://www.figma.com/api/mcp/asset/5ab03cd8-177c-4dee-807f-42cf6703b2f0\")",
+      "Bash(curl -sL -o tab-profile-inactive.svg \"https://www.figma.com/api/mcp/asset/07ac85ae-662f-4cae-8e69-fd08da821ff9\")",
+      "Bash(curl -sL -o tab-health-active.svg \"https://www.figma.com/api/mcp/asset/cf9e07fa-c674-44cc-9a9c-5e8995695296\")",
+      "Bash(curl -sL -o tab-diary-active.svg \"https://www.figma.com/api/mcp/asset/d26050ca-b0c1-4921-bcc3-b4a96cab3477\")",
+      "Bash(curl -sL -o tab-stats-active.svg \"https://www.figma.com/api/mcp/asset/57c0b2f7-6a04-426e-a1ff-1fbd7b278f2e\")",
+      "Bash(curl -sL -o tab-profile-active.svg \"https://www.figma.com/api/mcp/asset/62541900-f421-4fe7-b2ef-8c06a8331c40\")",
+      "Bash(npx prettier:*)"
     ],
     "additionalDirectories": [
       "/Users/serhiiamelin/Desktop/Recipes/recipes-app-monorepo/.claude/skills/mobile/styles",
