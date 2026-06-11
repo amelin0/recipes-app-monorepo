@@ -1,0 +1,16 @@
+# Meal Plan (client)
+
+Weekly meal plan by day_of_week + meal_type: copy day, send to shopping list.
+
+Each feature lives in its own folder containing `spec.md` + `plan.md`
+(plus any supporting artifacts).
+
+## Specs
+
+| Feature | Status | Owner | Updated |
+|---|---|---|---|
+
+## Related
+
+- Code: `apps/api/src/client/`
+- Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)

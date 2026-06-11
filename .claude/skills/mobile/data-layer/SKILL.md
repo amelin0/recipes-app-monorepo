@@ -1,332 +1,175 @@
 ---
 name: data-layer
-description: Patterns for API communication, types, optional mappers, and local storage. Covers domain.api.ts, domain.types.ts, domain.mapper.ts files and Axios HTTP service.
+description: Data layer patterns for the DNS mobile app. Covers remote API files + types, local storages (MMKV + SecureStore), and the relationship between data and state layers.
 ---
 
 # Data Layer Skill
 
-## Purpose
-
-Defines patterns for API communication, types, optional mappers, and local storage.
-
----
-
 ## Structure
 
 ```
-data/
+src/data/
 ├── remote/
 │   └── domains/
 │       ├── auth/
 │       │   ├── auth.api.ts
-│       │   ├── auth.types.ts
-│       │   ├── auth.mapper.ts   ← optional
-│       │   └── index.ts
-│       └── user/
-│           ├── user.api.ts
-│           ├── user.types.ts
-│           └── index.ts
-├── local/
-│   └── domains/
-│       ├── auth/
-│       │   ├── auth-storage.ts
-│       │   └── index.ts
-│       └── app/
-│           ├── app-storage.ts
-│           └── index.ts
-└── index.ts
+│       │   └── auth.types.ts
+│       ├── workout/
+│       │   ├── workout.api.ts
+│       │   └── workout.types.ts
+│       └── index.ts                  # barrel
+└── local/
+    └── domains/
+        ├── auth/
+        │   ├── auth-storage.ts       # AuthStorage (tokens via SecureStore)
+        │   └── index.ts
+        ├── app/
+        │   ├── app-storage.ts        # AppStorage (language, onboarding, MMKV)
+        │   └── index.ts
+        └── index.ts
 ```
 
-**Note:** HTTP client and storage service are in `shared/services/`.
+## Two-layer Storage Architecture
 
----
+Follow the same split as the remote/local dichotomy:
 
-## Remote Data (API)
+### Layer 1 — generic wrappers (low-level)
 
-### Types File (`.types.ts`)
+Location: `src/shared/services/storages/`. Two thin wrappers over the underlying engines:
 
-Single source of truth for all domain types. Used by API layer **and** components.
+- [`storage.service.ts`](../../../../apps/mobile/src/shared/services/storages/storage.service.ts) — **MMKV** wrapper. Sync, fast key/value. For preferences, caches, app-level flags.
+- [`secure-storage.service.ts`](../../../../apps/mobile/src/shared/services/storages/secure-storage.service.ts) — **expo-secure-store** wrapper. Encrypted, async. Exclusively for sensitive data (auth tokens, biometric keys).
 
-**Naming conventions:**
+Both expose the same API (`writeData`, `readData`, `deleteData`) with a typed `LocalDataKeys` / `SecureDataKeys` union. The barrel re-exports them with distinct prefixes so callers never confuse the two:
 
-| Kind | Suffix | Example | Used in |
-|------|--------|---------|---------|
-| Request types | `Request` | `SendOtpEmailRequest` | API layer only |
-| Domain models | Clean name | `Profile`, `Token` | Everywhere (components, hooks, etc.) |
-| Enums / unions | Clean name | `UserStatus`, `KycStatus` | Everywhere |
-| API wrapper | `ApiResponse<T>` | `ApiResponse<Profile>` | API layer only |
-
-```typescript
-// src/data/remote/domains/auth/auth.types.ts
-
-// Enums
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'DELETED';
-
-// Shared
-export interface ApiResponse<T> {
-  statusCode: number;
-  meta: Record<string, unknown>;
-  payload: T;
-}
-
-export interface Token {
-  value: string;
-  exp: number;
-}
-
-// Domain models — clean names, usable in components
-export interface Profile {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  status: UserStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Request types — suffixed, API-layer only
-export interface SendOtpEmailRequest {
-  email: string;
-}
-
-// Response types — clean descriptive names
-export interface EmailVerification {
-  email: string;
-  temporaryToken: string;
-  registrationStatus: RegistrationStatus;
-}
-
-export interface AuthSession {
-  user: Profile;
-  accessToken: Token;
-  refreshToken: Token;
-}
+```ts
+// shared/services/storages/index.ts re-exports:
+writeLocalData / readLocalData / deleteLocalData / clearLocalStorage  // MMKV
+writeSecureData / readSecureData / deleteSecureData                    // SecureStore
 ```
 
----
+**Rules for the generic layer**:
 
-### API File (`.api.ts`)
+1. **Keep it dumb** — no domain concepts. It only knows keys and serializes/deserializes JSON.
+2. **Typed keys** — add every new key to the `LocalDataKeys` / `SecureDataKeys` union. TypeScript will force you to use a known key at every call site.
+3. **Never import from here directly in view/state/domain code** — always go through a domain storage class.
+4. **Sensitive data only in SecureStore** — tokens, biometric keys, RSA private keys. Everything else in MMKV.
 
-API files contain endpoint calls using `HttpService` from shared.
+### Layer 2 — domain storages (high-level)
 
-```typescript
-// src/data/remote/domains/auth/auth.api.ts
-import { HttpService } from '@/shared/services';
+Location: `src/data/local/domains/{domain}/{domain}-storage.ts`. One **class per domain** with static methods that speak the domain language:
 
-import {
-  ApiResponse,
-  AuthSession,
-  EmailVerification,
-  SendOtpEmailRequest,
-  OtpResult,
-  VerifyEmailOtpRequest
-} from './auth.types';
+```ts
+// data/local/domains/auth/auth-storage.ts
+import { deleteSecureData, readSecureData, writeSecureData } from '@/shared/services';
 
-const ENDPOINTS = {
-  OTP_EMAIL: '/users/auth/otp/email',
-  OTP_EMAIL_VERIFY: '/users/auth/otp/email/verify',
-  PIN_VERIFY: '/users/auth/pin/verify'
-};
-
-export const AuthApi = {
-  sendOtpEmail: (data: SendOtpEmailRequest) => {
-    return HttpService.post<ApiResponse<OtpResult>>(ENDPOINTS.OTP_EMAIL, data);
-  },
-
-  verifyEmailOtp: (data: VerifyEmailOtpRequest) => {
-    return HttpService.post<ApiResponse<EmailVerification>>(ENDPOINTS.OTP_EMAIL_VERIFY, data);
-  },
-
-  verifyPin: (data: VerifyPinRequest) => {
-    return HttpService.post<ApiResponse<AuthSession>>(ENDPOINTS.PIN_VERIFY, data);
-  }
-};
-```
-
----
-
-### Mapper File (`.mapper.ts`) — OPTIONAL
-
-**Only create a mapper when there is actual transformation:**
-- Restructuring nested objects (e.g. flattening `Token` → flat strings)
-- Computing derived fields (e.g. `fullName` from `firstName` + `lastName`)
-- Converting types (e.g. date string → `Date` object)
-- Renaming fields (e.g. `countryCode` → `code`)
-
-**Do NOT create a mapper for 1:1 copies.** If the API response is already the shape you need, use the types directly.
-
-```typescript
-// src/data/remote/domains/auth/auth.mapper.ts
-import { AuthSession, EnabledCountries, EnabledCountry, Profile, Token } from './auth.types';
-
-// Mapped domain models (different shape from API types)
-export interface AuthTokens {
-  accessToken: string;
-  accessTokenExp: number;
-  refreshToken: string;
-  refreshTokenExp: number;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  fullName: string;        // ← computed
-  createdAt: Date;          // ← converted from string
-  updatedAt: Date;          // ← converted from string
-}
-
-export interface AuthResult {
-  user: UserProfile;
-  tokens: AuthTokens;
-}
-
-export interface CountryOption {
-  code: string;             // ← renamed from countryCode
-  name: string;             // ← renamed from countryName
-}
-
-export const authMapper = {
-  toTokens: (accessToken: Token, refreshToken: Token): AuthTokens => ({
-    accessToken: accessToken.value,
-    accessTokenExp: accessToken.exp,
-    refreshToken: refreshToken.value,
-    refreshTokenExp: refreshToken.exp
-  }),
-
-  toUserProfile: (dto: Profile): UserProfile => ({
-    id: dto.id,
-    email: dto.email,
-    firstName: dto.firstName,
-    lastName: dto.lastName,
-    fullName: [dto.firstName, dto.lastName].filter(Boolean).join(' '),
-    createdAt: new Date(dto.createdAt),
-    updatedAt: new Date(dto.updatedAt)
-  }),
-
-  toAuthResult: (dto: AuthSession): AuthResult => ({
-    user: authMapper.toUserProfile(dto.user),
-    tokens: authMapper.toTokens(dto.accessToken, dto.refreshToken)
-  }),
-
-  toCountryOptions: (dto: EnabledCountries): CountryOption[] =>
-    dto.countries.map(c => ({ code: c.countryCode, name: c.countryName }))
-};
-```
-
----
-
-### Barrel Export
-
-```typescript
-// src/data/remote/domains/auth/index.ts
-export { AuthApi } from './auth.api';
-export * from './auth.types';
-
-// Only if mapper exists
-export { authMapper } from './auth.mapper';
-export type { AuthResult, AuthTokens, CountryOption, UserProfile } from './auth.mapper';
-
-// src/data/index.ts
-export * from './remote/domains/auth';
-export * from './remote/domains/user';
-```
-
----
-
-## Local Data (Storage)
-
-Storage instances use services from `shared/services/`.
-
-```typescript
-// src/data/local/domains/auth/auth-storage.ts
-import { deleteData, readData, writeData } from '@/shared/services';
+interface TokenData { accessToken: string; refreshToken?: string }
+const TOKEN_KEY = 'token';
 
 export class AuthStorage {
-  static token: string;
+  static async saveTokens(data: TokenData) { await writeSecureData(TOKEN_KEY, data); }
+  static async getAccessToken() { return (await readSecureData<TokenData>(TOKEN_KEY))?.accessToken ?? null; }
+  static async getRefreshToken() { return (await readSecureData<TokenData>(TOKEN_KEY))?.refreshToken ?? null; }
+  static async removeTokens() { await deleteSecureData(TOKEN_KEY); }
+}
+```
 
-  static async saveTokens(data: any) {
-    AuthStorage.token = data.accessToken;
-    await writeData('token', data);
+```ts
+// data/local/domains/app/app-storage.ts
+import { readLocalData, writeLocalData } from '@/shared/services';
+
+export class AppStorage {
+  private static _appLanguage?: string;
+
+  static saveAppLanguage(language: string) {
+    AppStorage._appLanguage = language;
+    writeLocalData('appLanguage', { appLanguage: language });
   }
 
-  static async getAccessToken() {
-    if (AuthStorage.token) {
-      return AuthStorage.token;
+  static getAppLanguage(): string | null {
+    if (AppStorage._appLanguage) return AppStorage._appLanguage;
+    const data = readLocalData<{ appLanguage: string }>('appLanguage');
+    if (data?.appLanguage) {
+      AppStorage._appLanguage = data.appLanguage;
+      return data.appLanguage;
     }
-
-    const t = await readData<any>('token');
-    if (t?.accessToken) {
-      AuthStorage.token = t.accessToken;
-    }
-
-    return t ? t.accessToken : null;
-  }
-
-  static async removeTokens() {
-    AuthStorage.token = '';
-    await deleteData('token');
+    return null;
   }
 }
 ```
 
----
+**Rules for domain storages**:
 
-## File Naming Conventions
+1. **One class per domain** — `AuthStorage`, `AppStorage`, `UserStorage`.
+2. **Static methods, no instances** — storage is global.
+3. **Consumer-friendly API** — method names are verbs in the domain's language: `saveTokens`, `getAccessToken`, `saveOnboardingCompleted`. Never expose raw key names to callers.
+4. **In-memory cache is OK** — for frequently-read values (language, flags), cache in a private static field to avoid re-reading MMKV on every call.
+5. **Never use raw `createMMKV`/`SecureStore.*` in a domain storage** — always go through the shared wrappers. This keeps serialization consistent and the key surface auditable.
+6. **Callers never touch the shared layer** — views/hooks/services only import domain storage classes (`AuthStorage.saveTokens(...)`), never `writeSecureData`.
 
-### File Names (kebab-case with suffix)
-
-| Pattern               | Example            | Purpose                          |
-| --------------------- | ------------------ | -------------------------------- |
-| `[domain].api.ts`     | `auth.api.ts`      | API endpoint calls               |
-| `[domain].types.ts`   | `auth.types.ts`    | All types (request + domain)     |
-| `[domain].mapper.ts`  | `auth.mapper.ts`   | Transformation (optional)        |
-| `[domain]-storage.ts` | `auth-storage.ts`  | Local storage operations         |
-
-### Export Names (PascalCase)
+## Remote API Pattern
 
 ```typescript
-// File: auth.api.ts → Export: AuthApi
-export const AuthApi = { ... };
-
-// File: auth.mapper.ts → Export: authMapper
-export const authMapper = { ... };
-
-// File: auth-storage.ts → Export: AuthStorage
-export class AuthStorage { ... }
-```
-
-### Usage Example
-
-```typescript
-import { AuthApi, Profile, SendOtpEmailRequest } from '@/data';
-import { authMapper, UserProfile } from '@/data';
-import { AuthStorage } from '@/data/local/domains/auth';
+// data/remote/domains/workout/workout.api.ts
 import { HttpService } from '@/shared/services';
+import { Workout, CreateWorkoutRequest, UpdateWorkoutRequest } from './workout.types';
+
+const getWorkouts = () => HttpService.get<Workout[]>('/workout');
+const getWorkout = (id: string) => HttpService.get<Workout>(`/workout/${id}`);
+const createWorkout = (data: CreateWorkoutRequest) => HttpService.post<Workout>('/workout', data);
+const updateWorkout = (id: string, data: UpdateWorkoutRequest) => HttpService.put<Workout>(`/workout/${id}`, data);
+const deleteWorkout = (id: string) => HttpService.delete(`/workout/${id}`);
+
+export const WorkoutApi = {
+    getWorkouts,
+    getWorkout,
+    createWorkout,
+    updateWorkout,
+    deleteWorkout,
+};
 ```
 
----
+## Types File Pattern
 
-## Decision: Types vs Mapper
+```typescript
+// data/remote/domains/workout/workout.types.ts
+export interface Workout {
+    id: string;
+    name: string;
+    description: string;
+    type: WorkoutType;
+    exercises: WorkoutExercise[];
+    createdAt: string;
+    updatedAt: string;
+}
 
+export enum WorkoutType {
+    STRENGTH = 'STRENGTH',
+    ENDURANCE = 'ENDURANCE',
+    HYBRID = 'HYBRID',
+    HYROX = 'HYROX',
+    CROSSFIT = 'CROSSFIT',
+}
+
+export interface CreateWorkoutRequest { name: string; description?: string; type: WorkoutType; }
+export interface UpdateWorkoutRequest { name?: string; description?: string; type?: WorkoutType; }
 ```
-API returns camelCase and shape is usable as-is?
-  → Use types directly. No mapper needed.
 
-API returns snake_case, or nested structure needs flattening,
-or you need computed fields (fullName, Date conversion)?
-  → Create a mapper. Mapped models live in the mapper file.
-```
+## Rules — Remote
 
----
+1. **API methods are thin wrappers** — no business logic, just HTTP calls
+2. **Types live with their domain** — `workout.types.ts` next to `workout.api.ts`
+3. **One API object per domain** — exported as `WorkoutApi`, `AuthApi`, etc.
+4. **Methods use `HttpService`** — from `@/shared/services`
+5. **Barrel exports** — `import { WorkoutApi, Workout } from '@/data'`
+6. **No React imports** — data layer is pure TypeScript
+7. **Response types match API** — keep types in sync with backend DTOs
 
-## Summary
+## Anti-Patterns
 
-| File             | Purpose                        | Required |
-| ---------------- | ------------------------------ | -------- |
-| `*.api.ts`       | API calls                      | Yes      |
-| `*.types.ts`     | All types (request + domain)   | Yes      |
-| `*.mapper.ts`    | Transformation to domain model | Optional |
-| `*-storage.ts`   | Local storage operations       | Yes      |
+- Business logic in API files — keep in state hooks or services
+- Shared types scattered across files — keep per-domain
+- Direct axios usage — always use the configured `HttpService`
+- Transforming data in API layer — use mappers if needed (separate file)
+- `createMMKV(...)` or `SecureStore.setItemAsync(...)` in screens/hooks — always go through a domain storage class
+- Storing auth tokens (or anything sensitive) in MMKV — use SecureStore via `AuthStorage`

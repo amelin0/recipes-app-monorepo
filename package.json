@@ -1,26 +1,64 @@
 {
-  "name": "digital-nutrition-studio",
-  "private": true,
-  "scripts": {
-    "dev:web": "pnpm --filter @dns/web dev",
-    "dev:mobile": "pnpm --filter @dns/mobile start",
-    "dev:api": "pnpm --filter @dns/api supabase start",
-    "build:web": "pnpm --filter @dns/web build",
-    "generate:types": "pnpm --filter @dns/api supabase gen types --lang=typescript --local > apps/api/src/types/database.ts",
-    "db:push": "pnpm --filter @dns/api supabase db push",
-    "db:reset": "pnpm --filter @dns/api supabase db reset",
-    "deploy:web": "vercel --prod",
-    "deploy:web:preview": "vercel"
-  },
-  "devDependencies": {
-    "vercel": "^50.37.0"
-  },
-  "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
-  "version": "1.0.0",
-  "dependencies": {
-    "expo": "~55.0.8",
-    "react": "19.2.0",
-    "react-native": "0.83.2"
-  },
-  "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48"
+    "name": "digital-nutrition-studio",
+    "version": "0.0.1",
+    "private": true,
+    "description": "Digital Nutrition Studio - recipe management and meal planning platform",
+    "scripts": {
+        "install:mobile": "pnpm install --filter @dns/mobile...",
+        "install:api": "pnpm install --filter @dns/api...",
+        "install:server": "pnpm install --filter @dns/api... --ignore-scripts",
+        "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:mobile\"",
+        "dev:api": "pnpm --filter @dns/api dev",
+        "dev:mobile": "pnpm --filter @dns/mobile dev",
+        "dev:web": "pnpm --filter @dns/web dev",
+        "build:api": "pnpm --filter @dns/api build",
+        "build:mobile": "pnpm --filter @dns/mobile build",
+        "build:web": "pnpm --filter @dns/web build",
+        "deploy:web": "vercel --prod",
+        "deploy:web:preview": "vercel",
+        "lint": "pnpm -r lint",
+        "typecheck": "pnpm -r typecheck",
+        "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+        "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+        "db:generate": "pnpm --filter @dns/database db:generate",
+        "db:migrate": "pnpm --filter @dns/database db:migrate",
+        "db:studio": "pnpm --filter @dns/database db:studio",
+        "db:seed": "pnpm --filter @dns/database db:seed",
+        "clean": "rm -rf node_modules && pnpm -r exec rm -rf dist node_modules .turbo"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.2",
+        "concurrently": "^9.1.0",
+        "eslint": "^9.39.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-import-x": "^4.16.2",
+        "eslint-plugin-unicorn": "^64.0.0",
+        "eslint-plugin-unused-imports": "^4.4.1",
+        "prettier": "^3.8.1",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.57.2",
+        "vercel": "^50.37.0"
+    },
+    "pnpm": {
+        "overrides": {
+            "node-forge": ">=1.4.0",
+            "esbuild@<=0.24.2": ">=0.25.0",
+            "ajv@>=7.0.0-alpha.0 <8.18.0": ">=8.18.0",
+            "brace-expansion@^1": "^1.1.13",
+            "brace-expansion@^2": "^2.0.3",
+            "picomatch@<2.3.2": ">=2.3.2",
+            "picomatch@>=4.0.0 <4.0.4": ">=4.0.4",
+            "path-to-regexp@>=8.0.0 <8.4.0": ">=8.4.0",
+            "lodash@>=4.0.0 <=4.17.23": ">=4.18.0",
+            "lodash@<=4.17.23": ">=4.18.0",
+            "@xmldom/xmldom": "^0.8.12"
+        },
+        "neverBuiltDependencies": [
+            "uniwind"
+        ]
+    },
+    "packageManager": "pnpm@9.15.0",
+    "engines": {
+        "node": ">=20.0.0"
+    }
 }

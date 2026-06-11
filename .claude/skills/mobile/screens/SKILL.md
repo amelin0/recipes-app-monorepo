@@ -1,109 +1,114 @@
 ---
 name: screens
-description: Catalog of all screens in the app organized by domain. Covers screen hook pattern (useScreenName), presentational screen components, and Expo Router integration.
+description: Screen creation patterns for the DNS mobile app. Each screen = presentational component + business-logic hook. Covers the hook pattern, navigation, translations placement, and screen structure.
 ---
 
 # Screens Skill
 
-## Purpose
+## Screen Structure
 
-Catalog of all screens in the app, organized by domain.
+Each screen lives in a domain folder:
 
----
+```
+view/{domain}/{screen-name}/
+├── ScreenNameScreen.tsx    # JSX + useAppTranslation for copy
+├── useScreenNameScreen.ts  # Business logic ONLY (state, callbacks, queries, nav)
+├── components/             # Screen-local components (optional)
+│   ├── SectionHeader.tsx
+│   └── index.ts
+└── index.ts                # Barrel export
+```
 
-## Screen Conventions
+## Division of responsibilities
 
-- Every screen: `ScreenName.tsx` + `useScreenName.ts` hook
-- Screen is purely presentational — no `useState`, `useCallback`, `useQuery` directly
-- Hook returns `labels` object with all translated strings
-- Screen-specific sub-components go in `components/` subfolder
-- Screens with `Header` component use `pt-xs` (12px) padding top for consistency
+- **Screen (`.tsx`)** — renders JSX. Calls `useAppTranslation` directly for copy. Reads state + callbacks from the screen hook.
+- **Hook (`use*.ts`)** — business logic only. State, mutations, React Query, navigation calls, effects, memoization. **Never** calls `useAppTranslation`, **never** returns a `labels` object.
 
----
+This separation keeps each file focused on one concern. The hook can be tested without a translation context; the JSX stays human-readable with inline copy.
 
-## Auth Domain (`view/auth/`)
+## Screen Component Pattern
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `SignInScreen` | `(auth)/sign-in` | Email input + social auth buttons |
-| `EmailOtpScreen` | `(auth)/email-otp` | Email OTP verification |
-| `PhoneOtpScreen` | `(auth)/phone-otp` | Phone OTP verification |
-| `OnboardingScreen` | `(auth)/onboarding` | Welcome carousel/slides |
-| `CreatePasscodeScreen` | `(auth)/create-passcode` | PIN creation |
-| `EnterPinScreen` | `(auth)/enter-pin` | PIN entry for login |
-| `ResetPinScreen` | `(auth)/reset-pin` | PIN reset flow |
+```tsx
+// view/workout/workout-detail/WorkoutDetailScreen.tsx
+import React from 'react';
+import { View, Text, ScrollView } from 'react-native';
 
----
+import { AppButton } from '@/shared/ui/components';
+import { Skeleton } from '@/shared/ui/components';
+import { useAppTranslation } from '@/shared/utils/translations';
 
-## KYC Domain (`view/kyc/`)
+import { useWorkoutDetailScreen } from './useWorkoutDetailScreen';
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `SelectResidenceCountryScreen` | `(onboarding)/select-residence-country` | Country selection with form + Zod validation |
-| `PersonalInformationScreen` | `(onboarding)/personal-information` | Name/surname form |
-| `SelectBirthdayScreen` | `(onboarding)/select-birthday` | Date of birth via `DatePicker` widget |
-| `VerifyPhoneScreen` | `(onboarding)/verify-phone` | Phone input via `PhoneInput` widget |
-| `KycVerificationScreen` | `(onboarding)/kyc-verification` | Document upload (ID, selfie) |
-| `KycStatusScreen` | `(onboarding)/kyc-status` | Verification status display |
+export function WorkoutDetailScreen() {
+  const { t } = useAppTranslation(['workout', 'common']);
+  const { workout, isLoading, handleStart } = useWorkoutDetailScreen();
 
----
+  if (isLoading) return <Skeleton />;
 
-## User Domain (`view/user/`)
+  return (
+    <ScrollView className="flex-1 bg-bg-canvas" contentContainerClassName="p-l pt-safe">
+      <Text className="text-title-lg text-content-primary">{workout.name}</Text>
+      <Text className="text-body-md text-content-secondary mt-xs">
+        {workout.description}
+      </Text>
+      <AppButton
+        label={t('workout:detail.startButton')}
+        onPress={handleStart}
+        className="mt-xl"
+      />
+    </ScrollView>
+  );
+}
+```
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `ProfileScreen` | `(tabs)/profile` | Main profile tab |
-| `ProfileInfoScreen` | `(app)/profile-info` | View/edit profile details |
-| `AccountAlmostReadyScreen` | `(app)/account-almost-ready` | Onboarding checklist |
-| `BiometricScreen` | `(app)/biometric` | Biometric auth setup |
-| `ChangePinScreen` | `(change-pin)/change-pin` | Current PIN entry |
-| `VerifyChangePinScreen` | `(change-pin)/verify-change-pin` | New PIN confirmation |
+## Screen Hook Pattern (business logic only)
 
----
+```typescript
+// view/workout/workout-detail/useWorkoutDetailScreen.ts
+import { useCallback } from 'react';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
-## Transactions Domain (`view/transactions/`)
+import { useGetWorkout } from '@/state/domains/workout';
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `TransactionsScreen` | `(tabs)/transactions` | Transaction history list |
-| `SendScreen` | `(transactions)/send` | Send money flow |
-| `ReceivePaymentScreen` | `(transactions)/receive-payment` | QR code + share for receiving |
-| `ScanQRScreen` | `(transactions)/scan-qr` | QR code scanner |
-| `ConvertScreen` | `(transactions)/convert` | Currency conversion |
-| `TopUpScreen` | `(transactions)/top-up` | Top up wallet |
+export function useWorkoutDetailScreen() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { workoutId } = route.params as { workoutId: string };
+  const { workout, isLoading } = useGetWorkout(workoutId);
 
----
+  const handleStart = useCallback(() => {
+    navigation.navigate('ActiveWorkout', { workoutId });
+  }, [navigation, workoutId]);
 
-## Wallets Domain (`view/wallets/`)
+  return { workout, isLoading, handleStart };
+  //                                      ^ no `labels`, no `t`, no translations
+}
+```
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `WalletsScreen` | `(tabs)/index` | Home tab — wallet slider + actions |
+## Rules
 
----
+1. **Screen = JSX + translations only** — `useAppTranslation` called inline in the `.tsx`; `t('ns:key')` used directly in JSX.
+2. **Hook = business logic only** — state, callbacks, queries, mutations, navigation, memoization. No `useAppTranslation`, no `labels`, no translation keys.
+3. **Never a `labels` object** — don't return translated strings from the hook. If you catch yourself adding a `labels` property, move the `t()` calls back into the `.tsx`.
+4. **Callbacks in `useCallback`** — all event handlers wrapped.
+5. **Navigation via the router** — `useRouter()` / `useRoute()` lives in the hook.
+6. **Loading + error states handled** — skeletons, error UI.
+7. **Screen-local components** — extract JSX blocks > 30 lines into a `components/` subfolder.
+8. **`className` only** — never `StyleSheet.create`, never inline `style={{}}`.
+9. **Design tokens only** — every color/spacing/radius/font-size from `global.css`. Never `bg-white`, `p-4`, `rounded-lg`, `text-xl`, `#hex` values (see [../styles/SKILL.md](../styles/SKILL.md)).
+10. **Typography utilities only** — `text-title-lg`, `text-body-md`, `text-caption` — never `text-2xl font-bold`.
+11. **Safe area via utilities** — `pt-safe`, `pb-safe` — not `SafeAreaView` or manual insets.
+12. **ScrollView container styles** — use `contentContainerClassName` (not `contentContainerStyle`).
 
-## Notifications Domain (`view/notifications/`)
+## Navigation Registration (Expo Router)
 
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `NotificationsScreen` | `(app)/notifications` | Notification list |
-| `NotificationDetailsScreen` | `(app)/notification-details` | Single notification detail |
-| `ActivityScreen` | `(app)/activity` | Activity feed |
+Screens are referenced from `src/app/` thin route files — each route imports the screen from `view/` and re-exports as default. See [`src/app/(app)/(auth)/sign-in.tsx`](../../../../apps/mobile/src/app/(app)/(auth)/sign-in.tsx) for the canonical one-liner pattern.
 
----
+## Anti-Patterns
 
-## Recipients Domain (`view/recipients/`)
-
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `RecipientsScreen` | `(app)/recipients` | Saved recipients list |
-
----
-
-## System Domain (`view/system/`)
-
-| Screen | Route | Description |
-|--------|-------|-------------|
-| `AnimatedSplashScreen` | — | Animated splash on app launch |
-| `MaintenanceScreen` | — | Server maintenance notice |
-| `UpdateAppScreen` | — | Force update prompt |
+- Direct API calls in screen files — use React Query hooks via the screen hook
+- Inline business logic in JSX — extract to the screen hook
+- Giant screen files > 150 lines — extract sub-components
+- Navigation logic in the screen component — move to the hook
+- **`labels` object returned from the hook** — banned. Put `useAppTranslation` in the `.tsx` (see [../localization/SKILL.md](../localization/SKILL.md))
+- Hardcoded `#hex` colors, `fontSize: 16`, `padding: 16` — use tokens

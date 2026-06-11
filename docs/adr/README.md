@@ -1,0 +1,33 @@
+# Architectural Decision Records
+
+This folder captures **why** we made architectural choices — not what they are (that's documented elsewhere).
+
+Each ADR is a small Markdown file describing a single decision. Once written, an ADR is rarely edited; if a decision is reversed, write a new ADR that **supersedes** the old one and update the old one's status.
+
+## Format
+
+Use [`../templates/adr.md`](../templates/adr.md) (or run `/new-adr <title>`).
+Filename: `NNNN-kebab-case-title.md` (e.g. `0003-uniwind-pro-over-nativewind.md`).
+Keep numbering monotonic — never reuse a number.
+
+## Status values
+
+- **Proposed** — under discussion
+- **Accepted** — current decision in effect
+- **Superseded by ADR-NNNN** — replaced by a newer decision (link forward)
+- **Deprecated** — no longer applicable, no replacement
+
+## When to write one
+
+A decision is ADR-worthy when at least one of these is true:
+- It rules out a credible alternative ("we picked X over Y").
+- Reversing it later will be expensive (data migration, large refactor).
+- A new contributor would reasonably ask "why?" without reading the codebase.
+
+Skip an ADR for routine choices that follow from existing skills / conventions.
+
+## Index
+
+<!-- Update this list when adding a new ADR. -->
+
+- _(none yet)_

@@ -1,562 +1,180 @@
 ---
 name: components
-description: Patterns for creating React Native components styled with Uniwind (className). Covers simple reusable components like Button, Input, Header, and their prop interfaces.
+description: Component creation patterns for the DNS mobile app. Covers atomic UI components, composed widgets, props design, and Uniwind Pro styling.
 ---
 
 # Components Skill
 
-## Purpose
+## Component Categories
 
-Defines patterns for creating React Native components styled with Uniwind (`className`).
+### UI Components (`shared/ui/components/`)
 
----
-
-## Styling Rule
-
-**All components use Uniwind `className` for styling.** No `StyleSheet.create()`, no inline `style` objects, no separate `.styles.ts` files. Design tokens are defined in `src/global.css` and referenced via Tailwind utility classes.
-
-Exceptions: Reanimated animated styles, gesture-driven values, or third-party libraries that strictly require style objects.
-
----
-
-## Component Types
-
-### 1. Screen Components (`view/[domain]/`)
-
-Full-page components that represent screens. **Every screen has a dedicated `useScreenName.ts` hook** that encapsulates all logic. The screen component itself is purely presentational.
-
-#### Screen Hook (`useScreenName.ts`)
-
-Contains ALL screen logic: state, mutations, navigation, translations, computed values.
-
-```typescript
-// src/view/auth/sign-in/useSignInScreen.ts
-import { useCallback, useState } from 'react';
-import { router } from 'expo-router';
-
-import { useAppTranslation } from '@/shared/utils/translations';
-import { useSignInEmail, useSendOtpEmail } from '@/state/domains/auth/hooks';
-
-export const useSignInScreen = () => {
-  const { t } = useAppTranslation(['auth', 'common']);
-  const [email, setEmail] = useState('');
-
-  const { signInEmail, isPending: isSignInPending } = useSignInEmail();
-  const { sendOtpEmail, isPending: isSendOtpPending } = useSendOtpEmail();
-
-  const isLoading = isSignInPending || isSendOtpPending;
-
-  const handleContinue = useCallback(async () => {
-    if (!email.trim()) return;
-    try {
-      await signInEmail({ email: email.trim() });
-    } catch {
-      try {
-        await sendOtpEmail({ email: email.trim() });
-      } catch {
-        // Handle error
-      }
-    }
-  }, [email, signInEmail, sendOtpEmail]);
-
-  const handleContactSupport = useCallback(() => {
-    // Navigate to support
-  }, []);
-
-  const handleBack = useCallback(() => {
-    if (router.canGoBack()) router.back();
-  }, []);
-
-  const handleAppleAuth = useCallback(() => {
-    // Apple OAuth
-  }, []);
-
-  const handleGoogleAuth = useCallback(() => {
-    // Google OAuth
-  }, []);
-
-  return {
-    email,
-    setEmail,
-    isLoading,
-    isDisabled: !email.trim(),
-    handleContinue,
-    handleContactSupport,
-    handleBack,
-    handleAppleAuth,
-    handleGoogleAuth,
-    labels: {
-      title: t('auth:emailTitle'),
-      subtitle: t('auth:emailSubtitle'),
-      placeholder: t('auth:emailPlaceholder'),
-      continueButton: t('common:continue'),
-      orContinueWith: t('auth:orContinueWith'),
-      contactSupport: t('auth:contactSupport'),
-    },
-  };
-};
-```
-
-#### Screen Component (presentational)
-
-Destructures the hook return and renders JSX. **No logic inside.**
-
-```typescript
-// src/view/auth/sign-in/SignInScreen.tsx
-import React from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { Button, SocialButton } from '@/shared/ui/components';
-import { Input } from '@/shared/ui/components/inputs';
-import { Header } from '@/shared/ui/headers';
-import { useSignInScreen } from './useSignInScreen';
-
-export const SignInScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
-  const {
-    email,
-    setEmail,
-    isLoading,
-    isDisabled,
-    handleContinue,
-    handleContactSupport,
-    handleBack,
-    handleAppleAuth,
-    handleGoogleAuth,
-  } = useSignInScreen();
-
-  return (
-    <View className="flex-1 bg-bg-primary" style={{ paddingTop: insets.top }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        {/* Header, form, buttons — all purely presentational */}
-      </KeyboardAvoidingView>
-    </View>
-  );
-};
-```
-
-#### File Structure
-
-```
-view/auth/sign-in/
-├── SignInScreen.tsx        # Presentational — renders JSX
-├── useSignInScreen.ts     # All logic — state, handlers, navigation
-└── components/            # Screen-specific sub-components
-    └── LoginForm.tsx
-```
-
-**Rules:**
-
-- Named with `Screen` suffix
-- **Every screen has a `useScreenName.ts` hook** — no exceptions
-- Screen component is **purely presentational** — only destructures hook + renders
-- No `useState`, `useCallback`, `useMutation`, `useQuery` directly in screens
-- Screen hooks consume domain hooks from `state/domains/`
-- Located in `view/[domain]/[screen-name]/`
-- No separate `.styles.ts` files — use `className` directly
-
----
-
-### 2. Simple Components (`shared/ui/components/`)
-
-Stateless, highly reusable, atomic components organized by category.
-
-#### Folder Structure
+Atomic, reusable across all domains. No business logic.
 
 ```
 shared/ui/components/
-├── buttons/
-│   ├── Button.tsx
-│   ├── IconButton.tsx
-│   ├── LinkButton.tsx
-│   └── index.ts
-├── inputs/
-│   ├── Input.tsx
-│   ├── TextArea.tsx
-│   ├── Checkbox.tsx
-│   ├── Switch.tsx
-│   └── index.ts
-├── layouts/
-│   ├── Container.tsx
-│   ├── Row.tsx
-│   ├── Column.tsx
-│   ├── Spacer.tsx
-│   └── index.ts
-├── toasts/
-│   ├── Toast.tsx
-│   ├── ToastContainer.tsx
-│   └── index.ts
-├── modals/
-│   ├── Modal.tsx
-│   ├── BottomSheet.tsx
-│   ├── AlertDialog.tsx
-│   └── index.ts
-├── Text.tsx
-├── Avatar.tsx
-├── Icon.tsx
-├── Badge.tsx
-└── index.ts
+├── buttons/         # Button, IconButton, SocialButton
+├── inputs/          # Input, OtpInput, PinDots
+├── headers/         # Header, StepHeader
+├── common/          # Avatar, Badge, Skeleton, InfoBlock
+├── icon/            # AppIcon, FlagIcon
+├── bottom-sheets/   # BaseBottomSheet
+├── modals/          # AlertModal
+├── layouts/         # KeyboardLayout
+├── navigation/      # TabBar
+└── toasts/          # Toast, Snackbar
 ```
 
-#### Example: Input Component
+### Widgets (`shared/ui/widgets/`)
 
-```typescript
-// src/shared/ui/components/inputs/Input.tsx
+Composed components with their own internal state, often built on top of atomic components (DatePicker, PhoneInput, SelectCurrencyBottomSheet).
+
+### Domain Components (`view/[domain]/[screen]/components/`)
+
+Screen-local components. Never shared. Data via props, no direct hook calls.
+
+## Component Pattern
+
+```tsx
 import React from 'react';
-import { TextInput, View, Text, TextInputProps } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 
-interface InputProps extends TextInputProps {
-  label?: string;
-  error?: string;
-  className?: string;
-}
-
-export const Input: React.FC<InputProps> = ({
-  label,
-  error,
-  className = '',
-  ...props
-}) => {
-  return (
-    <View className="mb-lg">
-      {label && (
-        <Text className="text-sm font-figtree-medium text-content-primary mb-xs">
-          {label}
-        </Text>
-      )}
-      <TextInput
-        className={`h-12 border rounded-sm px-lg text-base text-content-primary bg-field-bg ${
-          error ? 'border-error' : 'border-field-border'
-        } focus:border-brand-primary ${className}`}
-        placeholderTextColorClassName="accent-content-tertiary"
-        {...props}
-      />
-      {error && (
-        <Text className="text-xs text-error mt-xxs">{error}</Text>
-      )}
-    </View>
-  );
-};
-```
-
-#### Example: Button Component
-
-```typescript
-// src/shared/ui/components/buttons/Button.tsx
-import React from 'react';
-import { Pressable, Text, ActivityIndicator } from 'react-native';
-
-const sizeClasses = {
-  small: 'py-xs px-sm',
-  medium: 'py-md px-lg',
-  large: 'py-lg px-xl',
-} as const;
-
-const variantClasses = {
-  primary: 'bg-button-primary active:opacity-80',
-  secondary: 'bg-bg-secondary active:opacity-80',
-  outline: 'border border-brand-primary active:bg-brand-light',
-  ghost: 'active:bg-bg-tertiary',
-} as const;
-
-const textClasses = {
-  primary: 'text-button-primary-content',
-  secondary: 'text-content-primary',
-  outline: 'text-brand-primary',
-  ghost: 'text-content-primary',
-} as const;
-
-interface ButtonProps {
+interface WorkoutCardProps {
   title: string;
+  duration: number;
+  type: string;
   onPress: () => void;
-  variant?: keyof typeof variantClasses;
-  size?: keyof typeof sizeClasses;
-  disabled?: boolean;
-  isLoading?: boolean;
-  className?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({
-  title,
-  onPress,
-  variant = 'primary',
-  size = 'medium',
-  disabled = false,
-  isLoading = false,
-  className = '',
-}) => {
+export function WorkoutCard({ title, duration, type, onPress }: WorkoutCardProps) {
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled || isLoading}
-      className={`rounded-xl items-center ${sizeClasses[size]} ${variantClasses[variant]} ${
-        disabled ? 'opacity-50' : ''
-      } ${className}`}
+      className="p-m rounded-16 bg-bg-elevated active:bg-bg-surface border border-border-default"
     >
-      {isLoading ? (
-        <ActivityIndicator colorClassName="accent-button-primary-content" />
-      ) : (
-        <Text className={`font-figtree-semibold ${textClasses[variant]}`}>{title}</Text>
-      )}
+      <Text className="text-body-lg text-content-primary">{title}</Text>
+      <Text className="text-caption text-content-secondary mt-xxs">
+        {duration} min · {type}
+      </Text>
     </Pressable>
   );
-};
-```
-
-**Characteristics:**
-
-- Self-contained with `className` styling
-- Props interface for type safety
-- Accept optional `className` prop for parent overrides
-- No business logic
-- No external state dependencies
-- Reusable across entire app
-- Organized by category in subfolders
-
----
-
-### 3. Widget Components (`shared/ui/widgets/`)
-
-Composed from multiple components, may have UI logic (not domain-specific). Typically include a BottomSheetModal or other complex interaction patterns.
-
-#### Current Widgets
-
-| Widget | Description |
-|--------|-------------|
-| `DatePicker/` | Day/month/year pickers with BottomSheet selectors |
-| `PhoneInput/` | Phone number input with country code picker (BottomSheet) |
-| `SelectCountryDropdown` | Country selector with search and flag icons |
-| `DocumentTypeDropdown` | Document type selector dropdown |
-| `SwipableStackList` | Swipable stacked card list |
-
-#### Folder Structure
-
-Widgets with multiple files use a folder with barrel export:
-
-```
-shared/ui/widgets/
-├── DatePicker/
-│   ├── DatePicker.tsx
-│   ├── MonthBottomSheet.tsx
-│   └── index.ts
-├── PhoneInput/
-│   ├── PhoneInput.tsx
-│   ├── phone-countries.ts
-│   └── index.ts
-├── DocumentTypeDropdown.tsx
-├── SelectCountryDropdown.tsx
-├── SwipableStackList.tsx
-└── index.ts
-```
-
-**Characteristics:**
-
-- Composed from `components/`
-- May have internal state (UI only, e.g. search, open/close)
-- Often include `BottomSheetModal` for selection UIs
-- Logic is generic, not domain-specific
-- More complex than atomic components
-- Use `BaseBottomSheet` from `components/bottom-sheets` when possible
-
----
-
-### 4. Feature Components (`view/[domain]/[screen]/components/`)
-
-Screen-specific components that are not reusable outside that screen.
-
-```typescript
-// src/view/auth/sign-in/components/LoginForm.tsx
-import React, { useState, useCallback } from 'react';
-import { View } from 'react-native';
-
-import { Input, Button, Text } from '@/shared/ui/components';
-
-interface LoginFormProps {
-  onSubmit: (email: string, password: string) => void;
-  isLoading: boolean;
-  error?: string;
-}
-
-export const LoginForm: React.FC<LoginFormProps> = ({
-  onSubmit,
-  isLoading,
-  error,
-}) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = useCallback(() => {
-    onSubmit(email, password);
-  }, [email, password, onSubmit]);
-
-  return (
-    <View className="gap-md">
-      <Input
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <Input
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        secureTextEntry
-      />
-      {error && <Text className="text-sm text-error">{error}</Text>}
-      <Button
-        title="Sign In"
-        onPress={handleSubmit}
-        isLoading={isLoading}
-        className="mt-md"
-      />
-    </View>
-  );
-};
-```
-
-**Characteristics:**
-
-- Specific to one screen
-- Located in screen's `components/` folder
-- Uses shared components and widgets
-
----
-
-## Component Structure
-
-### File Organization
-
-```
-view/auth/sign-in/
-├── SignInScreen.tsx
-└── components/
-    ├── LoginForm.tsx
-    └── SocialButtons.tsx
-
-shared/ui/
-├── components/
-│   ├── bottom-sheets/
-│   │   ├── BaseBottomSheet.tsx
-│   │   └── index.ts
-│   ├── buttons/
-│   │   ├── Button.tsx
-│   │   ├── IconButton.tsx
-│   │   ├── SelectButton.tsx
-│   │   ├── SlideButton.tsx
-│   │   ├── SocialButton.tsx
-│   │   └── index.ts
-│   ├── common/
-│   │   ├── Avatar.tsx
-│   │   ├── Badge.tsx
-│   │   ├── InfoBlock.tsx
-│   │   ├── QrCode.tsx
-│   │   └── index.ts
-│   ├── headers/
-│   │   ├── Header.tsx
-│   │   ├── ProfileHeader.tsx
-│   │   ├── StepHeader.tsx
-│   │   └── index.ts
-│   ├── icon/
-│   │   ├── AppIcon.tsx
-│   │   ├── FlagIcon.tsx
-│   │   └── index.ts
-│   ├── inputs/
-│   │   ├── CopyField.tsx
-│   │   ├── Input.tsx
-│   │   ├── OtpInput.tsx
-│   │   ├── PinDots.tsx
-│   │   ├── PinKeyboard.tsx
-│   │   ├── Radio.tsx
-│   │   ├── RadioButton.tsx
-│   │   └── index.ts
-│   ├── modals/
-│   │   ├── AlertModal.tsx
-│   │   └── index.ts
-│   ├── navigation/
-│   │   ├── TabBar.tsx
-│   │   └── index.ts
-│   ├── toasts/
-│   │   ├── Snackbar.tsx
-│   │   ├── Toast.tsx
-│   │   └── index.ts
-│   └── styled/
-└── widgets/
-    ├── DatePicker/
-    ├── PhoneInput/
-    ├── DocumentTypeDropdown.tsx
-    ├── SelectCountryDropdown.tsx
-    ├── SwipableStackList.tsx
-    └── index.ts
-```
-
-**Note:** No separate `.styles.ts` files. All styling lives in `className` props directly in the component.
-
----
-
-## Best Practices
-
-### Props Interface
-
-```typescript
-// Good — accept optional className for parent overrides
-interface ButtonProps {
-  title: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary';
-  disabled?: boolean;
-  className?: string;
 }
 ```
 
-### Default Props
+## Rules
 
-```typescript
-export const Button: React.FC<ButtonProps> = ({
-  title,
-  onPress,
-  variant = 'primary',
-  disabled = false,
-  className = '',
-}) => { ... }
-```
+1. **One file = one component** — no multiple component exports
+2. **Props interface always defined and exported** — `interface XProps { ... }`
+3. **Function declaration** — `export function X()` not `export const X = () =>`
+4. **No `any` types** — properly typed props
+5. **Pressable over TouchableOpacity** — modern API
+6. **`expo-image` over RN `Image`** — optimized loading
+7. **No business logic in components** — data and callbacks via props only
+8. **`className` only** — never `StyleSheet.create`, never inline `style={{}}`
+9. **Design tokens only** — every color/spacing/radius/font-size from `global.css`. No `bg-white`, `p-4`, `rounded-lg`, `text-xl`, no `#hex` values (see [../styles/SKILL.md](../styles/SKILL.md))
+10. **Typography utilities only** — `text-body-lg`, `text-button-lg`, `text-caption` — never raw `text-sm font-bold`
+11. **`tailwind-variants` for variant-driven components** — any component with ≥2 `variant`/`size`/state props uses `tv({ slots, variants, compoundVariants })`. Never build parallel `Record<Variant, string>` maps (see "Variant Pattern" below)
+12. **No hardcoded user-facing strings** — all text (button labels, placeholders, tooltips, `accessibilityLabel`) comes from the consumer via props. The consumer (screen `.tsx`) calls `useAppTranslation` directly and forwards `t('ns:key')` as a prop. Reusable components never call `useAppTranslation` themselves. See [../localization/SKILL.md](../localization/SKILL.md)
+13. **Lists via `AppList`** — never use `FlatList` / `SectionList` / `ScrollView` for virtualized data. Always import `AppList` from `@/shared/ui/components` (wraps `@legendapp/list` in `withUniwind` — supports generics, `className`, `contentContainerClassName`). Plain `ScrollView` is fine only for short non-virtualized content.
+14. **Icons via `AppIcon` (nano-icons)** — never use `react-native-svg` components for icons. Drop SVGs in `apps/mobile/assets/icons/app/`, run `prebuild` to regenerate the font + glyphmap, then render through the shared `AppIcon` wrapper (`createNanoIconSet(glyphMap)`). See [../icons/SKILL.md](../icons/SKILL.md) for the full workflow.
+15. **Gradients via `GradientView`** — never inline `<LinearGradient colors={[...]}>` with hardcoded hex. Use a preset (`brand-primary`, `brand-active`, `screen`) from `@/shared/ui/components`. See [../styles/SKILL.md](../styles/SKILL.md#gradients-expo-linear-gradient).
+16. **Barrel exports** — every folder has `index.ts`
 
-### Memoization
+## Variant Pattern (tailwind-variants)
 
-```typescript
-import { memo } from 'react';
+Reach for `tailwind-variants` (`tv`) as soon as a component has more than one `variant`, `size`, or visual state. It keeps all class logic in one declarative config, derives typescript types for the props, and handles combinations (e.g. "link variant at `lg` size needs different padding") via `compoundVariants`.
 
-export const UserCard = memo<UserCardProps>(({ user, onPress }) => {
-  return (
-    <Pressable
-      onPress={onPress}
-      className="flex-row items-center p-lg bg-bg-primary rounded-xl ios:shadow-sm android:elevation-2"
-    >
-      <Avatar source={user.avatar} className="w-12 h-12 rounded-full" />
-      <View className="flex-1 ml-md">
-        <Text className="text-base font-figtree-semibold text-content-primary">{user.name}</Text>
-        <Text className="text-sm text-content-secondary">{user.email}</Text>
-      </View>
-    </Pressable>
-  );
+### When to use
+
+- ≥2 variants OR sizes OR styling states (loading, selected, invalid, disabled)
+- Multi-part styling: base container + label + icon + spinner share the variant
+- Token overrides across combinations (compound variants)
+
+### When NOT to use
+
+- Simple presentational components with no variants (e.g. `Avatar` fixed shape) — inline `className` is simpler
+- Static layouts where class string never changes
+
+### Pattern
+
+```tsx
+import { Pressable, Text, type PressableProps } from 'react-native';
+
+import { tv, type VariantProps } from '@/shared/ui/tv';
+
+const button = tv({
+  slots: {
+    base: 'flex-row items-center justify-center gap-xs',
+    label: '',
+  },
+  variants: {
+    variant: {
+      primary:   { base: 'bg-primary-default active:bg-primary-active', label: 'text-primary-on' },
+      outline:   { base: 'border border-border-default active:bg-bg-surface', label: 'text-content-primary' },
+      destructive: { base: 'bg-error-default active:bg-error-active', label: 'text-error-on' },
+      link:      { base: '', label: 'text-link text-content-link' },
+    },
+    size: {
+      lg: { base: 'py-m px-l rounded-12', label: 'text-button-lg' },
+      sm: { base: 'py-xs px-m rounded-8', label: 'text-button-sm' },
+    },
+    isDisabled: { true: { base: 'opacity-50' } },
+  },
+  compoundVariants: [
+    { variant: 'link', size: 'lg', class: { base: 'py-xs px-none rounded-none', label: 'text-link' } },
+    { variant: 'link', size: 'sm', class: { base: 'py-xxs px-none rounded-none', label: 'text-link' } },
+  ],
+  defaultVariants: { variant: 'primary', size: 'lg' },
 });
 
-UserCard.displayName = 'UserCard';
+type ButtonVariantProps = VariantProps<typeof button>;
+
+export type AppButtonVariant = NonNullable<ButtonVariantProps['variant']>;
+export type AppButtonSize = NonNullable<ButtonVariantProps['size']>;
+
+export interface AppButtonProps extends Omit<PressableProps, 'children' | 'style'> {
+  label: string;
+  onPress: () => void;
+  variant?: AppButtonVariant;
+  size?: AppButtonSize;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function AppButton({ label, onPress, variant, size, disabled, className, ...rest }: AppButtonProps) {
+  const styles = button({ variant, size, isDisabled: disabled });
+  return (
+    <Pressable onPress={onPress} disabled={disabled} className={styles.base({ class: className })} {...rest}>
+      <Text className={styles.label()}>{label}</Text>
+    </Pressable>
+  );
+}
 ```
 
-### Third-Party Component Wrapping
+### Rules for tv configs
 
-```typescript
-// shared/ui/components/styled.ts
-import { withUniwind } from 'uniwind';
-import { BlurView } from 'expo-blur';
-import { SafeAreaView } from 'react-native-safe-area-context';
+1. **Always import `tv` from `@/shared/ui/tv`** — never from `tailwind-variants` directly. The project factory disables `tailwind-merge` because it treats all our `text-*` utilities as one group and silently strips color classes when typography classes are present (e.g. drops `text-primary-on` when it sees `text-button-lg`). Uniwind compiles every class at build time; CSS source-order resolves any real conflict.
+2. **Slots named by role** — `base`, `label`, `icon`, `spinner`, `container`, `content` — never by visual property (`wrap`, `outer`, `inner`)
+3. **Derive prop types from tv** — `VariantProps<typeof config>` (re-exported from `@/shared/ui/tv`) → never maintain a parallel `type Variant = 'a' | 'b'` by hand
+4. **Design tokens only in variant classes** — same rule as regular className; `bg-primary-default` not `bg-orange-500`
+5. **Compound variants for combinatorial overrides** — don't branch in JSX (`{variant === 'link' ? ... : ...}`); declare it in `compoundVariants`
+6. **Use `defaultVariants`** — don't default in destructuring; let the config own defaults
+7. **Boolean state variants** — use `isLoading`, `isSelected`, `isDisabled` as `{ true: {...} }` — keeps config explicit
+8. **Forward external `className`** — always accept `className` and pass via `styles.base({ class: className })`
 
-export const StyledBlurView = withUniwind(BlurView);
-export const StyledSafeAreaView = withUniwind(SafeAreaView);
-```
+### Reference implementation
+
+[`apps/mobile/src/shared/ui/components/buttons/AppButton.tsx`](../../../../apps/mobile/src/shared/ui/components/buttons/AppButton.tsx) — canonical pattern with slots + compound variants.
+
+## Anti-Patterns
+
+- `{value && <X />}` where `value` can be `0` or `""` — use ternary: `{value ? <X /> : null}`
+- Strings not wrapped in `<Text>` — always wrap
+- Hardcoded colors (`#666`, `bg-white`) — use tokens (`text-content-secondary`, `bg-bg-canvas`)
+- Hardcoded spacing (`p-4`, `gap-6`) — use scale (`p-m`, `gap-xl`)
+- Raw typography combos (`text-xl font-bold`) — use utility (`text-title-md`)
+- Deep View nesting — flatten with flex
+- `StyleSheet.create` — banned; everything via `className`
+- Parallel `Record<Variant, string>` maps for container/label/spinner — banned; use `tv` slots
+- `{variant === 'x' ? 'classA' : 'classB'}` ternaries for variant-specific styling — use `tv` `compoundVariants`
+- Manual `VariantType` union types when there's a `tv` config — derive with `VariantProps<typeof config>`

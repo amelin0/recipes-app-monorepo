@@ -1,22 +1,26 @@
 # Digital Nutrition Studio
 
-Monorepo for the Digital Nutrition Studio platform — a recipe management and meal planning system.
+Monorepo for the Digital Nutrition Studio (DNS) platform — a recipe management
+and meal planning system. Structure mirrors the 11am-app reference monorepo.
 
 ## Monorepo Structure
 
 ```
 recipes-app-monorepo/
 ├── apps/
-│   ├── api/          # @dns/api — Supabase config, shared client, Edge Functions
-│   ├── mobile/       # @dns/mobile — Expo React Native consumer app
-│   └── web/          # @dns/web — Next.js admin panel
-├── packages/         # Shared packages (future)
+│   ├── api/          # @dns/api — EMPTY: backend will be written by the backend developer
+│   ├── mobile/       # @dns/mobile — EMPTY: Expo app will be rebuilt (Uniwind Pro styling)
+│   └── web/          # @dns/web — Next.js admin panel (working)
+├── packages/         # Shared workspaces (planned: shared-types, validation,
+│                     #   constants, utils, database) — see packages/CLAUDE.md
+├── docs/             # Specs (spec.md + plan.md per feature), ADRs, runbooks
+├── scripts/          # minio-init.sh for docker-compose
 └── .claude/
     ├── skills/
-    │   ├── mobile/   # React Native / Expo skills (from bidel-mobile-app)
-    │   ├── api/      # Custom API (Hono + Edge Functions) skills
+    │   ├── mobile/   # React Native / Expo skills (from 11am-app reference)
     │   └── web/      # Next.js admin panel skills
-    ├── knowledge/    # Domain knowledge
+    ├── agents/       # Review/refactor agents (typescript-reviewer, tdd-guide, …)
+    ├── knowledge/    # Domain knowledge (endpoints contracts from V1 — reference for the new API)
     └── commands/     # Custom Claude commands
 ```
 
@@ -24,43 +28,19 @@ recipes-app-monorepo/
 
 | App | Stack |
 |-----|-------|
-| `@dns/api` | Supabase (PostgreSQL, Auth, Storage), Hono (API router), Edge Functions, Deno |
+| `@dns/api` | TBD by backend developer (reference: NestJS + PostgreSQL + Redis + MinIO, as in 11am-app) |
 | `@dns/web` | Next.js 16, React 19, Tailwind CSS v4, TypeScript |
-| `@dns/mobile` | Expo SDK 55, React Native 0.83, TypeScript |
+| `@dns/mobile` | TBD: Expo + React Native + Uniwind Pro (Tailwind v4 className), as in 11am-app |
+
+Local infrastructure: `docker-compose.yml` — postgres:16, redis:7, MinIO (S3).
 
 ## Package Manager
 
-**pnpm** — always use pnpm, never npm or yarn.
+**pnpm** — always use pnpm, never npm or yarn. Workspaces: `apps/*`, `packages/*`.
 
 ## Architecture
 
 All apps follow **domain-driven architecture**.
-
-### API (backend)
-Custom HTTP API via Supabase Edge Functions + Hono router. Split by role:
-
-```
-apps/api/src/
-├── admin/              # Admin-facing endpoints (web panel)
-│   ├── auth/           # POST /api/admin/auth/login
-│   ├── users/          # GET /api/admin/users/all
-│   └── router.ts       # authMiddleware + adminMiddleware applied globally
-├── client/             # User-facing endpoints (mobile app)
-│   ├── auth/           # POST /api/auth/login, /api/auth/register
-│   ├── users/          # GET /api/users/me
-│   └── router.ts
-├── shared/
-│   ├── services/       # Shared business logic (AuthService, UserService)
-│   ├── middleware/      # authMiddleware, adminMiddleware
-│   ├── helpers/        # response.helper.ts
-│   └── supabase.ts     # Admin client (service_role)
-├── router.ts           # Main router: / → client, /admin → admin
-└── types/database.ts   # Auto-generated DB types
-```
-
-Each domain folder has: `domain.controller.ts`, `domain.routes.ts`, `index.ts`.
-Services are shared — business logic lives in `shared/services/`, not duplicated per role.
-Clients never query DB directly — all data goes through the API.
 
 ### Roles
 - **USER** — mobile app user (default on register)
@@ -69,7 +49,7 @@ Clients never query DB directly — all data goes through the API.
 
 ### Mobile & Web (frontend)
 Layered separation:
-- **data/** — HTTP calls to API (no direct Supabase queries)
+- **data/** — HTTP calls to API (no direct DB queries)
 - **state/** — React Query hooks + Zustand slices
 - **view/** — Screens/pages (presentation only)
 - **shared/** — Cross-cutting: UI components, helpers, hooks, services
@@ -80,7 +60,7 @@ Layered separation:
 2. **Domain-driven** — code organized by business domain (recipe, ingredient, user, etc.)
 3. **Barrel exports** — every folder has `index.ts`
 4. **No business logic in routing layer** — route files only import screens from `view/`
-5. **API-first** — mobile/web call our API, not Supabase SDK directly
+5. **API-first** — mobile/web call our API over HTTP, never the DB directly
 
 ### File Naming
 
@@ -99,40 +79,29 @@ Layered separation:
 
 ## Environment Variables
 
-All env vars defined in `.env.example`:
-
-**Supabase keys (API backend only):**
-- `SUPABASE_URL` — Supabase project URL
-- `SUPABASE_ANON_KEY` — Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (Edge Functions)
-
-**API URL (clients):**
-- `NEXT_PUBLIC_API_URL` — API URL for web (Next.js)
-- `EXPO_PUBLIC_API_URL` — API URL for mobile (Expo)
-
-Mobile and web do NOT use Supabase SDK directly — they call our API via HTTP.
+All env vars defined in `.env.example`: PostgreSQL, Redis, JWT, S3/MinIO for
+the API; `NEXT_PUBLIC_API_URL` (web) and `EXPO_PUBLIC_API_URL` (mobile) for
+clients. Mobile and web call the API via HTTP only.
 
 ## Common Commands
 
 ```bash
 pnpm dev:web          # Start Next.js dev server
-pnpm dev:mobile       # Start Expo dev server
-pnpm dev:api          # Start local Supabase
+pnpm dev:mobile       # Start mobile dev (once @dns/mobile exists)
+pnpm dev:api          # Start API dev (once @dns/api exists)
 pnpm build:web        # Build Next.js
 pnpm deploy:web       # Deploy web to Vercel (production)
-pnpm generate:types   # Regenerate Supabase DB types
-pnpm db:push          # Push migrations to Supabase
-pnpm db:reset         # Reset local database
-```
-
-### Deploy API (Edge Functions)
-```bash
-cd apps/api && supabase functions deploy api --project-ref sctetzydpkkmbjbuanls --import-map supabase/functions/deno.json --no-verify-jwt
+pnpm lint             # Lint all workspaces
+pnpm typecheck        # Typecheck all workspaces
+pnpm format           # Prettier write
+pnpm db:generate      # Drizzle/ORM codegen (once @dns/database exists)
+pnpm db:migrate       # Run DB migrations (once @dns/database exists)
+docker compose up -d  # Local postgres + redis + MinIO
 ```
 
 ## Design System
 
-Semantic token system — identical naming across web (Tailwind CSS vars) and mobile (Unistyles theme objects).
+Semantic token system — identical naming across web (Tailwind CSS vars) and mobile.
 
 Full token reference: `.claude/knowledge/design-tokens.md`
 
@@ -143,15 +112,22 @@ Full token reference: `.claude/knowledge/design-tokens.md`
 
 ### Usage patterns
 - Web: `bg-primary-default`, `text-text-secondary`, `border-border-default`
-- Mobile: `colors.primary.default`, `colors.text.secondary`, `colors.border.default`
+- Mobile (Uniwind): tokens defined in `apps/mobile/src/global.css`, used via `className`
 
 ### Files
 - Web: `apps/web/src/app/globals.css` — Tailwind `@theme` with CSS custom properties
-- Mobile: `apps/mobile/src/shared/ui/theme/` — `colors.ts`, `typography.ts`, `sizes.ts`
 
 ### Fonts
 - **Manrope** — headings (`--font-heading`)
 - **Inter** — body text (`--font-sans`)
+
+## Docs
+
+`docs/` is the single source of truth for product specs:
+- `docs/specs/<bucket>/<domain>/<feature>/` — `spec.md` (WHAT/WHY) + `plan.md` (HOW)
+- Buckets: `client/` (mobile + client API), `admin/` (admin panel + admin API)
+- Zonal commands inside `docs/`: `/new-spec`, `/new-plan`, `/new-adr`, `/new-runbook`
+- See `docs/CLAUDE.md` for the rules
 
 ## Knowledge
 
@@ -161,47 +137,40 @@ See `.claude/knowledge/` for project context:
 - `01-project-description.md` — product vision, version roadmap (V1/V2/V3), design principles, typography, colors, navigation
 
 ### Domain features (each feature = separate file)
-- `auth/` — login.md, register.md
-- `user/` — get-me.md, get-all.md, settings.md, weight.md
-- `nutrition/` — set-goal.md, get-daily.md
-- `recipe/` — overview.md (CRUD, tags, ingredients, filters, i18n translations)
-- `product/` — overview.md (272 USDA products × 20 langs, custom products, admin CRUD + edit translations, search by user language)
-- `shopping-list/` — overview.md (add recipe → auto-aggregate ingredients, toggle checked)
-- `meal-plan/` — overview.md (weekly plan by day_of_week + meal_type, copy day, to-shopping-list)
+- `auth/`, `user/`, `nutrition/`, `recipe/`, `product/`, `shopping-list/`, `meal-plan/`
 
-Each feature file describes: endpoints, request/response, logic flow (controller → service → DB), middleware, DB relationships.
+> ⚠️ Feature files describe the V1 API contracts (endpoints, request/response,
+> DB relationships) built on the old Supabase backend. The backend is being
+> rewritten — treat these as the product contract reference, not as a
+> description of current code.
+
+- `mobile/` — reference codebase knowledge from 11am-app (services, hooks,
+  components, styling, state management, data layer, libs)
 
 ## Skills
 
 See `.claude/skills/` for coding patterns per app:
 
 ### mobile/
-- `architecture/` — layered arch: app → view → state → data → shared
-- `naming-conventions/` — file & export naming (kebab-case folders, PascalCase screens, domain.api.ts, useScreenName.ts)
-- `data-layer/` — API pattern (domain.api.ts, domain.types.ts, domain.mapper.ts)
-- `state-management/` — Zustand slices + React Query hooks
-- `screens/` — screen + useScreen hook pattern
-- `components/` — UI components catalog
-- `react-native-best-practices/` — performance, bundle, animations
-- `vercel-react-rules/` — React Native rules from Vercel
-- `native-modules/` — Expo modules, Turbo Modules
-- `styles/` — React Native Unistyles 3 (theme, breakpoints, variants)
-- `widgets/` — composed UI components
-- `upgrading-expo/` — Expo SDK upgrade guides
-- `expo-deployment/` — EAS Build, App Store, Play Store
-- `expo-cicd-workflows/` — CI/CD with GitHub Actions
-- `localization/` — i18next patterns
-- `callstack-skills/` — GitHub & GitHub Actions best practices
-
-### api/
-- `architecture/` — Custom API via Edge Functions + Hono. Role-based split: admin/ + client/ + shared/services/
-- `naming-conventions/` — domain files (domain.controller.ts, domain.routes.ts, domain.admin-routes.ts), DB objects (snake_case), migrations (NNNNN_verb_noun.sql)
+Patterns from the 11am-app reference (architecture, naming-conventions,
+data-layer, state-management, screens, components, widgets, styles (Uniwind),
+icons, localization, accessibility, e2e (Maestro), tdd-workflow,
+mobile-app-security, mobile-analytics-monitoring, mobile-cicd-devops,
+mobile-debugging-profiling, real-time-features) plus Expo guides
+(expo-deployment, expo-cicd-workflows, upgrading-expo, native-modules,
+react-native-best-practices, vercel-react-rules, callstack-skills).
 
 ### web/
 - `architecture/` — Next.js App Router with same data/state/view separation as mobile
 - `naming-conventions/` — mirrors mobile conventions adapted for Next.js routes (Page instead of Screen)
 - `data-layer/` — HTTP calls to API (domain.api.ts via HttpService)
 - `state-management/` — React Query hooks + Zustand for auth/UI state
-- `react-best-practices/` — 65 Vercel rules: waterfalls, bundle, SSR, re-renders, JS perf (from vercel-labs/agent-skills)
-- `composition-patterns/` — compound components, avoid boolean props, React 19 patterns (from vercel-labs/agent-skills)
-- `web-design-guidelines.md` — 100+ UI audit rules: a11y, forms, animations, i18n (from vercel-labs/agent-skills)
+- `react-best-practices/` — 65 Vercel rules: waterfalls, bundle, SSR, re-renders, JS perf
+- `composition-patterns/` — compound components, avoid boolean props, React 19 patterns
+- `web-design-guidelines.md` — 100+ UI audit rules: a11y, forms, animations, i18n
+
+## Agents
+
+See `.claude/agents/` — code-refactorer, component-auditor,
+performance-optimizer, refactor-cleaner, security-reviewer,
+silent-failure-hunter, tdd-guide, typescript-reviewer.
