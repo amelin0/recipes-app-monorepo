@@ -4,6 +4,8 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { useAppTranslation } from '@/shared/utils/translations';
+
 import { AppText } from '../texts';
 
 export type ToastVariant = 'default' | 'success' | 'negative' | 'warning';
@@ -39,6 +41,7 @@ export const Toast = ({
     onClose,
 }: ToastProps) => {
     const { theme } = useUnistyles();
+    const { t } = useAppTranslation();
     const contentColor = CONTENT_COLOR[variant](theme.colors);
 
     return (
@@ -60,7 +63,7 @@ export const Toast = ({
             {closable ? (
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Закрити"
+                    accessibilityLabel={t('common:actions.close')}
                     onPress={onClose}
                     hitSlop={8}
                     style={styles.action}

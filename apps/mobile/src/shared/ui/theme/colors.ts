@@ -7,6 +7,8 @@ export const colors = {
         primary: '#1E2932',
         /** Solid buttons, decorations (bg) */
         accent: '#85E239',
+        /** Light accent — OTP active cell border, highlights */
+        secondary: '#B1F04E',
     },
 
     // Semantic
@@ -68,10 +70,10 @@ export const colors = {
         orangeBorder: '#FF5200',
     },
 
-    // Elements — text/icon colors from the RFDS Typography frame (partial:
-    // only the tokens surfaced there; extend from the Elements Figma node).
+    // Elements — text/icon colors (from RFDS Typography frame + RF-mobile-app screens).
     elements: {
         primary: '#1E2932',
+        secondary: '#58616A',
         tertiary: '#687885',
         white: '#FFFFFF',
     },

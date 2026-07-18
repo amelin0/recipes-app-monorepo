@@ -1,5 +1,5 @@
 import { PlaceholderScreen } from '@/shared/ui/components';
 
 export default function MealPlanRoute() {
-    return <PlaceholderScreen title="План харчування" />;
+    return <PlaceholderScreen titleKey="common:tabs.meal-plan" />;
 }

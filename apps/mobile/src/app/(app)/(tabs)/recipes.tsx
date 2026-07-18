@@ -1,5 +1,5 @@
 import { PlaceholderScreen } from '@/shared/ui/components';
 
 export default function RecipesRoute() {
-    return <PlaceholderScreen title="Рецепти" />;
+    return <PlaceholderScreen titleKey="common:tabs.recipes" />;
 }
