@@ -29,7 +29,13 @@ export const useSignUpScreen = () => {
     }, [t]);
 
     const handleSignIn = useCallback(() => {
-        router.replace('/(app)/(auth)/sign-in');
+        // Sign-up is normally pushed from sign-in — going back avoids stacking
+        // a duplicate sign-in entry; replace covers deep-link entry.
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/(app)/(auth)/sign-in');
+        }
     }, []);
 
     return {

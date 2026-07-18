@@ -1,6 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
-    Pressable,
     TextInput,
     View,
     type NativeSyntheticEvent,
@@ -11,6 +10,8 @@ import {
 } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
+
+import { useAppTranslation } from '@/shared/utils/translations';
 
 import { AppText } from '../texts';
 
@@ -43,9 +44,11 @@ export interface OtpInputProps extends Omit<
 }
 
 /**
- * OTP code input — RFDS `code` (Figma node 66:2537). A hidden TextInput
- * drives N visual cells: 44×56, Semantic/secondary fill, active cell gets a
- * 2px Branding/secondary border and a fake caret.
+ * OTP code input — RFDS `code` (Figma node 66:2537). An invisible TextInput
+ * stretched over the whole cell row drives N visual cells (44×56,
+ * Semantic/secondary fill, active cell gets a 2px Branding/secondary border
+ * and a fake caret). The full-bleed overlay keeps native behavior working:
+ * tap-to-focus, long-press → Paste, screen-reader focus.
  */
 export const OtpInput = forwardRef<OtpInputRef, OtpInputProps>(function OtpInput(
     {
@@ -59,10 +62,12 @@ export const OtpInput = forwardRef<OtpInputRef, OtpInputProps>(function OtpInput
         autoFocus,
         onFocus,
         onBlur,
+        accessibilityLabel,
         ...rest
     },
     ref,
 ) {
+    const { t } = useAppTranslation();
     const inputRef = useRef<TextInput>(null);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -121,34 +126,32 @@ export const OtpInput = forwardRef<OtpInputRef, OtpInputProps>(function OtpInput
         [onChangeText, value],
     );
 
-    const focusField = useCallback(() => {
-        inputRef.current?.focus();
-    }, []);
-
     const activeIndex = value.length;
     const cells = useMemo(() => Array.from({ length }), [length]);
 
     return (
-        <Pressable onPress={focusField} disabled={disabled} style={[styles.root, style]}>
-            {cells.map((_, index) => {
-                const char = value[index] ?? '';
-                const isCellFocused =
-                    isFocused &&
-                    !disabled &&
-                    (index === activeIndex || (index === length - 1 && activeIndex === length));
+        <View style={[styles.root, style]}>
+            <View style={styles.cells} accessible={false} importantForAccessibility="no-hide-descendants">
+                {cells.map((_, index) => {
+                    const char = value[index] ?? '';
+                    const isCellFocused =
+                        isFocused &&
+                        !disabled &&
+                        (index === activeIndex || (index === length - 1 && activeIndex === length));
 
-                return (
-                    <View key={index} style={styles.cell(state, isCellFocused, disabled)}>
-                        {char ? (
-                            <AppText variant="bodyLargeReg" style={styles.char(disabled)}>
-                                {char}
-                            </AppText>
-                        ) : isCellFocused ? (
-                            <View style={styles.caret} />
-                        ) : null}
-                    </View>
-                );
-            })}
+                    return (
+                        <View key={index} style={styles.cell(state, isCellFocused, disabled)}>
+                            {char ? (
+                                <AppText variant="bodyLargeReg" style={styles.char(disabled)}>
+                                    {char}
+                                </AppText>
+                            ) : isCellFocused ? (
+                                <View style={styles.caret} />
+                            ) : null}
+                        </View>
+                    );
+                })}
+            </View>
 
             <TextInput
                 ref={inputRef}
@@ -164,15 +167,20 @@ export const OtpInput = forwardRef<OtpInputRef, OtpInputProps>(function OtpInput
                 autoComplete="sms-otp"
                 importantForAutofill="yes"
                 caretHidden
-                style={styles.hiddenInput}
+                accessibilityLabel={accessibilityLabel ?? t('common:a11y.otp-code')}
+                accessibilityValue={{ text: `${value.length}/${length}` }}
+                style={styles.overlayInput}
                 {...rest}
             />
-        </Pressable>
+        </View>
     );
 });
 
 const styles = StyleSheet.create(theme => ({
     root: {
+        width: '100%',
+    },
+    cells: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
@@ -201,10 +209,12 @@ const styles = StyleSheet.create(theme => ({
         height: 22,
         backgroundColor: theme.colors.elements.primary,
     },
-    hiddenInput: {
-        position: 'absolute',
-        width: 0,
-        height: 0,
-        opacity: 0,
+    // Full-bleed invisible overlay: keeps native tap-to-focus, the iOS/Android
+    // long-press Paste menu, and screen-reader focus working. Near-zero (not
+    // zero) opacity + transparent color so nothing is visibly rendered.
+    overlayInput: {
+        ...StyleSheet.absoluteFillObject,
+        opacity: 0.02,
+        color: 'transparent',
     },
 }));

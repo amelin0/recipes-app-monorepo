@@ -44,8 +44,11 @@ export const PasswordInput = forwardRef<TextInput, PasswordInputProps>(function 
             rightSlot={
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={toggleAccessibilityLabel ?? t('common:a11y.toggle-password')}
-                    hitSlop={8}
+                    accessibilityLabel={
+                        toggleAccessibilityLabel ??
+                        t(isVisible ? 'common:a11y.hide-password' : 'common:a11y.show-password')
+                    }
+                    hitSlop={12}
                     onPress={toggle}
                     disabled={disabled}
                 >

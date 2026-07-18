@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
 
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppButton, AppInput, AppScreen, AppText, LabeledDivider, PasswordInput } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
@@ -13,6 +13,7 @@ import { useSignInScreen } from './useSignInScreen';
 
 export const SignInScreen = () => {
     const { t } = useAppTranslation(['auth']);
+    const { theme } = useUnistyles();
     const {
         email,
         setEmail,
@@ -65,7 +66,7 @@ export const SignInScreen = () => {
                         variant="secondary"
                         label={t('auth:sign-in.continue-apple')}
                         onPress={handleAppleSignIn}
-                        leftSlot={<AppleIcon width={24} height={24} color={styles.socialIcon.color} />}
+                        leftSlot={<AppleIcon width={24} height={24} color={theme.colors.elements.primary} />}
                         fullWidth
                     />
                     <AppButton
@@ -105,9 +106,6 @@ const styles = StyleSheet.create(theme => ({
     },
     social: {
         gap: theme.spacing[3],
-    },
-    socialIcon: {
-        color: theme.colors.elements.primary,
     },
     footer: {
         flexDirection: 'row',

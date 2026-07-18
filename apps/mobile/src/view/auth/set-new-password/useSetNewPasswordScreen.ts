@@ -14,7 +14,13 @@ export const useSetNewPasswordScreen = () => {
     const handleSubmit = useCallback(() => {
         // TODO: POST /auth/reset-password once the API ships — mock success.
         ToastService.success(t('auth:set-new-password.success'));
-        router.replace('/(app)/(auth)/sign-in');
+        // Pop the whole reset flow (forgot-password → email-verify → here) so
+        // "back" from sign-in can't re-enter stale screens.
+        if (router.canGoBack()) {
+            router.dismissTo('/(app)/(auth)/sign-in');
+        } else {
+            router.replace('/(app)/(auth)/sign-in');
+        }
     }, [t]);
 
     return {

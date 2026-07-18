@@ -65,6 +65,7 @@ export const SignUpScreen = () => {
                         variant="bodyMediumReg"
                         color="tertiary"
                         style={styles.termsLink}
+                        accessibilityRole="link"
                         onPress={handleTermsOfService}
                     >
                         {t('auth:sign-up.terms-service')}
@@ -74,6 +75,7 @@ export const SignUpScreen = () => {
                         variant="bodyMediumReg"
                         color="tertiary"
                         style={styles.termsLink}
+                        accessibilityRole="link"
                         onPress={handlePrivacyPolicy}
                     >
                         {t('auth:sign-up.terms-privacy')}

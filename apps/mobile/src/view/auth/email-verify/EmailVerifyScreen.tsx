@@ -29,7 +29,7 @@ export const EmailVerifyScreen = () => {
                     <AppText variant="bodyMediumReg">{t('auth:email-verify.resend-question')}</AppText>
                     {canResend ? (
                         <Pressable accessibilityRole="button" hitSlop={8} onPress={handleResend}>
-                            <AppText variant="bodyMediumReg">{t('auth:email-verify.resend')}</AppText>
+                            <AppText variant="bodyMediumBold">{t('auth:email-verify.resend')}</AppText>
                         </Pressable>
                     ) : (
                         <AppText variant="bodyMediumReg" style={styles.resendDisabled}>

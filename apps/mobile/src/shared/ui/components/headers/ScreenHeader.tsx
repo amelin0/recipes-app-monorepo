@@ -15,7 +15,9 @@ export interface ScreenHeaderProps {
 export const ScreenHeader = ({ title, subtitle }: ScreenHeaderProps) => {
     return (
         <View style={styles.root}>
-            <AppText variant="titleMedium">{title}</AppText>
+            <AppText variant="titleMedium" accessibilityRole="header">
+                {title}
+            </AppText>
             {subtitle ? (
                 <AppText variant="bodyLargeReg" color="tertiary">
                     {subtitle}

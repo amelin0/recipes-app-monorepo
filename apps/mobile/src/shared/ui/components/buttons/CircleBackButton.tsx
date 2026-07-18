@@ -12,11 +12,17 @@ export interface CircleBackButtonProps extends Omit<PressableProps, 'children' |
     /** Screen-reader label — defaults to the localized "Back". */
     accessibilityLabel?: string;
     /**
-     * Called on press. Defaults to `router.back()`. Pass a custom handler when
-     * the screen needs to short-circuit navigation (confirm dialog, etc.).
+     * Called on press. Defaults to `router.back()` (guarded by `canGoBack`).
+     * Pass a custom handler when the screen needs to short-circuit navigation.
      */
     onPress?: () => void;
 }
+
+const goBack = () => {
+    if (router.canGoBack()) {
+        router.back();
+    }
+};
 
 /**
  * Circular back button — RFDS liquid pill (44×44, Semantic/white 30%) with an
@@ -30,9 +36,9 @@ export const CircleBackButton = ({ accessibilityLabel, onPress, ...rest }: Circl
         <Pressable
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel ?? t('common:actions.back')}
-            onPress={onPress ?? (() => router.back())}
+            onPress={onPress ?? goBack}
             hitSlop={8}
-            style={styles.base}
+            style={({ pressed }) => styles.base(pressed)}
         >
             <ArrowLeftIcon width={24} height={24} color={theme.colors.elements.primary} />
         </Pressable>
@@ -40,12 +46,13 @@ export const CircleBackButton = ({ accessibilityLabel, onPress, ...rest }: Circl
 };
 
 const styles = StyleSheet.create(theme => ({
-    base: {
+    base: (pressed: boolean) => ({
         minHeight: 44,
         minWidth: 44,
+        alignSelf: 'flex-start',
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: theme.radius.full,
-        backgroundColor: theme.colors.semantic.white30,
-    },
+        backgroundColor: pressed ? theme.colors.active.grey30 : theme.colors.semantic.white30,
+    }),
 }));
