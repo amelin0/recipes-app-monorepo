@@ -1,6 +1,8 @@
 # @dns/mobile
 
-Expo React Native app for Digital Nutrition Studio. Architecture mirrors the
+Expo React Native app for Digital Nutrition Studio — product name **RationFit**
+(bundle id / package `com.rationfit.application`, scheme `rationfit`,
+phones-only, `ITSAppUsesNonExemptEncryption: false`). Architecture mirrors the
 11am-app reference mobile app, but styling uses **react-native-unistyles 3**
 (NOT Uniwind/className).
 

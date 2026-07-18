@@ -1,16 +1,27 @@
 # Nutrition (client)
 
-Nutrition goals and daily macro tracking: set goal, get daily summary (protein, carbs, fats, calories).
+Денний трекінг харчування мобільного застосунку: головний екран з
+прогресом калорій і макросів (Б/Ж/В), раціоном на сьогодні
+(Сніданок/Обід/Вечеря/Перекус) та трекінгом води; екран налаштування
+цілі — пресети (Схуднення/Підтримка/Набір маси), степер калорій, баланс
+макросів зі слайдерами та ручним введенням.
 
-Each feature lives in its own folder containing `spec.md` + `plan.md`
-(plus any supporting artifacts).
+Кожна фіча живе у власній папці зі `spec.md` (+ `plan.md`, коли бекенд
+бере фічу в роботу).
+
+UI обох екранів уже реалізовано в мобільному застосунку з мок-даними
+(дизайн: Figma RF-mobile-app) — специфікації фіксують продуктовий
+контракт для бекенда.
 
 ## Specs
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
+| [Daily tracking (Головний екран)](./daily-tracking/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Goal setup (Налаштування цілі)](./goal-setup/spec.md) | Draft | @amelin0 | 2026-07-18 |
 
 ## Related
 
-- Code: `apps/api/src/client/`
-- Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)
+- Код (UI, мок-дані): `apps/mobile/src/view/tracking/`
+- Код (майбутній API): `apps/api/src/client/`
+- Knowledge (контракти V1, референс): [`.claude/knowledge/nutrition/`](../../../../.claude/knowledge/nutrition)

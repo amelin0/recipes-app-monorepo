@@ -1,16 +1,31 @@
 # Recipe (client)
 
-Recipe catalog for consumers: browsing, filters, tags, ingredients, i18n translations by user language.
+Каталог рецептів мобільного застосунку: вкладка «Рецепти» з табами
+Всі/Улюблені/Власні, популярними категоріями і перемикачем вигляду
+сітка/список; шторка фільтрів (енергетична цінність однієї порції +
+категорії, страви, спосіб приготування, дієти, інгредієнти); пошук
+інгредієнтів і страв з режимом категорії; деталі страви з
+інгредієнтами, кроками приготування та вибором порцій перед
+готуванням (порції «для інших» не впливають на КБЖВ).
 
-Each feature lives in its own folder containing `spec.md` + `plan.md`
-(plus any supporting artifacts).
+Кожна фіча живе у власній папці зі `spec.md` (+ `plan.md`, коли
+бекенд бере фічу в роботу).
+
+UI всіх екранів уже реалізовано в мобільному застосунку на мокових
+даних (дизайн: Figma RF-mobile-app) — специфікації фіксують
+продуктовий контракт для бекенда.
 
 ## Specs
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
+| [Recipes list (Вкладка «Рецепти»)](./recipes-list/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Recipe filters (Фільтр)](./recipe-filters/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Recipe search (Пошук)](./recipe-search/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Draft | @amelin0 | 2026-07-18 |
 
 ## Related
 
-- Code: `apps/api/src/client/`
-- Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)
+- Код (UI, мок-дані): `apps/mobile/src/view/recipe/`
+- Код (майбутній API): `apps/api/src/client/recipe/`
+- Knowledge (контракти V1, референс): [`.claude/knowledge/recipe/`](../../../../.claude/knowledge/recipe)

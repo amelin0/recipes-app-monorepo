@@ -1,16 +1,27 @@
 # Shopping List (client)
 
-Shopping list: add recipe → auto-aggregate ingredients, toggle checked items.
+Список продуктів на тиждень: авто-імпорт продуктів з плану харчування
+(перемикач «Додати з плану»), групування за категоріями (М'ясні, Мучні,
+Молочні…), відмічання куплених позицій, ручне додавання з каталогу з
+вибором кількості (Порція / Штука / Грам) і бейдж кількості на табі
+«Список».
 
-Each feature lives in its own folder containing `spec.md` + `plan.md`
-(plus any supporting artifacts).
+Кожна фіча живе у власній папці зі `spec.md` (+ `plan.md`, коли бекенд
+бере фічу в роботу).
+
+UI екранів уже реалізовано в мобільному застосунку з мок-даними
+(дизайн: Figma RF-mobile-app) — специфікації фіксують продуктовий
+контракт для бекенда.
 
 ## Specs
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
+| [Weekly list (Список продуктів)](./weekly-list/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Add product (Додати продукт)](./add-product/spec.md) | Draft | @amelin0 | 2026-07-18 |
 
 ## Related
 
-- Code: `apps/api/src/client/`
-- Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)
+- Код (UI, мок-дані): `apps/mobile/src/view/shopping-list/`
+- Код (майбутній API): `apps/api/src/client/`
+- Knowledge (контракти V1, референс): [`.claude/knowledge/shopping-list/`](../../../../.claude/knowledge/shopping-list)

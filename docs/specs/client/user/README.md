@@ -1,16 +1,25 @@
 # User (client)
 
-User profile and personal data: get current user (/users/me), settings, weight tracking.
+Профіль користувача: аватар з ініціалами та імʼя, підписка (тег
+«Premium Pro»), системна оцінка застосунку, налаштування мови й одиниць
+виміру, підтримка (FAQ, юридичні документи) і небезпечна зона
+(видалення акаунту, вихід).
 
-Each feature lives in its own folder containing `spec.md` + `plan.md`
-(plus any supporting artifacts).
+Кожна фіча живе у власній папці зі `spec.md` (+ `plan.md`, коли бекенд
+бере фічу в роботу).
+
+UI екрана вже реалізовано в мобільному застосунку з мок-даними
+(дизайн: Figma RF-mobile-app) — специфікації фіксують продуктовий
+контракт для бекенда.
 
 ## Specs
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
+| [Profile (Профіль і налаштування)](./profile/spec.md) | Draft | @amelin0 | 2026-07-18 |
 
 ## Related
 
-- Code: `apps/api/src/client/users/`
-- Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)
+- Код (UI, мок-дані): `apps/mobile/src/view/user/`
+- Код (майбутній API): `apps/api/src/client/users/`
+- Knowledge (контракти V1, референс): [`.claude/knowledge/user/`](../../../../.claude/knowledge/user)
