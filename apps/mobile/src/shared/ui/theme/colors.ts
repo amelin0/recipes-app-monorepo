@@ -9,6 +9,8 @@ export const colors = {
         accent: '#85E239',
         /** Light accent — OTP active cell border, highlights */
         secondary: '#B1F04E',
+        /** Accent at 10% — tab bar selection pill */
+        accentSoft: 'rgba(122, 211, 49, 0.1)',
     },
 
     // Semantic
@@ -35,6 +37,8 @@ export const colors = {
         disabled: '#BBBBBB',
         /** For liquid elements (white 30%) */
         white30: 'rgba(255, 255, 255, 0.3)',
+        /** Liquid-glass fill (white 80%) — floating tab bar */
+        white80: 'rgba(255, 255, 255, 0.8)',
         /** For elements, bg */
         ocean: '#2B7FFF',
         /** Light elements */

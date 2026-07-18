@@ -6,6 +6,9 @@ export interface AuthSlice {
 }
 
 export const createAuthSlice: StateCreator<AuthSlice, [], [], AuthSlice> = set => ({
-    isAuthenticated: false,
+    // DEV DEFAULT: true, щоб застосунок відкривався одразу на (tabs) під час
+    // роботи над табами. TODO: повернути false + персистенцію, коли зʼявиться
+    // реальний auth-флоу.
+    isAuthenticated: true,
     switchAuthenticatedAction: isAuthenticated => set(() => ({ isAuthenticated })),
 });

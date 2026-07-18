@@ -21,7 +21,7 @@ export const SUPPORTED_LANGUAGES = {
 
 export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 
-const NAMESPACES = ['common', 'auth'] as const;
+const NAMESPACES = ['common', 'auth', 'tracking'] as const;
 export type AppNamespace = (typeof NAMESPACES)[number];
 
 export const getInitialLanguage = (): SupportedLanguage => {
@@ -58,6 +58,7 @@ i18n.use(initReactI18next).init({
         uk: {
             common: uk.common,
             auth: uk.auth,
+            tracking: uk.tracking,
         },
     },
     interpolation: {

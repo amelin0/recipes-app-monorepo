@@ -3,10 +3,10 @@
     "tagline": "Рецепти та план харчування",
     "tabs": {
         "home": "Головна",
-        "meal-plan": "План",
-        "tracking": "Трекінг",
         "recipes": "Рецепти",
-        "profile": "Профіль"
+        "meal-plan": "План",
+        "progress": "Прогрес",
+        "shopping-list": "Список"
     },
     "placeholder": {
         "coming-soon": "Екран буде додано з Figma-макета."

@@ -9,10 +9,10 @@ export default function TabsLayout() {
     return (
         <Tabs screenOptions={{ headerShown: false }} tabBar={props => <AppTabBar {...props} />}>
             <Tabs.Screen name="home" options={{ title: t('common:tabs.home') }} />
-            <Tabs.Screen name="meal-plan" options={{ title: t('common:tabs.meal-plan') }} />
-            <Tabs.Screen name="tracking" options={{ title: t('common:tabs.tracking') }} />
             <Tabs.Screen name="recipes" options={{ title: t('common:tabs.recipes') }} />
-            <Tabs.Screen name="profile" options={{ title: t('common:tabs.profile') }} />
+            <Tabs.Screen name="meal-plan" options={{ title: t('common:tabs.meal-plan') }} />
+            <Tabs.Screen name="progress" options={{ title: t('common:tabs.progress') }} />
+            <Tabs.Screen name="shopping-list" options={{ title: t('common:tabs.shopping-list') }} />
         </Tabs>
     );
 }

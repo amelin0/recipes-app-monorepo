@@ -1,0 +1,25 @@
+{
+    "home": {
+        "daily-goal": "Ціль на день",
+        "of-kcal": "з {{value}} ккал",
+        "today-ration": "Раціон на сьогодні",
+        "meals": {
+            "breakfast": "Сніданок",
+            "lunch": "Обід",
+            "dinner": "Вечеря",
+            "snack": "Перекус"
+        },
+        "add": "+ Додати",
+        "not-planned": "Не заплановано",
+        "water": "Споживання води",
+        "water-progress": "{{current}} / {{max}} мл",
+        "macros": {
+            "protein": "Б",
+            "fats": "Ж",
+            "carbs": "В"
+        },
+        "grams": "г",
+        "profile-a11y": "Профіль",
+        "notifications-a11y": "Сповіщення"
+    }
+}

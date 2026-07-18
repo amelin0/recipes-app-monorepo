@@ -14,7 +14,8 @@ src/
 │   └── (app)/
 │       ├── _layout.tsx     # Stack.Protected auth guard
 │       ├── (auth)/         # unauthenticated funnel
-│       └── (tabs)/         # 5 tabs: home, meal-plan, tracking, recipes, profile
+│       └── (tabs)/         # 5 tabs: home, recipes, meal-plan, progress, shopping-list
+│                           # (liquid-glass floating AppTabBar; profile lives in the Home header)
 ├── data/
 │   ├── remote/domains/  # HTTP calls to API (<domain>.api.ts + ENDPOINTS const)
 │   └── local/domains/   # local storage per domain (auth/auth-storage.ts — tokens in SecureStore)

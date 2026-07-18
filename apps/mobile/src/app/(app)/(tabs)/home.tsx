@@ -1,5 +1,3 @@
-import { PlaceholderScreen } from '@/shared/ui/components';
+import { HomeScreen } from '@/view/tracking';
 
-export default function HomeRoute() {
-    return <PlaceholderScreen titleKey="common:tabs.home" />;
-}
+export default HomeScreen;

@@ -29,10 +29,19 @@ export const useStore = create<AppStore>()(
                 setItem: (name, value) => storage.set(name, value),
                 removeItem: name => storage.remove(name),
             })),
+            // DEV: isAuthenticated тимчасово НЕ персиститься, щоб dev-дефолт
+            // `true` діяв на кожному запуску. TODO: повернути в partialize
+            // разом з реальним auth-флоу.
             partialize: state => ({
                 appTheme: state.appTheme,
-                isAuthenticated: state.isAuthenticated,
             }),
+            version: 1,
+            migrate: persisted => {
+                // v0 персистив isAuthenticated — прибираємо, щоб старий
+                // збережений `false` не перекривав dev-дефолт.
+                const { isAuthenticated: _dropped, ...rest } = (persisted ?? {}) as Record<string, unknown>;
+                return rest;
+            },
             onRehydrateStorage: () => state => {
                 if (state) applyAppTheme(state.appTheme);
             },
