@@ -1,0 +1,12 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="star">
+<g id="Group">
+<path id="Vector" d="M12.825 4.34167L14 6.69166C14.1583 7.01666 14.5833 7.32499 14.9417 7.39166L17.0667 7.74166C18.425 7.96666 18.7417 8.94999 17.7667 9.93333L16.1083 11.5917C15.8333 11.8667 15.675 12.4083 15.7667 12.8L16.2417 14.85C16.6167 16.4667 15.75 17.1 14.325 16.25L12.3333 15.0667C11.975 14.85 11.375 14.85 11.0167 15.0667L9.025 16.25C7.6 17.0917 6.73334 16.4667 7.10834 14.85L7.58335 12.8C7.67501 12.4167 7.51668 11.875 7.24168 11.5917L5.58335 9.93333C4.60835 8.95833 4.92502 7.97499 6.28335 7.74166L8.40834 7.39166C8.76667 7.33332 9.19168 7.01666 9.35001 6.69166L10.525 4.34167C11.15 3.06667 12.1834 3.06667 12.825 4.34167Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<path id="Vector_2" d="M6.66667 4.16667H1.66667" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M4.16667 15.8333H1.66667" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_4" d="M2.5 10H1.66667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<g id="Vector_5" opacity="0">
+</g>
+</g>
+</svg>

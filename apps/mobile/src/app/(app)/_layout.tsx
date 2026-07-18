@@ -16,6 +16,18 @@ export default function AppLayout() {
                 <Stack.Screen name="goal-setup" />
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />
+                <Stack.Screen name="profile" />
+                <Stack.Screen name="add-product" />
+                <Stack.Screen
+                    name="product-amount"
+                    options={{
+                        // Шит вибору кількості (Порція | Штука | Грам).
+                        presentation: 'formSheet',
+                        sheetAllowedDetents: [0.5],
+                        sheetCornerRadius: 24,
+                        sheetGrabberVisible: false,
+                    }}
+                />
                 <Stack.Screen
                     name="meal-portions"
                     options={{

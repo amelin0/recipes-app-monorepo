@@ -1,5 +1,3 @@
-import { PlaceholderScreen } from '@/shared/ui/components';
+import { ShoppingListScreen } from '@/view/shopping-list';
 
-export default function ShoppingListRoute() {
-    return <PlaceholderScreen titleKey="common:tabs.shopping-list" />;
-}
+export default ShoppingListScreen;

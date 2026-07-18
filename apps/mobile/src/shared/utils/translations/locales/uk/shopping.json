@@ -1,0 +1,77 @@
+{
+    "list": {
+        "title": "Список продуктів",
+        "add-a11y": "Додати продукт",
+        "from-plan-title": "Додати з плану",
+        "from-plan-subtitle": "Автоматично імпортувати продукти з планування",
+        "from-plan-a11y": "Автоматичний імпорт продуктів з плану",
+        "empty": "В списку ще немає необхідних продуктів.",
+        "add-product": "Додати продукт",
+        "kcal": "{{count}} ккал",
+        "grams": "{{value}}г",
+        "ml": "{{value}} мл"
+    },
+    "categories": {
+        "meat": "М'ясні",
+        "flour": "Мучні",
+        "dairy": "Молочні",
+        "cereals": "Крупи",
+        "vegetables": "Овочі",
+        "fruits": "Фрукти",
+        "other": "Інше"
+    },
+    "add": {
+        "title": "Додати продукт",
+        "subtitle": "на {{date}}",
+        "search-placeholder": "Пошук інгредієнтів...",
+        "add-a11y": "Додати {{name}}",
+        "empty": "Нічого не знайдено"
+    },
+    "amount": {
+        "units": {
+            "portion": "Порція",
+            "piece": "Штука",
+            "gram": "Грам"
+        },
+        "suffix": {
+            "portion": "п",
+            "piece": "шт",
+            "gram": "г"
+        },
+        "add": "Додати",
+        "added-toast": "Продукт додано до списку",
+        "value-a11y": "Кількість",
+        "decrease-a11y": "Зменшити кількість",
+        "increase-a11y": "Збільшити кількість"
+    },
+    "products": {
+        "chicken-fillet": "Куряче філе",
+        "egg": "Яйце",
+        "tomato": "Помідор",
+        "rice": "Рис",
+        "buckwheat": "Гречка",
+        "carrot": "Морква",
+        "apple": "Яблуко",
+        "broccoli": "Броколі",
+        "sweet-potato": "Батат",
+        "avocado": "Авокадо",
+        "cheese": "Сир",
+        "mushrooms": "Гриби",
+        "corn": "Кукурудза",
+        "potato": "Картопля",
+        "watermelon": "Кавун",
+        "spinach": "Шпинат",
+        "garlic": "Часник",
+        "beef": "Яловичина",
+        "pork": "Свинина",
+        "turkey": "Індичка",
+        "lamb": "Баранина",
+        "wheat-flour": "Пшеничне борошно",
+        "corn-flour": "Кукурудзяне борошно",
+        "kefir": "Кефір",
+        "milk": "Молоко",
+        "sour-cream": "Сметана",
+        "cottage-cheese": "Творог",
+        "butter": "Масло"
+    }
+}

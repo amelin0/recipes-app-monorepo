@@ -2,9 +2,12 @@ import { Tabs } from 'expo-router';
 
 import { AppTabBar } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { useStore } from '@/state';
+import { selectVisibleShoppingItems } from '@/state/domains/shopping-list';
 
 export default function TabsLayout() {
     const { t } = useAppTranslation();
+    const shoppingCount = useStore(state => selectVisibleShoppingItems(state).length);
 
     return (
         <Tabs screenOptions={{ headerShown: false }} tabBar={props => <AppTabBar {...props} />}>
@@ -12,7 +15,13 @@ export default function TabsLayout() {
             <Tabs.Screen name="recipes" options={{ title: t('common:tabs.recipes') }} />
             <Tabs.Screen name="meal-plan" options={{ title: t('common:tabs.meal-plan') }} />
             <Tabs.Screen name="progress" options={{ title: t('common:tabs.progress') }} />
-            <Tabs.Screen name="shopping-list" options={{ title: t('common:tabs.shopping-list') }} />
+            <Tabs.Screen
+                name="shopping-list"
+                options={{
+                    title: t('common:tabs.shopping-list'),
+                    tabBarBadge: shoppingCount > 0 ? shoppingCount : undefined,
+                }}
+            />
         </Tabs>
     );
 }

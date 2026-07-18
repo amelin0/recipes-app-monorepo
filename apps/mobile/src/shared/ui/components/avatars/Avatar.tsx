@@ -3,6 +3,8 @@ import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
+import type { TypographyVariant } from '@/shared/ui/theme';
+
 import { AppText } from '../texts';
 
 export interface AvatarProps {
@@ -10,6 +12,8 @@ export interface AvatarProps {
     label: string;
     /** Diameter in px. @default 48 */
     size?: number;
+    /** Typography of the initials — larger avatars use bigger type. @default 'bodyLargeBold' */
+    labelVariant?: TypographyVariant;
     /** Tap handler — the avatar becomes a button when present. */
     onPress?: () => void;
     /** Screen-reader label (required when `onPress` is set). */
@@ -19,7 +23,14 @@ export interface AvatarProps {
 }
 
 /** Circle avatar — RFDS `avatar` (type=text). Image variant arrives with real profiles. */
-export const Avatar = ({ label, size = 48, onPress, accessibilityLabel, style }: AvatarProps) => {
+export const Avatar = ({
+    label,
+    size = 48,
+    labelVariant = 'bodyLargeBold',
+    onPress,
+    accessibilityLabel,
+    style,
+}: AvatarProps) => {
     return (
         <Pressable
             accessibilityRole={onPress ? 'button' : 'image'}
@@ -28,7 +39,7 @@ export const Avatar = ({ label, size = 48, onPress, accessibilityLabel, style }:
             onPress={onPress}
             style={[styles.circle(size), style]}
         >
-            <AppText variant="bodyLargeBold">{label}</AppText>
+            <AppText variant={labelVariant}>{label}</AppText>
         </Pressable>
     );
 };

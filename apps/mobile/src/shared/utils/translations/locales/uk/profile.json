@@ -1,0 +1,28 @@
+{
+    "title": "Профіль і налаштування",
+    "edit": "Редагувати",
+    "avatar-a11y": "Аватар",
+    "version": "v {{version}}",
+    "account": {
+        "title": "Обліковий запис",
+        "subscription": "Підписка",
+        "premium-tag": "Premium Pro",
+        "rate-us": "Оцініть нас"
+    },
+    "settings": {
+        "title": "Налаштування",
+        "language": "Мова",
+        "units": "Одиниці виміру"
+    },
+    "support": {
+        "title": "Підтримка",
+        "faq": "Часті питання",
+        "privacy": "Політика конфіденційності",
+        "terms": "Умови надання послуг"
+    },
+    "danger": {
+        "title": "Небезпечна зона",
+        "delete-account": "Видалити обліковий запис",
+        "logout": "Вийти"
+    }
+}

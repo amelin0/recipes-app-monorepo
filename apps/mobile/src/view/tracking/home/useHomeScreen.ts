@@ -50,7 +50,7 @@ export const useHomeScreen = () => {
         macros,
         meals,
         water: { current: waterCurrent, target: WATER_TARGET_ML },
-        handleAvatarPress: comingSoon,
+        handleAvatarPress: () => router.push('/(app)/profile'),
         handleNotificationsPress: comingSoon,
         handleGoalPress: () => router.push('/(app)/goal-setup'),
         handleMealPress: (_meal: MealKey) => comingSoon(),

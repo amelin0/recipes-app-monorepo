@@ -2,6 +2,7 @@ export * from './avatars';
 export * from './badges';
 export * from './buttons';
 export * from './cards';
+export * from './checkboxes';
 export * from './chips';
 export * from './dividers';
 export * from './headers';
