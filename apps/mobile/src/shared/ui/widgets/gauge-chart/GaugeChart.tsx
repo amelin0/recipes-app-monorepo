@@ -71,6 +71,18 @@ export const GaugeChart = ({
                         transform={`rotate(${startAngle} ${size / 2} ${size / 2})`}
                     />
                 ) : null}
+                <Circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius - strokeWidth - 6}
+                    stroke={fillColor}
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    fill="none"
+                    strokeDasharray="0.1 6"
+                    opacity={0.9}
+                    transform={`rotate(${startAngle} ${size / 2} ${size / 2})`}
+                />
             </Svg>
             <View style={styles.center}>{children}</View>
         </View>
