@@ -1,0 +1,20 @@
+{
+    "expo": {
+        "name": "Digital Nutrition Studio",
+        "slug": "dns-mobile",
+        "version": "1.0.0",
+        "scheme": "dns",
+        "orientation": "portrait",
+        "newArchEnabled": true,
+        "userInterfaceStyle": "light",
+        "ios": {
+            "supportsTablet": false,
+            "bundleIdentifier": "com.dns.mobile"
+        },
+        "android": {
+            "package": "com.dns.mobile",
+            "predictiveBackGestureEnabled": false
+        },
+        "plugins": ["expo-router", "expo-font"]
+    }
+}
