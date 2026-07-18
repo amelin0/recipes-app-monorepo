@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
-import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/recipe';
@@ -67,13 +66,9 @@ export const useRecipesListScreen = () => {
         setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
     }, []);
 
-    const handleRecipePress = useCallback(
-        (_id: string) => {
-            // TODO: recipe details screen once designed.
-            ToastService.info(t('common:states.coming-soon'));
-        },
-        [t],
-    );
+    const handleRecipePress = useCallback((id: string) => {
+        router.push({ pathname: '/(app)/meal-details', params: { id } });
+    }, []);
 
     return {
         activeTab,

@@ -90,5 +90,36 @@
         "ingredients-section": "Інгредієнти",
         "dishes-section": "Страви",
         "clear-a11y": "Очистити"
+    },
+    "details": {
+        "tabs": {
+            "ingredients": "Інгредієнти",
+            "method": "Спосіб приготування"
+        },
+        "kcal-label": "ккал",
+        "add-to-shopping-list": "Додати до списку продуктів",
+        "add-to-ration": "Додати до раціону",
+        "needed-ingredients": "Потрібні інгредієнти",
+        "cook-time": "Час приготування",
+        "favorite-a11y": "Додати в улюблені",
+        "edit-a11y": "Редагувати рецепт",
+        "share-a11y": "Поділитися рецептом",
+        "portions-a11y": "Обрати порції",
+        "cook-a11y": "Почати готувати"
+    },
+    "portions": {
+        "title": "Виберіть порції",
+        "subtitle": "Виберіть кількість порцій для себе та інших. Порції інших не вплинуть на вашу КБЖВ статистику.",
+        "my-portion": "Моя порція:",
+        "others-portion": "Порції інших:",
+        "for-others": "Для інших",
+        "portion-value": "{{value}} п",
+        "grams-value": "{{value}}г",
+        "total-weight": "Загальна вага:",
+        "start-cooking": "Розпочати приготування",
+        "close-a11y": "Закрити",
+        "decrease-a11y": "Зменшити порцію",
+        "increase-a11y": "Збільшити порцію",
+        "for-others-a11y": "Порції для інших"
     }
 }

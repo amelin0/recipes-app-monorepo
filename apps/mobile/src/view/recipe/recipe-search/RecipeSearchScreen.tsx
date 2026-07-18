@@ -27,6 +27,7 @@ export const RecipeSearchScreen = () => {
         handleCategoryPress,
         handleFilterPress,
         handleResultPress,
+        handleDishPress,
     } = useRecipeSearchScreen();
 
     const showCategories = !categoryKey && query.length === 0;
@@ -146,7 +147,7 @@ export const RecipeSearchScreen = () => {
                                 <Pressable
                                     key={dish.id}
                                     accessibilityRole="button"
-                                    onPress={() => handleResultPress(dish.id)}
+                                    onPress={() => handleDishPress(dish.id)}
                                     style={styles.resultCard}
                                 >
                                     <View style={[styles.dishThumb, { backgroundColor: dish.thumbBg }]}>
@@ -174,7 +175,7 @@ export const RecipeSearchScreen = () => {
                             <Pressable
                                 key={dish.id}
                                 accessibilityRole="button"
-                                onPress={() => handleResultPress(dish.id)}
+                                onPress={() => handleDishPress(dish.id)}
                                 style={styles.resultCard}
                             >
                                 <View style={[styles.dishThumbLarge, { backgroundColor: dish.thumbBg }]}>

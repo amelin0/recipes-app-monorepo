@@ -125,11 +125,15 @@ export const useRecipeSearchScreen = () => {
 
     const handleResultPress = useCallback(
         (_id: string) => {
-            // TODO: recipe/product details once designed.
+            // TODO: product details once designed.
             ToastService.info(t('common:states.coming-soon'));
         },
         [t],
     );
+
+    const handleDishPress = useCallback((id: string) => {
+        router.push({ pathname: '/(app)/meal-details', params: { id } });
+    }, []);
 
     return {
         categoryKey: category,
@@ -142,5 +146,6 @@ export const useRecipeSearchScreen = () => {
             router.push({ pathname: '/(app)/recipe-search', params: { category: key } }),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
         handleResultPress,
+        handleDishPress,
     };
 };

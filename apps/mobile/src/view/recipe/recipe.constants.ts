@@ -68,6 +68,86 @@ export const INGREDIENT_OPTIONS = [
     'ingredient-sweets',
 ];
 
+export interface MealIngredient {
+    id: string;
+    emoji: string;
+    name: string;
+    protein: number;
+    fats: number;
+    carbs: number;
+    grams: number;
+}
+
+export interface MealStep {
+    id: string;
+    title: string;
+    description: string;
+    ingredients: string[];
+    minutes: number;
+}
+
+export interface MockMealDetail {
+    id: string;
+    title: string;
+    cuisine: string;
+    minutes: number;
+    kcal: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+    image: ImageSourcePropType;
+    ingredients: MealIngredient[];
+    steps: MealStep[];
+    /** Nutrition of a single portion — drives the portion picker math. */
+    perPortion: { grams: number; kcal: number; protein: number; fats: number; carbs: number };
+}
+
+// TODO: replace with GET /recipes/:id once the API ships.
+export const MOCK_MEAL_DETAIL: MockMealDetail = {
+    id: 'meal-1',
+    title: 'Грецький салат',
+    cuisine: 'Середземноморська кухня',
+    minutes: 15,
+    kcal: 1859,
+    protein: 250,
+    fats: 267,
+    carbs: 180,
+    image: require('../../../assets/images/recipes/mock-2.jpg'),
+    ingredients: [
+        { id: 'ing-1', emoji: '🥒', name: 'Огірки', protein: 1, fats: 0, carbs: 4, grams: 150 },
+        { id: 'ing-2', emoji: '🍅', name: 'Помідори', protein: 2, fats: 0, carbs: 6, grams: 150 },
+        { id: 'ing-3', emoji: '🧀', name: 'Сир Фета', protein: 7, fats: 12, carbs: 2, grams: 150 },
+        { id: 'ing-4', emoji: '🫒', name: 'Оливки', protein: 0, fats: 5, carbs: 1, grams: 150 },
+    ],
+    steps: [
+        {
+            id: 'step-1',
+            title: '1. Підготовка овочів',
+            description:
+                'Помийте огірки та помідори. Наріжте огірки півкільцями, помідори — великими шматочками. Складіть у глибокий салатник.',
+            ingredients: ['Огірки', 'Помідори'],
+            minutes: 5,
+        },
+        {
+            id: 'step-2',
+            title: '2. Сир та оливки',
+            description:
+                'Наріжте фету великими кубиками. Додайте оливки та сир до овочів, обережно перемішайте, щоб сир не розсипався.',
+            ingredients: ['Сир Фета', 'Оливки'],
+            minutes: 5,
+        },
+        {
+            id: 'step-3',
+            title: '3. Заправка та подача',
+            description:
+                'Полийте салат оливковою олією, посипте орегано та свіжомеленим перцем. Подавайте одразу після приготування.',
+            ingredients: ['Оливки'],
+            minutes: 5,
+        },
+    ],
+    perPortion: { grams: 108, kcal: 337, protein: 17, fats: 50, carbs: 5 },
+};
+
 export interface MockRecipe {
     id: string;
     title: string;
