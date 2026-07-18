@@ -13,6 +13,7 @@ export default function AppLayout() {
 
             <Stack.Protected guard={isAuthenticated}>
                 <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="goal-setup" />
             </Stack.Protected>
         </Stack>
     );

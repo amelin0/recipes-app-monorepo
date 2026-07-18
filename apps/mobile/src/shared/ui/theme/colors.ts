@@ -11,6 +11,8 @@ export const colors = {
         secondary: '#B1F04E',
         /** Accent at 10% — tab bar selection pill */
         accentSoft: 'rgba(122, 211, 49, 0.1)',
+        /** Very light accent fill — tip/info boxes */
+        accentSubtle: '#F7FFF0',
     },
 
     // Semantic

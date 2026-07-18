@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { router } from 'expo-router';
 import { useUnistyles } from 'react-native-unistyles';
 
 import { formatDayHeader } from '@/shared/helpers';
@@ -51,7 +52,7 @@ export const useHomeScreen = () => {
         water: { current: waterCurrent, target: WATER_TARGET_ML },
         handleAvatarPress: comingSoon,
         handleNotificationsPress: comingSoon,
-        handleGoalPress: comingSoon,
+        handleGoalPress: () => router.push('/(app)/goal-setup'),
         handleMealPress: (_meal: MealKey) => comingSoon(),
         handleAddMeal: (_meal: MealKey) => comingSoon(),
         handleAddWater,

@@ -12,17 +12,25 @@ export interface CircleIconButtonProps extends Omit<PressableProps, 'children' |
     accessibilityLabel: string;
     /** Optional badge count pinned to the top-right corner. */
     badgeCount?: number;
+    /** Diameter in px. @default 44 */
+    size?: number;
 }
 
-/** Round 44px icon button — RFDS secondary circle (header notifications etc.). */
-export const CircleIconButton = ({ children, accessibilityLabel, badgeCount, ...rest }: CircleIconButtonProps) => {
+/** Round icon button — RFDS secondary circle (header notifications, ± steppers). */
+export const CircleIconButton = ({
+    children,
+    accessibilityLabel,
+    badgeCount,
+    size = 44,
+    ...rest
+}: CircleIconButtonProps) => {
     return (
-        <View style={styles.wrapper}>
+        <View style={styles.wrapper(size)}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={accessibilityLabel}
                 hitSlop={8}
-                style={({ pressed }) => styles.base(pressed)}
+                style={({ pressed }) => styles.base(pressed, size)}
                 {...rest}
             >
                 {children}
@@ -33,13 +41,13 @@ export const CircleIconButton = ({ children, accessibilityLabel, badgeCount, ...
 };
 
 const styles = StyleSheet.create(theme => ({
-    wrapper: {
-        width: 44,
-        height: 44,
-    },
-    base: (pressed: boolean) => ({
-        width: 44,
-        height: 44,
+    wrapper: (size: number) => ({
+        width: size,
+        height: size,
+    }),
+    base: (pressed: boolean, size: number) => ({
+        width: size,
+        height: size,
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: theme.radius.full,

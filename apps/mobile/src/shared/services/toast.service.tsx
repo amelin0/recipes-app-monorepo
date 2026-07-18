@@ -20,13 +20,7 @@ interface ShowOptions {
 /** Maps a `react-native-toast-message` payload onto our `Toast` component. */
 const renderToast = (variant: ToastVariant) => {
     const ToastRenderer = ({ text1, props }: ToastConfigParams<ShowOptions>) => (
-        <Toast
-            variant={variant}
-            text={text1 ?? ''}
-            actionLabel={props?.actionLabel}
-            onAction={props?.onAction}
-            onClose={ToastService.hide}
-        />
+        <Toast variant={variant} text={text1 ?? ''} actionLabel={props?.actionLabel} onAction={props?.onAction} />
     );
     ToastRenderer.displayName = `ToastRenderer(${variant})`;
     return ToastRenderer;
