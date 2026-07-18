@@ -1,5 +1,3 @@
-import { PlaceholderScreen } from '@/shared/ui/components';
+import { RecipesListScreen } from '@/view/recipe';
 
-export default function RecipesRoute() {
-    return <PlaceholderScreen titleKey="common:tabs.recipes" />;
-}
+export default RecipesListScreen;

@@ -60,6 +60,14 @@ export const shadow = {
         shadowRadius: 40,
         elevation: 8,
     },
+    // RFDS shadow/sheet — upward shadow of bottom-sheet style screens
+    sheet: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 8,
+    },
 } as const;
 
 export const iconSize = {

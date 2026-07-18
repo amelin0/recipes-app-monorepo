@@ -4,9 +4,11 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { applyAppTheme, createAppSlice, type AppSlice } from './domains/app';
 import { createAuthSlice, type AuthSlice } from './domains/auth';
+import { createRecipeFiltersSlice, type RecipeFiltersSlice } from './domains/recipe';
 
 type AppStore = AppSlice &
-    AuthSlice & {
+    AuthSlice &
+    RecipeFiltersSlice & {
         reset: () => void;
     };
 
@@ -17,9 +19,11 @@ export const useStore = create<AppStore>()(
         (...a) => ({
             ...createAppSlice(...a),
             ...createAuthSlice(...a),
+            ...createRecipeFiltersSlice(...a),
             reset: () => {
                 const [, get] = a;
                 get().switchAuthenticatedAction(false);
+                get().resetRecipeFilters();
             },
         }),
         {
