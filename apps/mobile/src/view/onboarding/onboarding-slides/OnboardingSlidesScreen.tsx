@@ -15,7 +15,7 @@ import {
     TITLE_BOX_HEIGHT,
 } from '../onboarding.constants';
 
-import { HighlightedTitle } from './components';
+import { HighlightedTitle } from '../components';
 import { useOnboardingSlidesScreen } from './useOnboardingSlidesScreen';
 
 export const OnboardingSlidesScreen = () => {

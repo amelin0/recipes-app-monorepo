@@ -8,9 +8,20 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import ArrowLeftIcon from '../../../../../assets/icons/arrow-left.svg';
 
+export type CircleBackButtonSize = 'sm' | 'md';
+
+const SIZES: Record<CircleBackButtonSize, { box: number; icon: number }> = {
+    /** Nav-bar variant — RFDS 686:26469. */
+    sm: { box: 44, icon: 20 },
+    /** Standalone footer variant — RFDS 66:2341. */
+    md: { box: 52, icon: 24 },
+};
+
 export interface CircleBackButtonProps extends Omit<PressableProps, 'children' | 'style' | 'onPress'> {
     /** Screen-reader label — defaults to the localized "Back". */
     accessibilityLabel?: string;
+    /** Button/icon size preset. @default 'sm' */
+    size?: CircleBackButtonSize;
     /**
      * Called on press. Defaults to `router.back()` (guarded by `canGoBack`).
      * Pass a custom handler when the screen needs to short-circuit navigation.
@@ -28,7 +39,7 @@ const goBack = () => {
  * Circular back button — RFDS liquid pill (44×44, Semantic/white 30%) with an
  * arrow-left icon, used at the top of the auth screens.
  */
-export const CircleBackButton = ({ accessibilityLabel, onPress, ...rest }: CircleBackButtonProps) => {
+export const CircleBackButton = ({ accessibilityLabel, size = 'sm', onPress, ...rest }: CircleBackButtonProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation();
 
@@ -38,17 +49,17 @@ export const CircleBackButton = ({ accessibilityLabel, onPress, ...rest }: Circl
             accessibilityLabel={accessibilityLabel ?? t('common:actions.back')}
             onPress={onPress ?? goBack}
             hitSlop={8}
-            style={({ pressed }) => styles.base(pressed)}
+            style={({ pressed }) => styles.base(pressed, SIZES[size].box)}
         >
-            <ArrowLeftIcon width={20} height={20} color={theme.colors.elements.primary} />
+            <ArrowLeftIcon width={SIZES[size].icon} height={SIZES[size].icon} color={theme.colors.elements.primary} />
         </Pressable>
     );
 };
 
 const styles = StyleSheet.create(theme => ({
-    base: (pressed: boolean) => ({
-        minHeight: 44,
-        minWidth: 44,
+    base: (pressed: boolean, box: number) => ({
+        minHeight: box,
+        minWidth: box,
         alignSelf: 'flex-start',
         alignItems: 'center',
         justifyContent: 'center',

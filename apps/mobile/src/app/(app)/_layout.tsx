@@ -13,6 +13,10 @@ export default function AppLayout() {
 
             <Stack.Protected guard={isAuthenticated}>
                 <Stack.Screen name="(tabs)" />
+                {/* Post-registration profile setup — entered from the app index
+                    while the questionnaire has not been completed. */}
+                <Stack.Screen name="setup-intro" />
+                <Stack.Screen name="setup-name" />
                 <Stack.Screen name="goal-setup" />
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />

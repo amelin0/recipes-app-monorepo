@@ -29,7 +29,7 @@ export const SignInScreen = () => {
     return (
         <AppScreen>
             <View style={styles.content}>
-                <AppText variant="titleMedium">{t('auth:sign-in.title')}</AppText>
+                <AppText variant="titleMediumTight">{t('auth:sign-in.title')}</AppText>
 
                 <View style={styles.form}>
                     <AppInput

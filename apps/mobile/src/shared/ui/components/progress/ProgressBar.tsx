@@ -10,16 +10,18 @@ export interface ProgressBarProps {
     color: string;
     /** Bar height in px. @default 8 */
     height?: number;
+    /** Track color. @default Active/tertiary */
+    trackColor?: string;
     /** Extra styles merged onto the track. */
     style?: StyleProp<ViewStyle>;
 }
 
 /** Rounded horizontal progress bar on an Active/tertiary track. */
-export const ProgressBar = ({ progress, color, height = 8, style }: ProgressBarProps) => {
+export const ProgressBar = ({ progress, color, height = 8, trackColor, style }: ProgressBarProps) => {
     const clamped = Math.min(Math.max(progress, 0), 1);
 
     return (
-        <View style={[styles.track(height), style]}>
+        <View style={[styles.track(height), trackColor ? { backgroundColor: trackColor } : null, style]}>
             <View style={[styles.fill(height, clamped), { backgroundColor: color }]} />
         </View>
     );

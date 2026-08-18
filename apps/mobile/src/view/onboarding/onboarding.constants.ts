@@ -43,3 +43,13 @@ export const TITLE_BOX_HEIGHT = 94;
  * the viewport is what stops a 375x667 phone from clipping the illustration.
  */
 export const SLIDE_BOTTOM_CHROME = 8 + 56 + 16 + 56 + 40 + 24;
+
+/** Mascot illustration on the profile-setup intro (RF-mobile-app 852:96484). */
+export const SETUP_MASCOT_SIZE = 200;
+
+/**
+ * Number of questions in the profile-setup questionnaire. Taken from the
+ * progress bar in 66:2333 — the filled run is 13 of the 143pt track, i.e. 1/11.
+ * Update as the remaining steps are designed.
+ */
+export const SETUP_STEPS = 11;

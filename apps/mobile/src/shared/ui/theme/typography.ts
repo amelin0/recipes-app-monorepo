@@ -28,12 +28,21 @@ export const typography = {
         fontSize: 28,
         lineHeight: 36.4,
     },
-    // Exception in the scale: the RFDS library frame still lists title/medium as
-    // Bold + 2% tracking, but every RF-mobile-app screen binds it to Inter
-    // SemiBold 24 with no tracking (verified against the Figma raster of
-    // 66:2516 «Вхід» and 66:2570 «Реєстрація» — stem 3.12px and left bearing
-    // 1.75px both match SemiBold, Bold would be 3.57px / 1.58px).
     titleMedium: {
+        fontFamily: fontFamily.bold,
+        fontSize: 24,
+        lineHeight: 31.2,
+        letterSpacing: 0.48,
+    },
+    /**
+     * The auth funnel draws its screen title with a different Figma Header
+     * component (RF-mobile-app 90:12835) than the rest of the app (13:9627):
+     * SemiBold with no tracking instead of Bold + 2%. Measured off the Figma
+     * rasters — stem 3.12px / bearing 1.75px on «Вхід» and «Реєстрація» vs
+     * 3.55px on «Як тебе звати?», against 3.13 (SemiBold) and 3.57 (Bold).
+     * Two live variants, so two tokens; do not collapse them.
+     */
+    titleMediumTight: {
         fontFamily: fontFamily.semiBold,
         fontSize: 24,
         lineHeight: 31.2,

@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { AppText } from '../texts';
 
 export interface ScreenHeaderProps {
-    /** Screen title — RFDS `Header` (title/medium). */
+    /** Screen title — auth-funnel `Header` (title/medium, SemiBold, no tracking). */
     title: string;
     /** Optional supporting copy under the title (body/large, tertiary). */
     subtitle?: string;
@@ -15,7 +15,7 @@ export interface ScreenHeaderProps {
 export const ScreenHeader = ({ title, subtitle }: ScreenHeaderProps) => {
     return (
         <View style={styles.root}>
-            <AppText variant="titleMedium" accessibilityRole="header">
+            <AppText variant="titleMediumTight" accessibilityRole="header">
                 {title}
             </AppText>
             {subtitle ? (
