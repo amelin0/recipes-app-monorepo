@@ -2,5 +2,8 @@ export { OnboardingSlidesScreen } from './onboarding-slides';
 export { SetupBirthDateScreen } from './setup-birth-date';
 export { SetupGenderScreen } from './setup-gender';
 export { SetupGreetingScreen } from './setup-greeting';
+export { SetupHeightScreen } from './setup-height';
 export { SetupIntroScreen } from './setup-intro';
 export { SetupNameScreen } from './setup-name';
+export { SetupUnitsScreen } from './setup-units';
+export { SetupWeightScreen } from './setup-weight';

@@ -223,12 +223,16 @@ supersedes: null
 
 - Дизайн: Figma RF-mobile-app 852:83113 (вступ), 66:2333 / 852:96676
   («Як тебе звати?»), 852:96816 (вітання), 855:98346 (стать), 66:2356
-  (дата народження) — звірено попіксельно 2026-08-18
+  (дата народження), 855:101238 (одиниці), 855:101071 (вага), 855:109474
+  (зріст) — звірено попіксельно 2026-08-18
 - Код (UI, мок): `apps/mobile/src/view/onboarding/setup-intro/`,
   `apps/mobile/src/view/onboarding/setup-name/`,
   `apps/mobile/src/view/onboarding/setup-greeting/`,
   `apps/mobile/src/view/onboarding/setup-gender/`,
-  `apps/mobile/src/view/onboarding/setup-birth-date/`
+  `apps/mobile/src/view/onboarding/setup-birth-date/`,
+  `apps/mobile/src/view/onboarding/setup-units/`,
+  `apps/mobile/src/view/onboarding/setup-weight/`,
+  `apps/mobile/src/view/onboarding/setup-height/`
 - Код (стан анкети): `apps/mobile/src/state/domains/profile-setup/`
 - Суміжні специфікації: [../intro-slides/spec.md](../intro-slides/spec.md)
   (знайомство до автентифікації),

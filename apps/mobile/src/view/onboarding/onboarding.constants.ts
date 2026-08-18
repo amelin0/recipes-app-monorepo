@@ -60,3 +60,21 @@ export const BIRTH_YEAR_MAX = 2012;
 
 /** Wheel position the design opens on (66:2356). */
 export const DEFAULT_BIRTH_DATE = '1995-01-01';
+
+/** Wheel ranges for the body-metric steps (855:101071, 855:109474). */
+export const WEIGHT_KG_MIN = 30;
+export const WEIGHT_KG_MAX = 250;
+export const HEIGHT_CM_MIN = 130;
+export const HEIGHT_CM_MAX = 220;
+
+/**
+ * Where the wheels open. The mocks show the first item of each range (30 кг,
+ * 130 см), which is the designer scrolling to the top rather than a product
+ * default — starting the average user 40kg below their weight would cost more
+ * scrolling than it saves.
+ */
+export const DEFAULT_WEIGHT_KG = 70;
+export const DEFAULT_HEIGHT_CM = 170;
+
+export const KG_PER_LB = 0.45359237;
+export const CM_PER_INCH = 2.54;

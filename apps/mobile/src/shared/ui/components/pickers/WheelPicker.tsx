@@ -115,7 +115,7 @@ export const WheelPicker = ({ columns }: WheelPickerProps) => {
         <View style={styles.card}>
             <View style={styles.clip}>
                 <View style={styles.viewport}>
-                    <View style={styles.columns}>
+                    <View style={styles.columns(columns.length)}>
                         {columns.map(column => (
                             <Column key={column.key} column={column} />
                         ))}
@@ -143,11 +143,13 @@ const styles = StyleSheet.create(theme => ({
     viewport: {
         height: VIEWPORT,
     },
-    columns: {
+    // A lone column is centred; several spread across the card (855:101071 vs
+    // 855:100403).
+    columns: (count: number) => ({
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: count > 1 ? 'space-between' : 'center',
         height: VIEWPORT,
-    },
+    }),
     column: {
         width: 100,
         height: VIEWPORT,

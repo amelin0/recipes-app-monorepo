@@ -20,16 +20,20 @@ export interface SetupFooterProps {
 }
 
 /**
- * Questionnaire footer — RFDS 66:2340. The CTA reads «Далі» while the step
- * cannot be completed and «Продовжити» once it can; that is how every frame in
- * the flow is drawn (disabled 66:2333 vs enabled 852:96676 / 855:98346).
+ * Questionnaire footer — RFDS 66:2340.
+ *
+ * The CTA label follows the layout: «Далі» next to the back button, «Продовжити»
+ * when it takes the full width. That matches 66:2333, 852:96676, 852:96816,
+ * 855:101238, 855:101071 and 855:109474; only the gender step (855:98346) is
+ * drawn with «Продовжити» in the two-button layout, which reads as a slip in the
+ * design rather than a rule.
  */
 export const SetupFooter = ({ canProceed, onNext, showBack = true, fullWidth = false }: SetupFooterProps) => {
     const { t } = useAppTranslation(['onboarding']);
 
     const cta = (
         <AppButton
-            label={t(canProceed ? 'onboarding:setup.actions.continue' : 'onboarding:setup.actions.next')}
+            label={t(fullWidth ? 'onboarding:setup.actions.continue' : 'onboarding:setup.actions.next')}
             onPress={onNext}
             disabled={!canProceed}
             fullWidth={fullWidth}

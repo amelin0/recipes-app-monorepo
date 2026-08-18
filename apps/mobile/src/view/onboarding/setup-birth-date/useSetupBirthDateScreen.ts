@@ -79,9 +79,8 @@ export const useSetupBirthDateScreen = () => {
     ];
 
     const handleNext = useCallback(() => {
-        // Nothing further is designed yet — persist and stop here.
         setAnswer('birthDate', `${year}-${pad(monthIndex + 1)}-${pad(day)}`);
-        router.push('/(app)/(tabs)/home');
+        router.push('/(app)/setup-units');
     }, [day, monthIndex, setAnswer, year]);
 
     return { columns, canProceed: true, handleNext };

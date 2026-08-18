@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { applyAppTheme, createAppSlice, type AppSlice } from './domains/app';
 import { createAuthSlice, type AuthSlice } from './domains/auth';
-import { createProfileSetupSlice, type ProfileSetupSlice } from './domains/profile-setup';
+import { createProfileSetupSlice, PROFILE_SETUP_DEFAULTS, type ProfileSetupSlice } from './domains/profile-setup';
 import { createRecipeFiltersSlice, type RecipeFiltersSlice } from './domains/recipe';
 import { createShoppingListSlice, type ShoppingListSlice } from './domains/shopping-list';
 
@@ -55,6 +55,17 @@ export const useStore = create<AppStore>()(
                 // збережений `false` не перекривав dev-дефолт.
                 const { isAuthenticated: _dropped, ...rest } = (persisted ?? {}) as Record<string, unknown>;
                 return rest;
+            },
+            // zustand replaces persisted keys wholesale, so a build that adds a
+            // questionnaire answer would read `undefined` for it out of an older
+            // store. Merge the defaults back under whatever was saved.
+            merge: (persisted, current) => {
+                const saved = (persisted ?? {}) as Partial<AppStore>;
+                return {
+                    ...current,
+                    ...saved,
+                    profileSetup: { ...PROFILE_SETUP_DEFAULTS, ...saved.profileSetup },
+                };
             },
             onRehydrateStorage: () => state => {
                 if (state) applyAppTheme(state.appTheme);
