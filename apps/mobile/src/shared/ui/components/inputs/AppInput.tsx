@@ -66,7 +66,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
     );
 
     const helperText = errorText ?? supportingText;
-    const placeholderTextColor = disabled ? theme.colors.semantic.disabled : theme.colors.semantic.darkGrey;
+    const placeholderTextColor = disabled ? theme.colors.semantic.disabled : theme.colors.elements.tertiary;
 
     return (
         <View style={[styles.root, style]}>
@@ -112,7 +112,7 @@ const styles = StyleSheet.create(theme => ({
         borderWidth: 1,
         backgroundColor: state === 'disabled' ? theme.colors.semantic.lightGrey : theme.colors.background.screen,
         borderColor: {
-            default: theme.colors.forms.lightBorder,
+            default: theme.colors.forms.border,
             focused: theme.colors.forms.darkBorder,
             invalid: theme.colors.forms.negativeBorder,
             disabled: theme.colors.semantic.lightGrey,

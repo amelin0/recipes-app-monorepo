@@ -31,7 +31,7 @@ export const PasswordInput = forwardRef<TextInput, PasswordInputProps>(function 
 
     const toggle = useCallback(() => setIsVisible(prev => !prev), []);
 
-    const iconColor = disabled ? theme.colors.semantic.disabled : theme.colors.elements.tertiary;
+    const iconColor = disabled ? theme.colors.semantic.disabled : theme.colors.elements.secondary;
 
     return (
         <AppInput

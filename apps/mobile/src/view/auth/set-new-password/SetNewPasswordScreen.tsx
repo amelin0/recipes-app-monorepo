@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppButton, AppScreen, CircleBackButton, PasswordInput, ScreenHeader } from '@/shared/ui/components';
+import { AppButton, AppScreen, PasswordInput, ScreenActions, ScreenHeader, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { useSetNewPasswordScreen } from './useSetNewPasswordScreen';
@@ -14,9 +14,9 @@ export const SetNewPasswordScreen = () => {
 
     return (
         <AppScreen>
-            <View style={styles.content}>
-                <CircleBackButton />
+            <TopBar title={t('auth:set-new-password.nav-title')} />
 
+            <View style={styles.content}>
                 <ScreenHeader title={t('auth:set-new-password.title')} />
 
                 <View style={styles.form}>
@@ -32,14 +32,12 @@ export const SetNewPasswordScreen = () => {
                         onChangeText={setConfirmPassword}
                         autoComplete="new-password"
                     />
-                    <AppButton
-                        label={t('auth:set-new-password.submit')}
-                        onPress={handleSubmit}
-                        fullWidth
-                        style={styles.submit}
-                    />
                 </View>
             </View>
+
+            <ScreenActions>
+                <AppButton label={t('auth:set-new-password.submit')} onPress={handleSubmit} fullWidth />
+            </ScreenActions>
         </AppScreen>
     );
 };
@@ -53,8 +51,5 @@ const styles = StyleSheet.create(theme => ({
     },
     form: {
         gap: theme.spacing[4],
-    },
-    submit: {
-        minHeight: 56,
     },
 }));

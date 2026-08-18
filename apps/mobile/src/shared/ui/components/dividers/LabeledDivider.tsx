@@ -33,6 +33,6 @@ const styles = StyleSheet.create(theme => ({
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: theme.colors.forms.lightBorder,
+        backgroundColor: theme.colors.forms.divider,
     },
 }));

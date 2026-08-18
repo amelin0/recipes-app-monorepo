@@ -46,7 +46,7 @@ const styles = StyleSheet.create(theme => ({
     content: {
         flex: 1,
         paddingHorizontal: theme.spacing[4],
-        paddingVertical: theme.spacing[3],
+        paddingTop: theme.spacing[4],
         gap: theme.spacing[6],
     },
     resendRow: {

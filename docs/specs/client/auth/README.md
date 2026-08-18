@@ -16,9 +16,9 @@ UI всіх екранів уже реалізовано в мобільному
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Sign-up (Реєстрація)](./sign-up/spec.md) | Draft | @amelin0 | 2026-07-18 |
-| [Sign-in (Вхід)](./sign-in/spec.md) | Draft | @amelin0 | 2026-07-18 |
-| [Password reset (Відновлення паролю)](./password-reset/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Sign-up (Реєстрація)](./sign-up/spec.md) | Draft | @amelin0 | 2026-08-18 |
+| [Sign-in (Вхід)](./sign-in/spec.md) | Draft | @amelin0 | 2026-08-18 |
+| [Password reset (Відновлення паролю)](./password-reset/spec.md) | Draft | @amelin0 | 2026-08-18 |
 | [Session (Сесія і токени)](./session/spec.md) | Draft | @amelin0 | 2026-07-18 |
 
 ## Related

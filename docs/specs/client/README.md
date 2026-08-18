@@ -8,6 +8,7 @@ Users with the **USER** role.
 
 | Domain | Scope |
 |---|---|
+| [`onboarding/`](./onboarding) | First launch: splash, intro slides |
 | [`auth/`](./auth) | Registration, login, sessions |
 | [`user/`](./user) | Profile, settings, weight tracking |
 | [`nutrition/`](./nutrition) | Nutrition goals, daily macro tracking |

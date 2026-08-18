@@ -9,7 +9,7 @@ and meal planning system. Structure mirrors the 11am-app reference monorepo.
 recipes-app-monorepo/
 ├── apps/
 │   ├── api/          # @dns/api — EMPTY: backend will be written by the backend developer
-│   ├── mobile/       # @dns/mobile — EMPTY: Expo app will be rebuilt (Uniwind Pro styling)
+│   ├── mobile/       # @dns/mobile — RationFit: Expo app (Unistyles), screens ship domain by domain
 │   └── web/          # @dns/web — Next.js admin panel (working)
 ├── packages/         # Shared workspaces (planned: shared-types, validation,
 │                     #   constants, utils, database) — see packages/CLAUDE.md
@@ -30,7 +30,7 @@ recipes-app-monorepo/
 |-----|-------|
 | `@dns/api` | TBD by backend developer (reference: NestJS + PostgreSQL + Redis + MinIO, as in 11am-app) |
 | `@dns/web` | Next.js 16, React 19, Tailwind CSS v4, TypeScript |
-| `@dns/mobile` | TBD: Expo + React Native + Uniwind Pro (Tailwind v4 className), as in 11am-app |
+| `@dns/mobile` | Expo SDK 55 + React Native 0.83 + expo-router + **react-native-unistyles 3** (NOT Uniwind) |
 
 Local infrastructure: `docker-compose.yml` — postgres:16, redis:7, MinIO (S3).
 
@@ -87,7 +87,7 @@ clients. Mobile and web call the API via HTTP only.
 
 ```bash
 pnpm dev:web          # Start Next.js dev server
-pnpm dev:mobile       # Start mobile dev (once @dns/mobile exists)
+pnpm dev:mobile       # Start mobile dev (see apps/mobile/CLAUDE.md — Metro port caveat)
 pnpm dev:api          # Start API dev (once @dns/api exists)
 pnpm build:web        # Build Next.js
 pnpm deploy:web       # Deploy web to Vercel (production)
@@ -101,31 +101,32 @@ docker compose up -d  # Local postgres + redis + MinIO
 
 ## Design System
 
-Semantic token system — identical naming across web (Tailwind CSS vars) and mobile.
+WARNING: mobile and web currently run **different palettes**. Do not copy tokens
+between them, and do not "align" one to the other without asking.
 
-Full token reference: `.claude/knowledge/design-tokens.md`
+### Mobile — source of truth: **RFDS Figma** (`oLpxjnx4DEZdTv5eTyE2Hv`)
+- Colors: node `54617:1222` (light theme) -> `apps/mobile/src/shared/ui/theme/colors.ts`
+- Typography: node `54617:1678`, **Inter only** -> `typography.ts`
+- Applied via `StyleSheet.create(theme => ({...}))` (react-native-unistyles), never `className`
+- Key colors: `branding.primary #1E2932`, `branding.accent #5EBA12`,
+  `semantic.darkGrey #8C8C8C`, `positive #00AB3C`, `negative #FF0021`, `ocean #2B7FFF`
+- `.claude/knowledge/design-tokens.md` is **outdated for mobile** — ignore it there
 
-### Key colors
-- **primary** (olive green `#6B8F3C`) — buttons, active states, links, progress rings
-- **accent** (peach `#D4956A`) — highlights, carbs indicator
-- **macro** — protein `#6B8F3C`, carbs `#D4956A`, fats `#5B9BD5`, calories `#8BA651`
-
-### Usage patterns
-- Web: `bg-primary-default`, `text-text-secondary`, `border-border-default`
-- Mobile (Uniwind): tokens defined in `apps/mobile/src/global.css`, used via `className`
-
-### Files
-- Web: `apps/web/src/app/globals.css` — Tailwind `@theme` with CSS custom properties
-
-### Fonts
-- **Manrope** — headings (`--font-heading`)
-- **Inter** — body text (`--font-sans`)
+### Web — older palette, unchanged
+- `apps/web/src/app/globals.css` — Tailwind `@theme` with CSS custom properties
+- primary olive `#6B8F3C`, accent peach `#D4956A`;
+  macro: protein `#6B8F3C`, carbs `#D4956A`, fats `#5B9BD5`, calories `#8BA651`
+- Usage: `bg-primary-default`, `text-text-secondary`, `border-border-default`
+- Fonts: **Manrope** headings (`--font-heading`), **Inter** body (`--font-sans`)
 
 ## Docs
 
 `docs/` is the single source of truth for product specs:
 - `docs/specs/<bucket>/<domain>/<feature>/` — `spec.md` (WHAT/WHY) + `plan.md` (HOW)
 - Buckets: `client/` (mobile + client API), `admin/` (admin panel + admin API)
+- **Mobile screens built from Figma ship `spec.md` only** (frontmatter `plan: null`) —
+  the backend developer turns the spec into schema + endpoints. See
+  "Screen delivery workflow" in `apps/mobile/CLAUDE.md`.
 - Zonal commands inside `docs/`: `/new-spec`, `/new-plan`, `/new-adr`, `/new-runbook`
 - See `docs/CLAUDE.md` for the rules
 

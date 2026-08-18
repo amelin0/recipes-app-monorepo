@@ -5,7 +5,7 @@ domain: auth
 status: Draft
 owner: '@amelin0'
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-08-18
 plan: null
 related-adrs: []
 supersedes: null
@@ -182,6 +182,9 @@ Sign-In. Переконатися, що користувач у застосун
 
 ## Related
 
-- Дизайн: Figma RF-mobile-app 66:2516 (Вхід)
+- Дизайн: Figma RF-mobile-app 66:2516 (Вхід) — звірено попіксельно
+  2026-08-18; розійшлися лише токени оформлення (обведення інпутів,
+  колір плейсхолдера, лінія роздільника, накреслення заголовка, розмір
+  іконок провайдерів). Продуктовий контракт нижче без змін.
 - Код (UI, мок): `apps/mobile/src/view/auth/sign-in/`
 - Знання V1: `.claude/knowledge/auth/login.md`

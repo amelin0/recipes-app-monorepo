@@ -10,7 +10,6 @@ export const useSignUpScreen = () => {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
 
     const handleSignUp = useCallback(() => {
         // TODO: POST /auth/register once the API ships — mock flow goes
@@ -25,6 +24,17 @@ export const useSignUpScreen = () => {
 
     const handlePrivacyPolicy = useCallback(() => {
         // TODO: open the privacy-policy page once it exists.
+        ToastService.info(t('common:states.coming-soon'));
+    }, [t]);
+
+    const handleAppleSignUp = useCallback(() => {
+        // TODO: Apple OAuth once the API ships. Same provider call as sign-in —
+        // the backend decides whether the identity creates or reuses an account.
+        ToastService.info(t('common:states.coming-soon'));
+    }, [t]);
+
+    const handleGoogleSignUp = useCallback(() => {
+        // TODO: Google OAuth once the API ships.
         ToastService.info(t('common:states.coming-soon'));
     }, [t]);
 
@@ -43,11 +53,11 @@ export const useSignUpScreen = () => {
         setEmail,
         password,
         setPassword,
-        confirmPassword,
-        setConfirmPassword,
         handleSignUp,
         handleTermsOfService,
         handlePrivacyPolicy,
+        handleAppleSignUp,
+        handleGoogleSignUp,
         handleSignIn,
     };
 };

@@ -6,13 +6,13 @@ export const colors = {
         /** Main color */
         primary: '#1E2932',
         /** Solid buttons, decorations (bg) */
-        accent: '#85E239',
-        /** Light accent — OTP active cell border, highlights */
+        accent: '#5EBA12',
+        /** Light accent — OTP active cell border. App-file literal, not an RFDS variable. */
         secondary: '#B1F04E',
-        /** Accent at 10% — tab bar selection pill */
-        accentSoft: 'rgba(122, 211, 49, 0.1)',
-        /** Very light accent fill — tip/info boxes */
+        /** Very light accent fill — tip/info boxes. App-file literal, not an RFDS variable. */
         accentSubtle: '#F7FFF0',
+        /** RFDS `Branding/disabled` — inactive pagination dots, muted brand surfaces. */
+        disabled: '#E0E2E4',
     },
 
     // Semantic
@@ -20,7 +20,7 @@ export const colors = {
         /** Solid elements */
         lightGrey: '#F9FAFB',
         /** Solid elements */
-        darkGrey: '#969696',
+        darkGrey: '#8C8C8C',
         /** White elements regardless of theme */
         white: '#FFFFFF',
         /** Approval, allowance, availability */
@@ -37,10 +37,12 @@ export const colors = {
         lightNegative: '#FFEBEB',
         /** Disabled elements */
         disabled: '#BBBBBB',
-        /** For liquid elements (white 30%) */
+        /** RFDS `Semantic/liquid` — white at 30% */
         white30: 'rgba(255, 255, 255, 0.3)',
-        /** Liquid-glass fill (white 80%) — floating tab bar */
-        white80: 'rgba(255, 255, 255, 0.8)',
+        /** Liquid-glass bar fill — floating tab bar. App-file literal. */
+        glassFill: 'rgba(233, 233, 233, 0.8)',
+        /** Liquid-glass selection pill — floating tab bar. App-file literal. */
+        glassSelection: 'rgba(255, 255, 255, 0.5)',
         /** For elements, bg */
         ocean: '#2B7FFF',
         /** Light elements */
@@ -69,6 +71,10 @@ export const colors = {
 
     // Forms (outlines for elements)
     forms: {
+        /** RF-mobile-app `Forms/border` — text-input outlines. */
+        border: '#E6E6E6',
+        /** Hairline separator (LabeledDivider). App-file literal, not an RFDS variable. */
+        divider: '#F6F6F6',
         lightBorder: '#EFEFEF',
         darkBorder: '#1E2932',
         negativeBorder: '#FF0021',

@@ -40,7 +40,7 @@ export const CircleBackButton = ({ accessibilityLabel, onPress, ...rest }: Circl
             hitSlop={8}
             style={({ pressed }) => styles.base(pressed)}
         >
-            <ArrowLeftIcon width={24} height={24} color={theme.colors.elements.primary} />
+            <ArrowLeftIcon width={20} height={20} color={theme.colors.elements.primary} />
         </Pressable>
     );
 };

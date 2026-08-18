@@ -1,26 +1,30 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
 
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppInput, AppScreen, AppText, PasswordInput } from '@/shared/ui/components';
+import { AppButton, AppInput, AppScreen, AppText, LabeledDivider, PasswordInput } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
+
+import AppleIcon from '../../../../assets/icons/auth/apple.svg';
+import GoogleIcon from '../../../../assets/icons/auth/google.svg';
 
 import { useSignUpScreen } from './useSignUpScreen';
 
 export const SignUpScreen = () => {
     const { t } = useAppTranslation(['auth']);
+    const { theme } = useUnistyles();
     const {
         email,
         setEmail,
         password,
         setPassword,
-        confirmPassword,
-        setConfirmPassword,
         handleSignUp,
         handleTermsOfService,
         handlePrivacyPolicy,
         handleSignIn,
+        handleAppleSignUp,
+        handleGoogleSignUp,
     } = useSignUpScreen();
 
     return (
@@ -44,12 +48,6 @@ export const SignUpScreen = () => {
                         onChangeText={setPassword}
                         autoComplete="new-password"
                     />
-                    <PasswordInput
-                        placeholder={t('auth:sign-up.confirm-password-placeholder')}
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        autoComplete="new-password"
-                    />
 
                     <AppButton
                         label={t('auth:sign-up.submit')}
@@ -57,6 +55,25 @@ export const SignUpScreen = () => {
                         fullWidth
                         style={styles.submit}
                     />
+
+                    <LabeledDivider label={t('auth:sign-up.or')} />
+
+                    <View style={styles.social}>
+                        <AppButton
+                            variant="secondary"
+                            label={t('auth:sign-up.sign-up-apple')}
+                            onPress={handleAppleSignUp}
+                            leftSlot={<AppleIcon width={24} height={24} color={theme.colors.elements.primary} />}
+                            fullWidth
+                        />
+                        <AppButton
+                            variant="secondary"
+                            label={t('auth:sign-up.sign-up-google')}
+                            onPress={handleGoogleSignUp}
+                            leftSlot={<GoogleIcon width={24} height={24} />}
+                            fullWidth
+                        />
+                    </View>
                 </View>
 
                 <AppText variant="bodyMediumReg" color="tertiary" style={styles.terms}>
@@ -103,11 +120,16 @@ const styles = StyleSheet.create(theme => ({
         paddingVertical: theme.spacing[3],
         gap: theme.spacing[6],
     },
+    // Unlike sign-in, the divider and the social buttons live inside the form
+    // column here — the design spaces them 16 apart, not 24 (Figma 66:2575).
     form: {
         gap: theme.spacing[4],
     },
     submit: {
         minHeight: 56,
+    },
+    social: {
+        gap: theme.spacing[3],
     },
     terms: {
         textAlign: 'center',

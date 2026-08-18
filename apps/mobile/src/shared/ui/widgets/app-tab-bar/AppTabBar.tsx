@@ -141,7 +141,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     },
     fill: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: theme.colors.semantic.white80,
+        backgroundColor: theme.colors.semantic.glassFill,
     },
     row: {
         flexDirection: 'row',
@@ -161,7 +161,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     selection: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: theme.radius.full,
-        backgroundColor: theme.colors.branding.accentSoft,
+        backgroundColor: theme.colors.semantic.glassSelection,
     },
     label: {
         textAlign: 'center',

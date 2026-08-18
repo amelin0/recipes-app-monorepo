@@ -205,8 +205,8 @@ const styles = StyleSheet.create(theme => ({
         color: disabled ? theme.colors.semantic.disabled : theme.colors.elements.primary,
     }),
     caret: {
-        width: 1.5,
-        height: 22,
+        width: 1.2,
+        height: 19,
         backgroundColor: theme.colors.elements.primary,
     },
     // Full-bleed invisible overlay: keeps native tap-to-focus, the iOS/Android

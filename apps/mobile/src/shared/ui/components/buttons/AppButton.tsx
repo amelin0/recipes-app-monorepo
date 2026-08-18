@@ -11,11 +11,13 @@ export type AppButtonSize = 'lg' | 'md';
 type ThemeColors = ReturnType<typeof useUnistyles>['theme']['colors'];
 
 /**
- * Label / spinner color per RFDS spec: disabled always Semantic/disabled;
+ * Label / spinner color per the RFDS Button matrix (node 13:9311): disabled is
+ * always Semantic/disabled; primary is white on the accent fill in every state;
  * pressed secondary flips to white; everything else is Elements/primary.
  */
 const contentColor = (colors: ThemeColors, variant: AppButtonVariant, pressed: boolean, disabled: boolean): string => {
     if (disabled) return colors.semantic.disabled;
+    if (variant === 'primary') return colors.semantic.white;
     if (variant === 'secondary' && pressed) return colors.semantic.white;
     return colors.elements.primary;
 };
@@ -28,7 +30,7 @@ export interface AppButtonProps extends Omit<PressableProps, 'children' | 'style
     /**
      * Visual style — RFDS `Button` (Figma node 54621:944).
      *
-     * - `primary` — solid Branding/accent; pressed = Active/primary.
+     * - `primary` — solid Branding/accent, white label; pressed = Active/primary.
      * - `secondary` — solid Semantic/light grey; pressed = Active/secondary (label turns white).
      * - `ghost` — transparent; pressed = Active/tertiary.
      * - `liquid` — Semantic/white 30% over imagery; pressed = Active/grey 30%.
