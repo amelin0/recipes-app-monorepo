@@ -48,8 +48,15 @@ export const SLIDE_BOTTOM_CHROME = 8 + 56 + 16 + 56 + 40 + 24;
 export const SETUP_MASCOT_SIZE = 200;
 
 /**
- * Number of questions in the profile-setup questionnaire. Taken from the
- * progress bar in 66:2333 — the filled run is 13 of the 143pt track, i.e. 1/11.
- * Update as the remaining steps are designed.
+ * Number of questions in the profile-setup questionnaire. Read off the progress
+ * bar: the filled run grows by exactly 10pt per step on a 143pt track (13 on
+ * step 1 → 43 on step 4), so it reaches full width on step 14.
  */
-export const SETUP_STEPS = 11;
+export const SETUP_STEPS = 14;
+
+/** Selectable birth years — wide enough to cover the whole adult audience. */
+export const BIRTH_YEAR_MIN = 1940;
+export const BIRTH_YEAR_MAX = 2012;
+
+/** Wheel position the design opens on (66:2356). */
+export const DEFAULT_BIRTH_DATE = '1995-01-01';

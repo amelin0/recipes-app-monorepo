@@ -4,11 +4,13 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { applyAppTheme, createAppSlice, type AppSlice } from './domains/app';
 import { createAuthSlice, type AuthSlice } from './domains/auth';
+import { createProfileSetupSlice, type ProfileSetupSlice } from './domains/profile-setup';
 import { createRecipeFiltersSlice, type RecipeFiltersSlice } from './domains/recipe';
 import { createShoppingListSlice, type ShoppingListSlice } from './domains/shopping-list';
 
 type AppStore = AppSlice &
     AuthSlice &
+    ProfileSetupSlice &
     RecipeFiltersSlice &
     ShoppingListSlice & {
         reset: () => void;
@@ -21,11 +23,13 @@ export const useStore = create<AppStore>()(
         (...a) => ({
             ...createAppSlice(...a),
             ...createAuthSlice(...a),
+            ...createProfileSetupSlice(...a),
             ...createRecipeFiltersSlice(...a),
             ...createShoppingListSlice(...a),
             reset: () => {
                 const [, get] = a;
                 get().switchAuthenticatedAction(false);
+                get().resetProfileSetup();
                 get().resetRecipeFilters();
                 get().resetShoppingList();
             },
@@ -42,6 +46,8 @@ export const useStore = create<AppStore>()(
             // разом з реальним auth-флоу.
             partialize: state => ({
                 appTheme: state.appTheme,
+                // Answers survive a kill so the questionnaire resumes (FR-005).
+                profileSetup: state.profileSetup,
             }),
             version: 1,
             migrate: persisted => {

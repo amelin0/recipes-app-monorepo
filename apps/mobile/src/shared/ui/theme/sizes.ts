@@ -44,12 +44,17 @@ export const shadow = {
         shadowRadius: 50,
         elevation: 6,
     },
-    // RFDS shadow/block — cards on Home & co.
+    /**
+     * RFDS shadow/block — cards on Home & co. Figma states a 12px blur, and
+     * iOS `shadowRadius` is the Gaussian sigma, i.e. half the CSS blur —
+     * transcribing 12 verbatim made the shadow spread ~13.5pt instead of the
+     * designed ~8 (measured against Figma 855:100403).
+     */
     block: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
-        shadowRadius: 12,
+        shadowRadius: 6,
         elevation: 4,
     },
     // RFDS shadow/elements — floating liquid-glass elements (tab bar)

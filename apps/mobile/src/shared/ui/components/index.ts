@@ -9,6 +9,7 @@ export * from './headers';
 export * from './inputs';
 export * from './layouts';
 export * from './pagination';
+export * from './pickers';
 export * from './placeholder';
 export * from './progress';
 export * from './sliders';
