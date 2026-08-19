@@ -42,10 +42,10 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: theme.spacing[4],
-        // The design hangs the row 14 below a 48px status bar; 12 is the token
-        // that lands on it once the real safe-area inset (≈50 on this device
-        // class) is taken into account.
-        paddingTop: theme.spacing[3],
+        // The 804:* screens hang the row directly under a 62pt status bar, i.e.
+        // flush with the real safe-area inset — no padding of its own. (The
+        // older 686:26467 node measured 14 below a 48pt bar, which is what the
+        // previous 12pt token was compensating for.)
         paddingBottom: theme.spacing[2],
         backgroundColor: theme.colors.background.screen,
     },

@@ -18,6 +18,7 @@ UI екрана вже реалізовано в мобільному засто
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
 | [Profile (Профіль і налаштування)](./profile/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Profile edit (Редагування профілю)](./profile-edit/spec.md) | Draft | @amelin0 | 2026-08-19 |
 
 ## Related
 

@@ -1,28 +1,26 @@
 import React from 'react';
 import { View } from 'react-native';
 
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 import { AppButton, AppScreen, AppText, ScreenActions } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import CheckIcon from '../../../../assets/icons/check.svg';
+import MascotMeditate from '../../../../assets/images/brand/mascot-meditate.svg';
 
 import { usePasswordChangedScreen } from './usePasswordChangedScreen';
 
+const MASCOT_SIZE = 200;
+
+/** Closing step of the password reset (804:24915). */
 export const PasswordChangedScreen = () => {
     const { t } = useAppTranslation(['auth']);
-    const { theme } = useUnistyles();
     const { handleSignIn } = usePasswordChangedScreen();
 
     return (
         <AppScreen>
             <View style={styles.content}>
-                <View style={styles.badgeOuter}>
-                    <View style={styles.badgeInner}>
-                        <CheckIcon width={32} height={32} color={theme.colors.semantic.white} />
-                    </View>
-                </View>
+                <MascotMeditate width={MASCOT_SIZE} height={MASCOT_SIZE} />
 
                 <View style={styles.header}>
                     <AppText variant="titleLarge" accessibilityRole="header" style={styles.centered}>
@@ -45,27 +43,11 @@ const styles = StyleSheet.create(theme => ({
     content: {
         flex: 1,
         alignItems: 'center',
-        paddingHorizontal: theme.spacing[4],
-        // Figma 686:26295 pins the block 208 from the frame top, i.e. 160 below
-        // the status bar — it is deliberately above the optical centre.
-        paddingTop: 160,
         gap: theme.spacing[3],
-    },
-    badgeOuter: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.semantic.lightPositive,
-    },
-    badgeInner: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.semantic.positive,
+        paddingHorizontal: theme.spacing[4],
+        // 804:24918 sits 152 from the frame top — 90 below the 62pt status bar —
+        // and carries its own 12 of padding.
+        paddingTop: 90 + theme.spacing[3],
     },
     header: {
         width: '100%',

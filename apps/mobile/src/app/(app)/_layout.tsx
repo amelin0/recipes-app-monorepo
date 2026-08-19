@@ -69,6 +69,7 @@ export default function AppLayout() {
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />
                 <Stack.Screen name="profile" />
+                <Stack.Screen name="profile-edit" />
                 <Stack.Screen name="add-product" />
                 <Stack.Screen
                     name="product-amount"

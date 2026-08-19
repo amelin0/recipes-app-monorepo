@@ -2,6 +2,14 @@
     "title": "Профіль і налаштування",
     "edit": "Редагувати",
     "avatar-a11y": "Аватар",
+    "edit-screen": {
+        "title": "Редагування профілю",
+        "change-photo": "Змінити фото",
+        "personal-title": "Особисті дані",
+        "name-label": "Імʼя",
+        "save": "Зберегти зміни",
+        "saved": "Зміни збережено"
+    },
     "version": "v {{version}} ({{build}})",
     "account": {
         "title": "Обліковий запис",

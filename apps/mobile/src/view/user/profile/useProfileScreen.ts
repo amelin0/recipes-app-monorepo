@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import { router } from 'expo-router';
+
 import { ToastService } from '@/shared/services';
 import { appBuild, appVersion, requestRateApp } from '@/shared/utils';
 import { useAppTranslation } from '@/shared/utils/translations';
@@ -34,7 +36,7 @@ export const useProfileScreen = () => {
         subscriptionTag: t(`profile:account.plans.${MOCK_SUBSCRIPTION.plan}`),
         subscriptionUntil: t('profile:account.valid-until', { date: MOCK_SUBSCRIPTION.validUntil }),
         versionLabel: t('profile:version', { version: appVersion, build: appBuild }),
-        handleEdit: comingSoon,
+        handleEdit: () => router.push('/(app)/profile-edit'),
         handleSubscription: comingSoon,
         handleRateUs: () => void requestRateApp(),
         handleReferral: comingSoon,
