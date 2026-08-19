@@ -18,15 +18,25 @@ export interface MetricHeadlineValue {
 }
 
 export interface MetricHeadlineProps {
-    current: MetricHeadlineValue;
-    goal: MetricHeadlineValue;
+    /**
+     * One card per value. Metrics with a goal show two side by side
+     * (673:32324); waist stacks its reading over a recommendation and height
+     * has only the reading (1024:31123, 686:14432).
+     */
+    cards: MetricHeadlineValue[];
+    /**
+     * Two values that compare (reading vs goal) sit side by side; two that read
+     * as separate statements stack (waist's reading over its recommendation).
+     * @default 'row'
+     */
+    direction?: 'row' | 'column';
 }
 
-/** The two big cards at the top of a metric's screen (673:32324). */
-export const MetricHeadline = ({ current, goal }: MetricHeadlineProps) => (
-    <View style={styles.row}>
-        {[current, goal].map((item, index) => (
-            <View key={index === 0 ? 'current' : 'goal'} style={styles.card}>
+/** The big value card(s) at the top of a metric's screen. */
+export const MetricHeadline = ({ cards, direction = 'row' }: MetricHeadlineProps) => (
+    <View style={styles.row(direction === 'row' && cards.length > 1)}>
+        {cards.map(item => (
+            <View key={item.label} style={styles.card}>
                 <AppText variant="bodySmallReg" style={styles.centered}>
                     {item.label}
                 </AppText>
@@ -52,12 +62,13 @@ export const MetricHeadline = ({ current, goal }: MetricHeadlineProps) => (
 );
 
 const styles = StyleSheet.create(theme => ({
-    row: {
+    // Two values sit side by side; a stack of them runs down the screen.
+    row: (side: boolean) => ({
         width: '100%',
-        flexDirection: 'row',
-        alignItems: 'flex-start',
+        flexDirection: side ? 'row' : 'column',
+        alignItems: side ? 'flex-start' : 'stretch',
         gap: theme.spacing[2],
-    },
+    }),
     card: {
         flex: 1,
         minWidth: 0,

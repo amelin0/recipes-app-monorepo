@@ -98,7 +98,7 @@ export const MOCK_HEIGHT = {
     ] satisfies MockLinePoint[],
 };
 
-export type MetricKey = 'weight' | 'calories' | 'water' | 'steps';
+export type MetricKey = 'weight' | 'calories' | 'water' | 'steps' | 'waist' | 'height';
 
 export interface MockMetricRecord {
     id: string;
@@ -184,5 +184,45 @@ export const MOCK_STEPS_DETAIL = {
         { id: 's-6', title: 'ПТ, 26 вересня', value: 10800 },
         { id: 's-7', title: 'ЧТ, 25 вересня', value: 7900 },
         { id: 's-8', title: 'СР, 24 вересня', value: 15000 },
+    ] as MockMetricRecord[],
+};
+
+export const MOCK_WAIST_DETAIL = {
+    currentCm: 73,
+    /** Upper bound of the healthy range the card recommends. */
+    recommendedMaxCm: 76,
+    axis: [90, 80, 70, 60],
+    points: [
+        { label: '4/9', value: 79 },
+        { label: '8/9', value: 82 },
+        { label: '12/9', value: 83 },
+        { label: '16/9', value: 86 },
+        { label: '20/9', value: 74 },
+        { label: '24/9', value: 83 },
+        { label: '28/9', value: 71 },
+    ],
+    records: [
+        { id: 'wt-7', title: '2 жовтня 2026', value: 70, delta: -15 },
+        { id: 'wt-6', title: '18 вересня 2026', value: 85, delta: -0.6 },
+        { id: 'wt-5', title: '10 вересня 2026', value: 70.6, delta: -0.4 },
+        { id: 'wt-4', title: '1 вересня 2026', value: 71.1, delta: 0.5 },
+        { id: 'wt-3', title: '25 серпня 2026', value: 70.8, delta: -0.3 },
+        { id: 'wt-2', title: '18 серпня 2026', value: 71.3, delta: 0.5 },
+        { id: 'wt-1', title: '10 серпня 2026', value: 70.7 },
+    ] as MockMetricRecord[],
+};
+
+export const MOCK_HEIGHT_DETAIL = {
+    currentCm: 182.4,
+    axis: [200, 180, 160, 140],
+    points: [
+        { label: '4/9', value: 178 },
+        { label: '24/9', value: 180 },
+        { label: '28/9', value: 182.4 },
+    ],
+    records: [
+        { id: 'h-3', title: '2 жовтня 2026', value: 182.4, delta: 4.4 },
+        { id: 'h-2', title: '18 вересня 2026', value: 178, delta: 0 },
+        { id: 'h-1', title: '10 вересня 2026', value: 178 },
     ] as MockMetricRecord[],
 };

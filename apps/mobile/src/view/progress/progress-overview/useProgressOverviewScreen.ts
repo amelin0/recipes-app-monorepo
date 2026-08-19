@@ -78,9 +78,7 @@ export const useProgressOverviewScreen = () => {
         nutrientTab,
         setNutrientTab: (key: string) => setNutrientTab(key as NutrientTab),
         format: formatThousands,
-        // Waist and height have no detail screen in the design yet.
         handleMetricPress: (metric: MetricKey) => router.push({ pathname: '/(app)/metric-detail', params: { metric } }),
-        handleUndesignedMetricPress: comingSoon,
         handleEditGoal: comingSoon,
         handleReminders: comingSoon,
         handleAdd: comingSoon,

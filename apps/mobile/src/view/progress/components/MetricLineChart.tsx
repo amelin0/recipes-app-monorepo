@@ -10,6 +10,8 @@ export interface LinePoint {
     /** Date under the point («12/6»). */
     label: string;
     value: number;
+    /** Dot colour — waist marks readings outside its range (673:40199). */
+    color?: string;
 }
 
 export interface MetricLineChartProps {
@@ -80,7 +82,7 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
                                 cx={xFor(index)}
                                 cy={yFor(point.value)}
                                 r={DOT / 2}
-                                fill={theme.colors.semantic.positive}
+                                fill={point.color ?? theme.colors.semantic.positive}
                             />
                         ))}
                         {/* Keeps the SVG box honest when a single point would
