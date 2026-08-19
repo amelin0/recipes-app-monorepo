@@ -70,6 +70,10 @@ export default function AppLayout() {
                 <Stack.Screen name="meal-details" />
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="profile-edit" />
+                <Stack.Screen name="settings-reminders" />
+                <Stack.Screen name="settings-language" />
+                <Stack.Screen name="settings-theme" />
+                <Stack.Screen name="settings-units" />
                 <Stack.Screen name="add-product" />
                 <Stack.Screen
                     name="product-amount"

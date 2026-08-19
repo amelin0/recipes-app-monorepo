@@ -10,8 +10,8 @@ import {
     AppScreen,
     AppText,
     Avatar,
-    CircleBackButton,
     ScreenActions,
+    TopBar,
 } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
@@ -27,13 +27,7 @@ export const ProfileEditScreen = () => {
 
     return (
         <AppScreen>
-            <View style={styles.headerBar}>
-                <CircleBackButton />
-                <AppText variant="bodyLargeBold" style={styles.headerTitle}>
-                    {t('profile:edit-screen.title')}
-                </AppText>
-                <View style={styles.headerSpacer} />
-            </View>
+            <TopBar title={t('profile:edit-screen.title')} />
 
             <View style={styles.content}>
                 <View style={styles.avatarBlock}>
@@ -77,20 +71,6 @@ export const ProfileEditScreen = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-    headerBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-        paddingHorizontal: theme.spacing[4],
-        paddingBottom: theme.spacing[2],
-    },
-    headerTitle: {
-        flex: 1,
-        textAlign: 'center',
-    },
-    headerSpacer: {
-        width: 44,
-    },
     content: {
         flex: 1,
         alignItems: 'center',

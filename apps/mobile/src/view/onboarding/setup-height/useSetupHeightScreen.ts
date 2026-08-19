@@ -4,10 +4,11 @@ import { router } from 'expo-router';
 
 import type { WheelPickerColumn } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { buildRange } from '@/shared/helpers';
 import { useStore } from '@/state';
 
 import { DEFAULT_HEIGHT_CM, HEIGHT_CM_MAX, HEIGHT_CM_MIN } from '../onboarding.constants';
-import { buildRange, cmToInch, inchToCm, nearestIndex } from '../onboarding.helpers';
+import { cmToInch, inchToCm, nearestIndex } from '../onboarding.helpers';
 
 export const useSetupHeightScreen = () => {
     const { t } = useAppTranslation(['onboarding']);

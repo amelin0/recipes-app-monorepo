@@ -3,11 +3,11 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppSwitch, AppText, WheelPicker, type WheelPickerColumn } from '@/shared/ui/components';
-import { useAppTranslation } from '@/shared/utils/translations';
-
 import ArrowDownIcon from '../../../../../assets/icons/arrow-down.svg';
 import ArrowUpIcon from '../../../../../assets/icons/arrow-up.svg';
+import { WheelPicker, type WheelPickerColumn } from '../pickers';
+import { AppSwitch } from '../switches';
+import { AppText } from '../texts';
 
 export interface ReminderCardProps {
     title: string;
@@ -17,6 +17,8 @@ export interface ReminderCardProps {
     onToggle: (value: boolean) => void;
     /** Formatted time, or a cadence like «Кожні 2 тижні». */
     value: string;
+    /** Label of the schedule row — «Час». */
+    timeLabel: string;
     /** Omit for reminders whose schedule is not a clock time. */
     onToggleExpanded?: () => void;
     expanded?: boolean;
@@ -30,11 +32,11 @@ export const ReminderCard = ({
     enabled,
     onToggle,
     value,
+    timeLabel,
     onToggleExpanded,
     expanded = false,
     timeColumns,
 }: ReminderCardProps) => {
-    const { t } = useAppTranslation(['onboarding']);
     const { theme } = useUnistyles();
 
     const Chevron = expanded ? ArrowUpIcon : ArrowDownIcon;
@@ -63,7 +65,7 @@ export const ReminderCard = ({
                 style={styles.timeRow}
             >
                 <AppText variant="bodyMediumBold" style={styles.timeLabel}>
-                    {t('onboarding:setup.reminders.time')}
+                    {timeLabel}
                 </AppText>
                 <View style={styles.timeValue}>
                     <AppText variant="bodyMediumReg">{value}</AppText>
@@ -82,8 +84,10 @@ const styles = StyleSheet.create(theme => ({
     card: {
         width: '100%',
         gap: theme.spacing[3],
-        paddingHorizontal: theme.spacing[5],
-        paddingVertical: theme.spacing[3],
+        // 20/12 in Figma, less the 1pt border it centres on the edge and RN
+        // lays outside the padding box (882:169716).
+        paddingHorizontal: theme.spacing[5] - 1,
+        paddingVertical: theme.spacing[3] - 1,
         borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: theme.colors.forms.lightBorder,
@@ -100,9 +104,12 @@ const styles = StyleSheet.create(theme => ({
     caption: {
         color: theme.colors.semantic.darkGrey,
     },
+    // Figma draws it as a zero-height line with a 1pt stroke, so it paints a
+    // hairline without taking a point of the card's height.
     divider: {
         width: '100%',
         height: 1,
+        marginVertical: -0.5,
         backgroundColor: theme.colors.forms.lightBorder,
     },
     timeRow: {

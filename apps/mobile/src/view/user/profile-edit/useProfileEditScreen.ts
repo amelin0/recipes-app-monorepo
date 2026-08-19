@@ -34,7 +34,7 @@ export const useProfileEditScreen = () => {
         // TODO: PATCH /me once the API ships — the questionnaire's answer is the
         // only place a name lives today.
         setAnswer('name', trimmed);
-        ToastService.success(t('profile:edit-screen.saved'));
+        ToastService.success(t('profile:settings.saved'));
         if (router.canGoBack()) {
             router.back();
         }

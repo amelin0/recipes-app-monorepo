@@ -3,15 +3,20 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import CheckIcon from '../../../../../assets/icons/check-small.svg';
+import { AppText } from '../texts';
 
-import CheckIcon from '../../../../assets/icons/onboarding/check-small.svg';
-
-/** `sm` — units step (56/16); `lg` — goal step, whose copy runs to two lines (80/12). */
-export type OptionRowSize = 'sm' | 'lg';
+/**
+ * `sm` — units step (56/16); `md` — profile settings lists (56/12);
+ * `lg` — goal step, whose copy runs to two lines (80/12).
+ */
+export type OptionRowSize = 'sm' | 'md' | 'lg';
 
 const SIZES: Record<OptionRowSize, { minHeight: number; padding: number }> = {
     sm: { minHeight: 56, padding: 16 },
+    // 12 in Figma, less the 1pt border: Figma centres the stroke, RN lays it
+    // outside the padding box, which would make the row 2pt taller.
+    md: { minHeight: 56, padding: 11 },
     lg: { minHeight: 80, padding: 12 },
 };
 
@@ -21,6 +26,8 @@ export interface OptionRowProps {
     description?: string;
     selected: boolean;
     onPress: () => void;
+    /** Node before the labels, e.g. the theme swatch (804:24776). */
+    leading?: React.ReactNode;
     /** @default 'sm' */
     size?: OptionRowSize;
 }
@@ -30,7 +37,7 @@ export interface OptionRowProps {
  * `GenderCard`, the selected state keeps a 1pt border and adds a check on the
  * trailing edge instead of thickening the outline.
  */
-export const OptionRow = ({ title, description, selected, onPress, size = 'sm' }: OptionRowProps) => {
+export const OptionRow = ({ title, description, selected, onPress, leading, size = 'sm' }: OptionRowProps) => {
     const { theme } = useUnistyles();
 
     return (
@@ -40,6 +47,7 @@ export const OptionRow = ({ title, description, selected, onPress, size = 'sm' }
             onPress={onPress}
             style={styles.row(selected, size)}
         >
+            {leading}
             <View style={styles.labels}>
                 <AppText variant="bodyLargeBold">{title}</AppText>
                 {description ? (

@@ -3,13 +3,12 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppScreen } from '@/shared/ui/components';
+import { AppButton, AppScreen, ReminderCard } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import CloseIcon from '../../../../assets/icons/close.svg';
 import { SetupHeader } from '../components';
 
-import { ReminderCard } from './components';
 import { useSetupRemindersScreen } from './useSetupRemindersScreen';
 
 /** Reminder schedule set up right after the permission ask (882:141275). */
@@ -49,6 +48,7 @@ export const SetupRemindersScreen = () => {
                             value={reminder.time}
                             expanded={reminder.expanded}
                             onToggleExpanded={() => toggleExpanded(reminder.key)}
+                            timeLabel={t('onboarding:setup.reminders.time')}
                             timeColumns={timeColumnsFor(reminder.key)}
                         />
                     ))}
@@ -59,6 +59,7 @@ export const SetupRemindersScreen = () => {
                         enabled={weighIn.enabled}
                         onToggle={value => toggle('weigh-in', value)}
                         value={t('onboarding:setup.reminders.weigh-in.cadence')}
+                        timeLabel={t('onboarding:setup.reminders.time')}
                     />
                 </View>
             </ScrollView>

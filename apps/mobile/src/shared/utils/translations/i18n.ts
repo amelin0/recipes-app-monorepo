@@ -4,6 +4,8 @@
 import '@formatjs/intl-pluralrules/polyfill';
 import '@formatjs/intl-pluralrules/locale-data/uk';
 import '@formatjs/intl-pluralrules/locale-data/en';
+import '@formatjs/intl-pluralrules/locale-data/de';
+import '@formatjs/intl-pluralrules/locale-data/fr';
 import '@formatjs/intl-pluralrules/locale-data/es';
 
 import i18n from 'i18next';
@@ -24,6 +26,8 @@ import * as uk from './locales/uk';
 export const SUPPORTED_LANGUAGES = {
     uk: 'Українська',
     en: 'English',
+    de: 'Deutsch',
+    fr: 'Français',
     es: 'Español',
 } as const;
 

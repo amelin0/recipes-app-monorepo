@@ -3,10 +3,10 @@ import { View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppScreen } from '@/shared/ui/components';
+import { AppScreen, OptionRow } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import { OptionRow, SetupFooter, SetupHeader, SetupProgress } from '../components';
+import { SetupFooter, SetupHeader, SetupProgress } from '../components';
 import { GOAL_KEYS } from '../onboarding.constants';
 
 import { useSetupGoalScreen } from './useSetupGoalScreen';

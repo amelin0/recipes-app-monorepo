@@ -2,7 +2,7 @@ import { createMMKV } from 'react-native-mmkv';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { applyAppTheme, createAppSlice, type AppSlice } from './domains/app';
+import { applyAppTheme, createAppSlice, UNIT_DEFAULTS, type AppSlice } from './domains/app';
 import { createAuthSlice, type AuthSlice } from './domains/auth';
 import { createProfileSetupSlice, PROFILE_SETUP_DEFAULTS, type ProfileSetupSlice } from './domains/profile-setup';
 import { createRecipeFiltersSlice, type RecipeFiltersSlice } from './domains/recipe';
@@ -46,6 +46,7 @@ export const useStore = create<AppStore>()(
             // разом з реальним auth-флоу.
             partialize: state => ({
                 appTheme: state.appTheme,
+                units: state.units,
                 // Answers survive a kill so the questionnaire resumes (FR-005).
                 profileSetup: state.profileSetup,
             }),
@@ -64,6 +65,7 @@ export const useStore = create<AppStore>()(
                 return {
                     ...current,
                     ...saved,
+                    units: { ...UNIT_DEFAULTS, ...saved.units },
                     profileSetup: { ...PROFILE_SETUP_DEFAULTS, ...saved.profileSetup },
                 };
             },

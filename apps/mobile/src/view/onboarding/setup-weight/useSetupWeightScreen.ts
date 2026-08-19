@@ -4,10 +4,11 @@ import { router } from 'expo-router';
 
 import type { WheelPickerColumn } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { buildRange } from '@/shared/helpers';
 import { useStore } from '@/state';
 
 import { DEFAULT_WEIGHT_KG, WEIGHT_KG_MAX, WEIGHT_KG_MIN } from '../onboarding.constants';
-import { buildRange, kgToLb, lbToKg, nearestIndex } from '../onboarding.helpers';
+import { kgToLb, lbToKg, nearestIndex } from '../onboarding.helpers';
 
 export const useSetupWeightScreen = () => {
     const { t } = useAppTranslation(['onboarding']);

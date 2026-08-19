@@ -7,8 +7,7 @@
         "change-photo": "Змінити фото",
         "personal-title": "Особисті дані",
         "name-label": "Імʼя",
-        "save": "Зберегти зміни",
-        "saved": "Зміни збережено"
+        "save": "Зберегти зміни"
     },
     "version": "v {{version}} ({{build}})",
     "account": {
@@ -28,7 +27,9 @@
         "reminders": "Нагадування",
         "language": "Мова",
         "theme": "Тема",
-        "units": "Одиниці виміру"
+        "units": "Одиниці виміру",
+        "save": "Зберегти зміни",
+        "saved": "Зміни збережено"
     },
     "support": {
         "title": "Підтримка",
@@ -42,5 +43,56 @@
         "title": "Небезпечна зона",
         "delete-account": "Видалити обліковий запис",
         "logout": "Вийти"
+    },
+    "language-screen": {
+        "title": "Мова",
+        "names": {
+            "uk": "Українська",
+            "en": "Англійська",
+            "de": "Німецька",
+            "fr": "Французька",
+            "es": "Іспанська"
+        }
+    },
+    "theme-screen": {
+        "title": "Тема",
+        "options": {
+            "light": {
+                "title": "Світла",
+                "description": "Завжди світлий інтерфейс"
+            },
+            "dark": {
+                "title": "Темна",
+                "description": "Завжди темний інтерфейс"
+            },
+            "system": {
+                "title": "Системна",
+                "description": "Слідує налаштуванням пристрою"
+            }
+        }
+    },
+    "units-screen": {
+        "title": "Одиниці виміру",
+        "quantities": {
+            "body-mass": "Маса тіла",
+            "food-weight": "Вага продуктів",
+            "length": "Довжина",
+            "water": "Вода"
+        },
+        "metric": {
+            "body-mass": "кг",
+            "food-weight": "г",
+            "length": "см",
+            "water": "мл"
+        },
+        "imperial": {
+            "body-mass": "фунт",
+            "food-weight": "унція",
+            "length": "дюйм",
+            "water": "унція"
+        }
+    },
+    "reminders-screen": {
+        "title": "Нагадування"
     }
 }

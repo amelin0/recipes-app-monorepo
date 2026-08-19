@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppScreen, AppText, Avatar, CircleBackButton, Tag } from '@/shared/ui/components';
+import { AppScreen, AppText, Avatar, Tag, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import ColorSwatchIcon from '../../../../assets/icons/color-swatch.svg';
@@ -58,13 +58,7 @@ export const ProfileScreen = () => {
 
     return (
         <AppScreen>
-            <View style={styles.headerBar}>
-                <CircleBackButton />
-                <AppText variant="bodyLargeBold" style={styles.headerTitle}>
-                    {t('profile:title')}
-                </AppText>
-                <View style={styles.headerSpacer} />
-            </View>
+            <TopBar title={t('profile:title')} />
 
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.userBlock}>
@@ -202,20 +196,6 @@ export const ProfileScreen = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-    headerBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-        paddingHorizontal: theme.spacing[4],
-        paddingBottom: theme.spacing[2],
-    },
-    headerTitle: {
-        flex: 1,
-        textAlign: 'center',
-    },
-    headerSpacer: {
-        width: 44,
-    },
     scroll: {
         alignItems: 'center',
         gap: theme.spacing[4],

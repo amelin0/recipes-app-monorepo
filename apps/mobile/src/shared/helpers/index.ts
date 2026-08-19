@@ -1,3 +1,4 @@
+export * from './build-range';
 export * from './format-compact-number';
 export * from './format-day-header';
 export * from './format-full-date';
