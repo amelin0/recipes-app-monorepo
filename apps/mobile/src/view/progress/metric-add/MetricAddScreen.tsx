@@ -10,20 +10,45 @@ import CloseIcon from '../../../../assets/icons/close.svg';
 
 import { useMetricAddScreen } from './useMetricAddScreen';
 
-/** Sheet for logging a reading by hand (673:41245, 673:42212, 673:42669). */
+/** Units the sheet appends to the value, per metric. */
+const UNIT_KEY = {
+    weight: 'progress:units.kg',
+    waist: 'progress:units.cm',
+    height: 'progress:units.cm',
+    steps: 'progress:units.steps-short',
+    water: 'progress:units.ml',
+} as const;
+
+/**
+ * Sheet for entering a number by hand — a reading you took (673:41245,
+ * 673:42212, 673:42669) or the goal you are aiming at (673:49980, 673:50419,
+ * 805:18701). Same control either way; the copy and the action differ.
+ */
 export const MetricAddScreen = () => {
     const { t } = useAppTranslation(['progress', 'common']);
     const { theme } = useUnistyles();
-    const { metric, value, setValue, isValid, canDecrease, handleDecrease, handleIncrease, handleClose, handleSave } =
-        useMetricAddScreen();
+    const {
+        metric,
+        mode,
+        isGoal,
+        subtitleParams,
+        value,
+        setValue,
+        isValid,
+        canDecrease,
+        handleDecrease,
+        handleIncrease,
+        handleClose,
+        handleSave,
+    } = useMetricAddScreen();
 
     return (
         <View style={styles.sheet}>
             <View style={styles.header}>
                 <View style={styles.headerText}>
-                    <AppText variant="titleMedium">{t(`progress:add.${metric}.title`)}</AppText>
+                    <AppText variant="titleMedium">{t(`progress:${mode}-entry.${metric}.title`)}</AppText>
                     <AppText variant="bodyMediumReg" style={styles.muted}>
-                        {t(`progress:add.${metric}.subtitle`)}
+                        {t(`progress:${mode}-entry.${metric}.subtitle`, subtitleParams)}
                     </AppText>
                 </View>
                 <Pressable
@@ -39,7 +64,7 @@ export const MetricAddScreen = () => {
 
             <View style={styles.body}>
                 <ValueStepper
-                    value={`${value} ${t(`progress:units.${metric === 'weight' ? 'kg' : 'cm'}`)}`}
+                    value={`${value} ${t(UNIT_KEY[metric])}`}
                     onChangeValue={next =>
                         // The unit rides along in the field, so strip it back off.
                         setValue(next.replace(/[^\d.,]/g, ''))
@@ -47,14 +72,14 @@ export const MetricAddScreen = () => {
                     canDecrease={canDecrease}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
-                    decreaseLabel={t('progress:add.decrease-a11y')}
-                    increaseLabel={t('progress:add.increase-a11y')}
+                    decreaseLabel={t('progress:entry.decrease-a11y')}
+                    increaseLabel={t('progress:entry.increase-a11y')}
                 />
 
                 <AppButton
                     fullWidth
                     size="md"
-                    label={t('progress:add.save')}
+                    label={t(isGoal ? 'progress:entry.save-goal' : 'progress:entry.save')}
                     disabled={!isValid}
                     onPress={handleSave}
                 />

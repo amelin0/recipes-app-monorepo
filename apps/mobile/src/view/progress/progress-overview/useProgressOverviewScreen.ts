@@ -16,6 +16,7 @@ import {
     MOCK_WATER,
     MOCK_WEIGHT,
     type MetricKey,
+    type GoalMetricKey,
     type ReadingMetricKey,
 } from '../progress.constants';
 import type { BarGroup } from '../components';
@@ -80,8 +81,10 @@ export const useProgressOverviewScreen = () => {
         setNutrientTab: (key: string) => setNutrientTab(key as NutrientTab),
         format: formatThousands,
         handleMetricPress: (metric: MetricKey) => router.push({ pathname: '/(app)/metric-detail', params: { metric } }),
-        // TODO: goal editing still has no design.
-        handleEditGoal: comingSoon,
+        handleEditGoal: (metric: GoalMetricKey | 'calories') =>
+            metric === 'calories'
+                ? router.push('/(app)/goal-setup')
+                : router.push({ pathname: '/(app)/metric-add', params: { metric, mode: 'goal' } }),
         handleReminders: () => router.push('/(app)/weigh-in-reminder'),
         handleAdd: (metric: ReadingMetricKey) => router.push({ pathname: '/(app)/metric-add', params: { metric } }),
         // Steps come from the day, not from a reading sheet — no design yet.

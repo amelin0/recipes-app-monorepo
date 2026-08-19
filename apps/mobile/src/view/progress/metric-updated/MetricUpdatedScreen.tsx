@@ -8,22 +8,53 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import InfoCircleIcon from '../../../../assets/icons/info-circle.svg';
 import MascotHeight from '../../../../assets/images/brand/mascot-height.svg';
+import MascotSteps from '../../../../assets/images/brand/mascot-steps.svg';
 import MascotWaist from '../../../../assets/images/brand/mascot-waist.svg';
+import MascotWater from '../../../../assets/images/brand/mascot-water.svg';
 import MascotWeight from '../../../../assets/images/brand/mascot-weight.svg';
 
 import { useMetricUpdatedScreen } from './useMetricUpdatedScreen';
 
 const MASCOT_SIZE = 200;
 
+/**
+ * A goal reads as a rate — «5,000 кроків/день» — where a reading is just the
+ * amount (673:51308 vs 673:43309).
+ */
+const UNIT_KEY = {
+    reading: {
+        weight: 'progress:units.kg',
+        waist: 'progress:units.cm',
+        height: 'progress:units.cm',
+        steps: 'progress:units.steps',
+        water: 'progress:units.ml',
+    },
+    goal: {
+        weight: 'progress:units.kg',
+        waist: 'progress:units.cm',
+        height: 'progress:units.cm',
+        steps: 'progress:units.steps-per-day',
+        water: 'progress:units.ml-per-day',
+    },
+} as const;
+
 /** Receipt for a reading just logged (673:43135, 673:43255, 673:43309). */
 export const MetricUpdatedScreen = () => {
     const { t } = useAppTranslation(['progress']);
     const { theme } = useUnistyles();
-    const { metric, value, date, recommendedGoal, showsWaistNote, handleDone, handleConfirmGoal } =
+    const { metric, isGoal, value, date, recommendedGoal, showsWaistNote, handleDone, handleConfirmGoal } =
         useMetricUpdatedScreen();
 
-    const Mascot = { weight: MascotWeight, waist: MascotWaist, height: MascotHeight }[metric];
-    const unit = t(`progress:units.${metric === 'weight' ? 'kg' : 'cm'}`);
+    const Mascot = {
+        weight: MascotWeight,
+        waist: MascotWaist,
+        height: MascotHeight,
+        steps: MascotSteps,
+        water: MascotWater,
+    }[metric];
+    const unit = t(UNIT_KEY[isGoal ? 'goal' : 'reading'][metric]);
+    // Only a new weight reading opens the calorie-goal question (673:43135).
+    const offersGoalChange = !isGoal && metric === 'weight';
 
     return (
         <AppScreen>
@@ -33,11 +64,15 @@ export const MetricUpdatedScreen = () => {
                 <Mascot width={MASCOT_SIZE} height={MASCOT_SIZE} />
 
                 <AppText variant="titleLarge" accessibilityRole="header" style={styles.centered}>
-                    {t(`progress:updated.${metric}.title`)}
+                    {t(`progress:${isGoal ? 'goal-updated' : 'updated'}.${metric}.title`)}
                 </AppText>
 
                 <View style={styles.card}>
-                    {metric === 'weight' ? (
+                    {isGoal ? (
+                        <AppText variant="bodyLargeBold" style={styles.centered}>
+                            {t('progress:goal-updated.label')}
+                        </AppText>
+                    ) : offersGoalChange ? (
                         <AppText variant="bodyLargeBold" style={styles.centered}>
                             {t('progress:updated.weight.praise')}
                         </AppText>
@@ -62,7 +97,7 @@ export const MetricUpdatedScreen = () => {
                     ) : null}
                 </View>
 
-                {metric === 'weight' ? (
+                {offersGoalChange ? (
                     <View style={styles.card}>
                         <AppText variant="bodySmallReg" style={styles.centered}>
                             {t('progress:updated.weight.goal-hint')}
@@ -75,7 +110,7 @@ export const MetricUpdatedScreen = () => {
             </ScrollView>
 
             <ScreenActions style={styles.actions}>
-                {metric === 'weight' ? (
+                {offersGoalChange ? (
                     <>
                         <AppButton fullWidth label={t('progress:updated.weight.confirm')} onPress={handleConfirmGoal} />
                         <AppButton

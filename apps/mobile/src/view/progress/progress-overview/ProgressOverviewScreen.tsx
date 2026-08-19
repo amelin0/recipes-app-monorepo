@@ -31,7 +31,11 @@ export const ProgressOverviewScreen = () => {
         handleAddSteps,
     } = useProgressOverviewScreen();
 
-    const editGoal = { key: 'edit-goal', label: t('progress:actions.edit-goal'), onPress: handleEditGoal };
+    const editGoal = (metric: 'weight' | 'steps' | 'water' | 'calories') => ({
+        key: 'edit-goal',
+        label: t('progress:actions.edit-goal'),
+        onPress: () => handleEditGoal(metric),
+    });
 
     return (
         <AppScreen>
@@ -71,7 +75,7 @@ export const ProgressOverviewScreen = () => {
                     <MetricLineChart points={weight.points} axis={weight.axis} />
                     <MetricActions
                         actions={[
-                            editGoal,
+                            editGoal('weight'),
                             { key: 'reminders', label: t('progress:actions.reminders'), onPress: handleReminders },
                         ]}
                         onAdd={() => handleAdd('weight')}
@@ -124,7 +128,7 @@ export const ProgressOverviewScreen = () => {
                             { key: 'over', label: t('progress:legend.over'), color: theme.colors.semantic.negative },
                         ]}
                     />
-                    <MetricActions actions={[editGoal]} />
+                    <MetricActions actions={[editGoal('calories')]} />
                 </MetricCard>
 
                 <MetricCard
@@ -150,7 +154,7 @@ export const ProgressOverviewScreen = () => {
                     />
                     <MetricBarChart groups={water.groups} axis={water.axis} max={water.max} />
                     <PageDots count={2} activeIndex={1} size="lg" />
-                    <MetricActions actions={[editGoal]} />
+                    <MetricActions actions={[editGoal('water')]} />
                 </MetricCard>
 
                 <MetricCard
@@ -177,7 +181,7 @@ export const ProgressOverviewScreen = () => {
                     <MetricBarChart groups={steps.groups} axis={steps.axis} max={steps.max} />
                     <PageDots count={2} activeIndex={1} size="lg" />
                     <MetricActions
-                        actions={[editGoal]}
+                        actions={[editGoal('steps')]}
                         onAdd={handleAddSteps}
                         addLabel={t('progress:steps.add-a11y')}
                     />

@@ -329,7 +329,11 @@ export const useMetricDetailScreen = () => {
         // Daily metrics are logged from the home screen, not from here.
         handleAdd: () =>
             isReading ? router.push({ pathname: '/(app)/metric-add', params: { metric } }) : comingSoon(),
-        handleEditGoal: comingSoon,
+        // Calories keep their own full goal screen; the rest edit in a sheet.
+        handleEditGoal: () =>
+            metric === 'calories'
+                ? router.push('/(app)/goal-setup')
+                : router.push({ pathname: '/(app)/metric-add', params: { metric, mode: 'goal' } }),
         handleReminders: () => (metric === 'weight' ? router.push('/(app)/weigh-in-reminder') : comingSoon()),
     };
 };

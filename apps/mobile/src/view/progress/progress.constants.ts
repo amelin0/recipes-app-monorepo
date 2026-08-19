@@ -250,3 +250,13 @@ export const READING_METRIC_CONFIG: Record<ReadingMetricKey, ReadingMetricConfig
  * the server from the whole profile, not from the reading alone.
  */
 export const RECOMMENDED_CALORIE_GOAL = 2000;
+
+/** Metrics whose goal the user can edit from a sheet. Calories get their own screen. */
+export type GoalMetricKey = 'weight' | 'steps' | 'water';
+
+export const GOAL_METRIC_CONFIG: Record<GoalMetricKey, ReadingMetricConfig> = {
+    weight: { step: 0.1, min: 20, max: 300, precision: 1 },
+    // Same steps the questionnaire nudges these goals by.
+    steps: { step: 500, min: 1000, max: 50000, precision: 0 },
+    water: { step: 100, min: 500, max: 6000, precision: 0 },
+};

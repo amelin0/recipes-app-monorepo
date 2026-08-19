@@ -16,7 +16,7 @@ UI реалізовано в застосунку на мок-даних (диз
 |---|---|---|---|
 | [Metrics overview (Екран прогресу)](./metrics-overview/spec.md) | Draft | @amelin0 | 2026-08-19 |
 | [Metric detail (Детальний екран показника)](./metric-detail/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Metric logging (Додати вимір)](./metric-logging/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Metric logging (Вимір і ціль)](./metric-logging/spec.md) | Draft | @amelin0 | 2026-08-19 |
 
 ## Related
 
