@@ -25,6 +25,7 @@ export const ProgressOverviewScreen = () => {
         setNutrientTab,
         format,
         handleMetricPress,
+        handleUndesignedMetricPress,
         handleEditGoal,
         handleReminders,
         handleAdd,
@@ -44,7 +45,7 @@ export const ProgressOverviewScreen = () => {
                 <MetricCard
                     title={t('progress:weight.title')}
                     subtitle={t('progress:weight.subtitle')}
-                    onPress={handleMetricPress}
+                    onPress={() => handleMetricPress('weight')}
                 >
                     <MetricStats
                         stats={[
@@ -81,7 +82,7 @@ export const ProgressOverviewScreen = () => {
                 <MetricCard
                     title={t('progress:nutrients.title')}
                     subtitle={t('progress:nutrients.subtitle')}
-                    onPress={handleMetricPress}
+                    onPress={() => handleMetricPress('calories')}
                 >
                     <SegmentedControl
                         items={[
@@ -129,7 +130,7 @@ export const ProgressOverviewScreen = () => {
                 <MetricCard
                     title={t('progress:water.title')}
                     subtitle={t('progress:water.subtitle', { value: format(water.goalMl) })}
-                    onPress={handleMetricPress}
+                    onPress={() => handleMetricPress('water')}
                 >
                     <MetricStats
                         stats={[
@@ -155,7 +156,7 @@ export const ProgressOverviewScreen = () => {
                 <MetricCard
                     title={t('progress:steps.title')}
                     subtitle={t('progress:steps.subtitle')}
-                    onPress={handleMetricPress}
+                    onPress={() => handleMetricPress('steps')}
                 >
                     <MetricStats
                         stats={[
@@ -181,7 +182,7 @@ export const ProgressOverviewScreen = () => {
                 <MetricCard
                     title={t('progress:waist.title')}
                     subtitle={t('progress:waist.subtitle')}
-                    onPress={handleMetricPress}
+                    onPress={handleUndesignedMetricPress}
                 >
                     <MetricStats
                         stats={[
@@ -208,7 +209,7 @@ export const ProgressOverviewScreen = () => {
                 <MetricCard
                     title={t('progress:height.title')}
                     subtitle={t('progress:height.subtitle')}
-                    onPress={handleMetricPress}
+                    onPress={handleUndesignedMetricPress}
                 >
                     <MetricStats
                         stats={[

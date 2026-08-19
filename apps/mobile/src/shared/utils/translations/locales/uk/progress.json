@@ -6,7 +6,12 @@
         "current-m": "Поточний",
         "goal": "Ціль",
         "daily-average": "Середнє за день",
-        "daily-goal": "Ціль на день"
+        "daily-goal": "Ціль на день",
+        "today": "Сьогодні",
+        "min": "Мін",
+        "max": "Макс",
+        "average-f": "Середня",
+        "average-n": "Середнє"
     },
     "actions": {
         "edit-goal": "Змінити ціль",
@@ -16,7 +21,8 @@
         "planned": "Заплановано",
         "eaten": "Спожито",
         "under": "Недобір",
-        "over": "Перебір"
+        "over": "Перебір",
+        "done": "Виконано"
     },
     "weight": {
         "title": "Вага",
@@ -57,5 +63,30 @@
         "subtitle": "Відстежуйте прогрес зросту.",
         "cm": "{{value}} см",
         "add": "Додати зріст"
+    },
+    "units": {
+        "kg": "кг",
+        "kcal": "ккал",
+        "kcal-per-day": "ккал/день",
+        "ml": "мл",
+        "ml-per-day": "мл / день",
+        "steps": "кроків",
+        "steps-per-day": "кроків/день"
+    },
+    "detail": {
+        "dynamics": "Динаміка",
+        "dynamics-days": "Динаміка - {{value}} днів",
+        "records": "Записи",
+        "to-goal": "+{{value}} до цілі",
+        "to-goal-plain": "{{value}} до цілі",
+        "min-norm": "Мінімальна норма",
+        "max-norm": "Максимальна норма",
+        "within-norm": "В межах норми",
+        "outside-norm": "Поза нормою",
+        "of-days": "з {{value}} днів",
+        "reading": "{{value}} {{unit}}",
+        "delta": "{{value}} {{unit}}",
+        "of-goal": "{{value}} / {{goal}} {{unit}}",
+        "add-a11y": "Додати запис"
     }
 }

@@ -1,12 +1,22 @@
 import { useCallback, useState } from 'react';
 
+import { router } from 'expo-router';
+
 import { useUnistyles } from 'react-native-unistyles';
 
 import { formatThousands } from '@/shared/helpers';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import { MOCK_CALORIES, MOCK_HEIGHT, MOCK_STEPS, MOCK_WAIST, MOCK_WATER, MOCK_WEIGHT } from '../progress.constants';
+import {
+    MOCK_CALORIES,
+    MOCK_HEIGHT,
+    MOCK_STEPS,
+    MOCK_WAIST,
+    MOCK_WATER,
+    MOCK_WEIGHT,
+    type MetricKey,
+} from '../progress.constants';
 import type { BarGroup } from '../components';
 
 export type NutrientTab = 'calories' | 'protein' | 'fats' | 'carbs';
@@ -68,8 +78,9 @@ export const useProgressOverviewScreen = () => {
         nutrientTab,
         setNutrientTab: (key: string) => setNutrientTab(key as NutrientTab),
         format: formatThousands,
-        // TODO: each of these opens the metric's own screen / editor.
-        handleMetricPress: comingSoon,
+        // Waist and height have no detail screen in the design yet.
+        handleMetricPress: (metric: MetricKey) => router.push({ pathname: '/(app)/metric-detail', params: { metric } }),
+        handleUndesignedMetricPress: comingSoon,
         handleEditGoal: comingSoon,
         handleReminders: comingSoon,
         handleAdd: comingSoon,

@@ -15,6 +15,7 @@ UI реалізовано в застосунку на мок-даних (диз
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
 | [Metrics overview (Екран прогресу)](./metrics-overview/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Metric detail (Детальний екран показника)](./metric-detail/spec.md) | Draft | @amelin0 | 2026-08-19 |
 
 ## Related
 

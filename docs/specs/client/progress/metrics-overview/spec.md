@@ -180,11 +180,15 @@ supersedes: null
       КБЖВ/води/кроків. Чи має там бути текст-пояснення замість
       порожнього графіка?
 - [ ] Обʼєм талії і зріст не мають цілі — чи планується вона?
+- [ ] Обʼєм талії і зріст — єдині картки без детального екрана
+      ([metric-detail](../metric-detail/spec.md) їх не малює). Куди мають
+      вести їхні заголовки?
 
 ## Related
 
 - Дизайн: Figma RF-mobile-app 670:26709 (заповнений), 642:39952 (порожній)
 - Код (UI, мок): `apps/mobile/src/view/progress/`
-- Специфікації: [daily-tracking](../../nutrition/daily-tracking/spec.md),
+- Специфікації: [metric-detail](../metric-detail/spec.md),
+  [daily-tracking](../../nutrition/daily-tracking/spec.md),
   [goal-setup](../../nutrition/goal-setup/spec.md),
   [profile-setup](../../onboarding/profile-setup/spec.md)

@@ -17,7 +17,9 @@ export interface ChartLegendProps {
 
 /** Colour key under the calorie chart (805:16732). */
 export const ChartLegend = ({ items }: ChartLegendProps) => (
-    <View style={styles.row}>
+    // Four keys spread across the chart's width; two sit together in the
+    // middle (805:16732 vs 805:17114).
+    <View style={styles.row(items.length > 2)}>
         {items.map(item => (
             <View key={item.key} style={styles.item}>
                 <View style={[styles.dot, { backgroundColor: item.color }]} />
@@ -30,12 +32,13 @@ export const ChartLegend = ({ items }: ChartLegendProps) => (
 );
 
 const styles = StyleSheet.create(theme => ({
-    row: {
+    row: (spread: boolean) => ({
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-    },
+        justifyContent: spread ? 'space-between' : 'center',
+        gap: spread ? 0 : theme.spacing[5],
+    }),
     item: {
         flexDirection: 'row',
         alignItems: 'center',
