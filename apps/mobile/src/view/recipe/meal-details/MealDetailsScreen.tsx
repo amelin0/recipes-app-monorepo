@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Image, ScrollView, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,19 +9,18 @@ import {
     AppText,
     CircleBackButton,
     CircleIconButton,
-    PageDots,
+    NutritionSummaryRow,
     SegmentedControl,
+    Tag,
 } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import ChefsHatIcon from '../../../../assets/icons/chefs-hat.svg';
 import CutleryIcon from '../../../../assets/icons/cutlery.svg';
 import EditIcon from '../../../../assets/icons/edit.svg';
 import ExportIcon from '../../../../assets/icons/export.svg';
 import HeartIcon from '../../../../assets/icons/heart.svg';
-import { TimeTag } from '../components';
 
-import { IngredientRow, MealSummaryRow, StepCard } from './components';
+import { IngredientRow, MethodCard } from './components';
 import { useMealDetailsScreen } from './useMealDetailsScreen';
 
 const HERO_HEIGHT = 308;
@@ -31,21 +30,16 @@ export const MealDetailsScreen = () => {
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
     const { t } = useAppTranslation(['recipes']);
-    const [carouselWidth, setCarouselWidth] = useState(0);
     const {
         meal,
         activeTab,
         setActiveTab,
         isFavorite,
-        stepIndex,
-        handleStepScroll,
         handleToggleFavorite,
         handleEdit,
         handleShare,
         handleAddToShoppingList,
-        handleAddToRation,
-        handlePortionsPress,
-        handleCookPress,
+        handleLogMeal,
     } = useMealDetailsScreen();
 
     return (
@@ -54,20 +48,25 @@ export const MealDetailsScreen = () => {
                 <Image source={meal.image} style={styles.hero} resizeMode="cover" />
 
                 <View style={styles.sheet}>
-                    <View style={styles.titleBlock}>
-                        <AppText variant="titleLarge">{meal.title}</AppText>
-                        <AppText variant="bodyLargeReg" color="tertiary">
-                            {meal.cuisine}
-                        </AppText>
-                        <TimeTag label={t('recipes:list.minutes', { count: meal.minutes })} />
+                    <View style={styles.titleRow}>
+                        <View style={styles.titleBlock}>
+                            <AppText variant="titleLarge">{meal.title}</AppText>
+                            <AppText variant="bodyLargeReg" color="tertiary">
+                                {meal.cuisine}
+                            </AppText>
+                        </View>
+                        <Tag label={t('recipes:list.minutes', { count: meal.minutes })} tone="negative" />
                     </View>
 
-                    <MealSummaryRow kcal={meal.kcal} protein={meal.protein} fats={meal.fats} carbs={meal.carbs} />
+                    <NutritionSummaryRow
+                        calories={meal.kcal.toLocaleString('en-US')}
+                        macros={{ protein: meal.protein, fats: meal.fats, carbs: meal.carbs }}
+                    />
 
                     <SegmentedControl
                         items={[
-                            { key: 'ingredients', label: t('recipes:details.tabs.ingredients') },
                             { key: 'method', label: t('recipes:details.tabs.method') },
+                            { key: 'ingredients', label: t('recipes:details.tabs.ingredients') },
                         ]}
                         activeKey={activeTab}
                         onChange={setActiveTab}
@@ -87,24 +86,11 @@ export const MealDetailsScreen = () => {
                             />
                         </View>
                     ) : (
-                        <View
-                            style={styles.tabContent}
-                            onLayout={event => setCarouselWidth(event.nativeEvent.layout.width)}
-                        >
-                            {carouselWidth > 0 ? (
-                                <ScrollView
-                                    horizontal
-                                    pagingEnabled
-                                    showsHorizontalScrollIndicator={false}
-                                    onMomentumScrollEnd={event => handleStepScroll(event, carouselWidth)}
-                                >
-                                    {meal.steps.map(step => (
-                                        <StepCard key={step.id} step={step} width={carouselWidth} />
-                                    ))}
-                                </ScrollView>
-                            ) : null}
-                            <PageDots count={meal.steps.length} activeIndex={stepIndex} />
-                        </View>
+                        <MethodCard
+                            ingredients={meal.ingredients.map(ingredient => ingredient.name)}
+                            time={t('recipes:list.minutes', { count: meal.minutes })}
+                            steps={meal.steps}
+                        />
                     )}
                 </View>
             </ScrollView>
@@ -132,24 +118,11 @@ export const MealDetailsScreen = () => {
             </View>
 
             <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing[2] }]}>
-                <CircleIconButton
-                    size={52}
-                    accessibilityLabel={t('recipes:details.portions-a11y')}
-                    onPress={handlePortionsPress}
-                >
-                    <CutleryIcon width={24} height={24} color={theme.colors.elements.primary} />
-                </CircleIconButton>
-                <CircleIconButton
-                    size={52}
-                    accessibilityLabel={t('recipes:details.cook-a11y')}
-                    onPress={handleCookPress}
-                >
-                    <ChefsHatIcon width={24} height={24} color={theme.colors.elements.primary} />
-                </CircleIconButton>
                 <AppButton
-                    label={t('recipes:details.add-to-ration')}
-                    onPress={handleAddToRation}
-                    style={styles.footerButton}
+                    fullWidth
+                    label={t('recipes:details.log-meal')}
+                    onPress={handleLogMeal}
+                    leftSlot={<CutleryIcon width={24} height={24} color={theme.colors.semantic.white} />}
                 />
             </View>
         </View>
@@ -176,8 +149,14 @@ const styles = StyleSheet.create(theme => ({
         padding: theme.spacing[4],
         gap: theme.spacing[4],
     },
+    titleRow: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing[2],
+    },
     titleBlock: {
-        gap: theme.spacing[1],
+        flex: 1,
     },
     tabContent: {
         gap: theme.spacing[2],

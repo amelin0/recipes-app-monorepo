@@ -4,14 +4,11 @@ import { Pressable, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import { AppText, MacroBadge, macroPalette, type MacroKey } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import CutleryIcon from '../../../../../assets/icons/cutlery.svg';
 import TickCircleOutlineIcon from '../../../../../assets/icons/tick-circle-outline.svg';
-
-import { MacroBadge } from './MacroBadge';
-import { macroPalette, type MacroKey } from './macro-palette';
 
 /**
  * What the trailing button offers for this dish.

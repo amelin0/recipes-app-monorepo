@@ -3,11 +3,8 @@ import { View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText, ProgressBar } from '@/shared/ui/components';
+import { AppText, MacroBadge, macroPalette, ProgressBar, type MacroKey } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
-
-import { MacroBadge } from './MacroBadge';
-import { macroPalette, type MacroKey } from './macro-palette';
 
 export interface MacroTileProps {
     macroKey: MacroKey;

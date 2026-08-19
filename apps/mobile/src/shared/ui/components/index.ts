@@ -9,6 +9,7 @@ export * from './headers';
 export * from './icons';
 export * from './inputs';
 export * from './layouts';
+export * from './nutrition';
 export * from './outlines';
 export * from './pagination';
 export * from './pickers';

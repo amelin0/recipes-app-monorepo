@@ -64,6 +64,8 @@ export const colors = {
         screen: '#FFFFFF',
         /** 40% opacity for overlays */
         overlay: 'rgba(0, 0, 0, 0.4)',
+        /** RFDS `Background/elements` — outlined tag fill (984:57614). */
+        elements: '#F8F8F8',
     },
 
     // Active (pressed states)

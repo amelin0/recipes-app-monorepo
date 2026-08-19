@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import { AppText } from '../texts';
 
 export interface MacroBadgeProps {
     /** Single-letter macro label (Б / Ж / В). */

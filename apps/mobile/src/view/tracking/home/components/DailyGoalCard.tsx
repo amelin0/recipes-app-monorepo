@@ -3,13 +3,12 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppCard, AppText } from '@/shared/ui/components';
+import { AppCard, AppText, type MacroKey } from '@/shared/ui/components';
 import { GaugeChart } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import ArrowRightIcon from '../../../../../assets/icons/arrow-right.svg';
 
-import type { MacroKey } from './macro-palette';
 import { MacroTile } from './MacroTile';
 
 export interface MacroData {
