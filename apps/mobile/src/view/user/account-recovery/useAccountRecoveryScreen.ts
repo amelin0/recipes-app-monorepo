@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { ToastService } from '@/shared/services';
+import { router } from 'expo-router';
+
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 
@@ -32,9 +33,10 @@ export const useAccountRecoveryScreen = () => {
     const seconds = Math.floor(left / SECOND) % 60;
 
     const handleRestore = useCallback(() => {
-        // TODO: POST /me/restore once the API ships.
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
+        // TODO: POST /me/restore once the API ships — mock success for now; the
+        // failure path is 804:25402.
+        router.replace('/(app)/account-restored');
+    }, []);
 
     return {
         countdown: t('profile:account-recovery.countdown', {

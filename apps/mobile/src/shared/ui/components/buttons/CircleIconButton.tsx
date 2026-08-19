@@ -14,7 +14,12 @@ export interface CircleIconButtonProps extends Omit<PressableProps, 'children' |
     badgeCount?: number;
     /** Diameter in px. @default 44 */
     size?: number;
+    /** `grey` — header/stepper circles; `glass` — nav bar actions. @default 'grey' */
+    tone?: CircleIconButtonTone;
 }
+
+/** Fill of the circle: the RFDS grey chip, or the nav bar's translucent one. */
+export type CircleIconButtonTone = 'grey' | 'glass';
 
 /** Round icon button — RFDS secondary circle (header notifications, ± steppers). */
 export const CircleIconButton = ({
@@ -22,6 +27,7 @@ export const CircleIconButton = ({
     accessibilityLabel,
     badgeCount,
     size = 44,
+    tone = 'grey',
     ...rest
 }: CircleIconButtonProps) => {
     return (
@@ -30,7 +36,7 @@ export const CircleIconButton = ({
                 accessibilityRole="button"
                 accessibilityLabel={accessibilityLabel}
                 hitSlop={8}
-                style={({ pressed }) => styles.base(pressed, size)}
+                style={({ pressed }) => styles.base(pressed, size, tone)}
                 {...rest}
             >
                 {children}
@@ -45,13 +51,20 @@ const styles = StyleSheet.create(theme => ({
         width: size,
         height: size,
     }),
-    base: (pressed: boolean, size: number) => ({
+    base: (pressed: boolean, size: number, tone: CircleIconButtonTone) => ({
         width: size,
         height: size,
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: theme.radius.full,
-        backgroundColor: pressed ? theme.colors.active.tertiary : theme.colors.semantic.lightGrey,
+        backgroundColor:
+            tone === 'glass'
+                ? pressed
+                    ? theme.colors.active.grey30
+                    : theme.colors.semantic.white30
+                : pressed
+                  ? theme.colors.active.tertiary
+                  : theme.colors.semantic.lightGrey,
     }),
     badge: {
         position: 'absolute',

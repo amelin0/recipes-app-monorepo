@@ -1,0 +1,1 @@
+export { AccountRestoredScreen } from './AccountRestoredScreen';

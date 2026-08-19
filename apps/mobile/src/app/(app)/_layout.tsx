@@ -81,6 +81,8 @@ export default function AppLayout() {
                 <Stack.Screen name="feedback-sent" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="account-deleted" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="account-recovery" />
+                <Stack.Screen name="account-restored" options={{ gestureEnabled: false }} />
+                <Stack.Screen name="account-restore-failed" />
                 <Stack.Screen name="add-product" />
                 <Stack.Screen
                     name="product-amount"

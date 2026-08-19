@@ -1,3 +1,5 @@
+export { AccountRestoreFailedScreen } from './account-restore-failed';
+export { AccountRestoredScreen } from './account-restored';
 export { AccountDeletedScreen } from './account-deleted';
 export { AccountRecoveryScreen } from './account-recovery';
 export { FeedbackScreen } from './feedback';

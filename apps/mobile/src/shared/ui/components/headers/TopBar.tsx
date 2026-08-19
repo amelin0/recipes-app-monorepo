@@ -13,6 +13,8 @@ export interface TopBarProps {
     showBack?: boolean;
     /** Overrides the default `router.back()` of the back button. */
     onBack?: () => void;
+    /** Action on the trailing edge, e.g. the help button (1000:79427). */
+    trailing?: React.ReactNode;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface TopBarProps {
  * leading edge, centered title, and a 44×36 trailing spacer that balances the
  * button so the title stays optically centered.
  */
-export const TopBar = ({ title, showBack = true, onBack }: TopBarProps) => {
+export const TopBar = ({ title, showBack = true, onBack, trailing }: TopBarProps) => {
     return (
         <View style={styles.root}>
             <View style={styles.leading}>{showBack ? <CircleBackButton onPress={onBack} /> : null}</View>
@@ -31,7 +33,7 @@ export const TopBar = ({ title, showBack = true, onBack }: TopBarProps) => {
                 </AppText>
             ) : null}
 
-            <View style={styles.trailing} />
+            <View style={styles.trailing}>{trailing}</View>
         </View>
     );
 };
@@ -59,6 +61,8 @@ const styles = StyleSheet.create(theme => ({
     },
     trailing: {
         width: 44,
-        height: 36,
+        minHeight: 36,
+        alignItems: 'flex-end',
+        justifyContent: 'center',
     },
 }));

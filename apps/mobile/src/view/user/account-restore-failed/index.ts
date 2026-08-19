@@ -1,0 +1,1 @@
+export { AccountRestoreFailedScreen } from './AccountRestoreFailedScreen';
