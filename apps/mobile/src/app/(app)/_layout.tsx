@@ -23,6 +23,9 @@ export default function AppLayout() {
                 <Stack.Screen name="setup-units" />
                 <Stack.Screen name="setup-weight" />
                 <Stack.Screen name="setup-height" />
+                <Stack.Screen name="setup-benefit-macros" />
+                <Stack.Screen name="setup-benefit-diet" />
+                <Stack.Screen name="setup-benefit-plan" />
                 <Stack.Screen name="goal-setup" />
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />

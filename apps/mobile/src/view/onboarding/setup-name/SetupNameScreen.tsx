@@ -43,7 +43,12 @@ export const SetupNameScreen = () => {
                     />
                 </View>
 
-                <SetupFooter canProceed={canProceed} onNext={handleNext} fullWidth={isKeyboardVisible} />
+                <SetupFooter
+                    canProceed={canProceed}
+                    onNext={handleNext}
+                    fullWidth={isKeyboardVisible}
+                    aboveKeyboard={isKeyboardVisible}
+                />
             </KeyboardAvoidingView>
         </AppScreen>
     );

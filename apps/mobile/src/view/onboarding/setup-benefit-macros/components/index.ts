@@ -1,0 +1,1 @@
+export { MacroGaugeGraphic } from './MacroGaugeGraphic';

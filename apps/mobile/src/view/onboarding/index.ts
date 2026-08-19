@@ -1,4 +1,7 @@
 export { OnboardingSlidesScreen } from './onboarding-slides';
+export { SetupBenefitDietScreen } from './setup-benefit-diet';
+export { SetupBenefitMacrosScreen } from './setup-benefit-macros';
+export { SetupBenefitPlanScreen } from './setup-benefit-plan';
 export { SetupBirthDateScreen } from './setup-birth-date';
 export { SetupGenderScreen } from './setup-gender';
 export { SetupGreetingScreen } from './setup-greeting';

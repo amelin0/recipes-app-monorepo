@@ -4,6 +4,8 @@ export type { HighlightedTitleProps } from './HighlightedTitle';
 export { OptionRow } from './OptionRow';
 export type { OptionRowProps } from './OptionRow';
 
+export { SetupBenefit } from './SetupBenefit';
+export type { SetupBenefitProps } from './SetupBenefit';
 export { SetupFooter } from './SetupFooter';
 export type { SetupFooterProps } from './SetupFooter';
 

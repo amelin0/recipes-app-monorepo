@@ -36,7 +36,7 @@ export const SetupGreetingScreen = () => {
                 </AppText>
             </View>
 
-            <SetupFooter canProceed onNext={handleNext} showBack={false} fullWidth />
+            <SetupFooter canProceed onNext={handleNext} fullWidth />
         </AppScreen>
     );
 };

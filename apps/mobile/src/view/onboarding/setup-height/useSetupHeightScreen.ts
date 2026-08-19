@@ -43,8 +43,7 @@ export const useSetupHeightScreen = () => {
 
     const handleNext = useCallback(() => {
         setAnswer('heightCm', heightCm);
-        // Step 8 is not designed yet — the questionnaire stops here for now.
-        router.push('/(app)/(tabs)/home');
+        router.push('/(app)/setup-benefit-macros');
     }, [heightCm, setAnswer]);
 
     return { columns, handleNext };
