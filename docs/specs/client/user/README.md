@@ -24,6 +24,8 @@ UI екрана вже реалізовано в мобільному засто
 | [App settings (Мова, тема, одиниці)](./app-settings/spec.md) | Draft | @amelin0 | 2026-08-19 |
 | [Reminders (Нагадування)](./reminders/spec.md) | Draft | @amelin0 | 2026-08-19 |
 | [FAQ (Часті питання)](./faq/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Feedback (Зворотній звʼязок)](./feedback/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Account deletion (Видалення й відновлення)](./account-deletion/spec.md) | Draft | @amelin0 | 2026-08-19 |
 
 ## Related
 

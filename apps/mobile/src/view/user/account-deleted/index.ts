@@ -1,0 +1,1 @@
+export { AccountDeletedScreen } from './AccountDeletedScreen';

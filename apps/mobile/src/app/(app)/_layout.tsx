@@ -75,6 +75,12 @@ export default function AppLayout() {
                 <Stack.Screen name="settings-theme" />
                 <Stack.Screen name="settings-units" />
                 <Stack.Screen name="faq" />
+                <Stack.Screen name="feedback" />
+                {/* Both are flow endpoints — going back would re-submit or
+                    re-request something that already happened. */}
+                <Stack.Screen name="feedback-sent" options={{ gestureEnabled: false }} />
+                <Stack.Screen name="account-deleted" options={{ gestureEnabled: false }} />
+                <Stack.Screen name="account-recovery" />
                 <Stack.Screen name="add-product" />
                 <Stack.Screen
                     name="product-amount"

@@ -17,6 +17,10 @@ export interface AppInputProps extends Omit<TextInputProps, 'style' | 'editable'
     supportingText?: string;
     /** Error message; drives the destructive state and replaces `supportingText`. */
     errorText?: string;
+    /** Character count shown under the field, right-aligned (804:25481). */
+    counterText?: string;
+    /** Destructive state without a message — when the error is shown elsewhere. */
+    invalid?: boolean;
     /** Node rendered inside the field before the TextInput (e.g. search icon, 20px). */
     leftSlot?: React.ReactNode;
     /** Node rendered inside the field after the TextInput (e.g. clear button, 20px). */
@@ -41,13 +45,27 @@ function resolveState(disabled: boolean, hasError: boolean, isFocused: boolean):
  * border + negative supporting text), disabled (light-grey fill, muted text).
  */
 export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
-    { label, supportingText, errorText, leftSlot, rightSlot, disabled = false, style, value, onFocus, onBlur, ...rest },
+    {
+        label,
+        supportingText,
+        errorText,
+        counterText,
+        invalid = false,
+        leftSlot,
+        rightSlot,
+        disabled = false,
+        style,
+        value,
+        onFocus,
+        onBlur,
+        ...rest
+    },
     ref,
 ) {
     const { theme } = useUnistyles();
     const [isFocused, setIsFocused] = useState(false);
 
-    const state = resolveState(disabled, Boolean(errorText), isFocused);
+    const state = resolveState(disabled, invalid || Boolean(errorText), isFocused);
 
     const handleFocus = useCallback<FocusHandler>(
         event => {
@@ -72,7 +90,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
         <View style={[styles.root, style]}>
             {label ? <AppText variant="bodyMediumBold">{label}</AppText> : null}
 
-            <View style={styles.field(state)}>
+            <View style={styles.field(state, Boolean(rest.multiline))}>
                 {leftSlot}
                 <TextInput
                     ref={ref}
@@ -92,6 +110,12 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
                     {helperText}
                 </AppText>
             ) : null}
+
+            {counterText ? (
+                <AppText variant="caption" style={[styles.supporting(state), styles.counter]}>
+                    {counterText}
+                </AppText>
+            ) : null}
         </View>
     );
 });
@@ -101,9 +125,11 @@ const styles = StyleSheet.create(theme => ({
         gap: theme.spacing[1],
         width: '100%',
     },
-    field: (state: InputState) => ({
+    field: (state: InputState, multiline: boolean) => ({
         flexDirection: 'row',
-        alignItems: 'center',
+        // A multiline field grows downwards, so its content hangs from the top.
+        alignItems: multiline ? 'flex-start' : 'center',
+        flex: multiline ? 1 : undefined,
         gap: theme.spacing[2],
         minHeight: 48,
         paddingHorizontal: theme.spacing[3],
@@ -121,10 +147,16 @@ const styles = StyleSheet.create(theme => ({
     textInput: (state: InputState) => ({
         ...theme.typography.bodyMediumReg,
         flex: 1,
+        alignSelf: 'stretch',
         padding: 0,
+        textAlignVertical: 'top',
         paddingHorizontal: theme.spacing[1],
         color: state === 'disabled' ? theme.colors.semantic.disabled : theme.colors.elements.primary,
     }),
+    counter: {
+        width: '100%',
+        textAlign: 'right',
+    },
     supporting: (state: InputState) => ({
         color: {
             default: theme.colors.elements.primary,

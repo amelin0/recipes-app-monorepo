@@ -1,3 +1,7 @@
+export { AccountDeletedScreen } from './account-deleted';
+export { AccountRecoveryScreen } from './account-recovery';
+export { FeedbackScreen } from './feedback';
+export { FeedbackSentScreen } from './feedback-sent';
 export { FaqScreen } from './faq';
 export { ProfileEditScreen } from './profile-edit';
 export { ProfileScreen } from './profile';

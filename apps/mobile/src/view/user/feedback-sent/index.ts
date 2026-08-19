@@ -1,0 +1,1 @@
+export { FeedbackSentScreen } from './FeedbackSentScreen';

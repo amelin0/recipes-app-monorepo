@@ -18,3 +18,13 @@ export const MOCK_WEIGH_IN = {
     /** Already formatted — the date contract is an open question in the spec. */
     nextDate: '23 жовтня 2026',
 };
+
+/** How long a deleted account can still be restored (804:25371). */
+export const ACCOUNT_RECOVERY_DAYS = 30;
+
+export const FEEDBACK_KINDS = ['bug', 'broken', 'improvement', 'feature', 'other'] as const;
+export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
+
+export const FEEDBACK_DESCRIPTION_MIN = 10;
+export const FEEDBACK_DESCRIPTION_MAX = 1000;
+export const FEEDBACK_MAX_PHOTOS = 3;
