@@ -94,5 +94,8 @@
     },
     "reminders-screen": {
         "title": "Нагадування"
+    },
+    "faq-screen": {
+        "title": "Часті питання"
     }
 }

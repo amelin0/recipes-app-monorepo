@@ -74,6 +74,7 @@ export default function AppLayout() {
                 <Stack.Screen name="settings-language" />
                 <Stack.Screen name="settings-theme" />
                 <Stack.Screen name="settings-units" />
+                <Stack.Screen name="faq" />
                 <Stack.Screen name="add-product" />
                 <Stack.Screen
                     name="product-amount"

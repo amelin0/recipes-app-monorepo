@@ -1,3 +1,4 @@
+export { FaqScreen } from './faq';
 export { ProfileEditScreen } from './profile-edit';
 export { ProfileScreen } from './profile';
 export { SettingsLanguageScreen } from './settings-language';

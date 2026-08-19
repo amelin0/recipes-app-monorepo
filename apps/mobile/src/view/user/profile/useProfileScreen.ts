@@ -46,7 +46,7 @@ export const useProfileScreen = () => {
         handleTheme: () => router.push('/(app)/settings-theme'),
         handleUnits: () => router.push('/(app)/settings-units'),
         handleFeedback: comingSoon,
-        handleFaq: comingSoon,
+        handleFaq: () => router.push('/(app)/faq'),
         handleSupportChat: comingSoon,
         handlePrivacy: comingSoon,
         handleTerms: comingSoon,
