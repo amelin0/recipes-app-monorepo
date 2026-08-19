@@ -1,41 +1,42 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppSwitch, AppText } from '@/shared/ui/components';
+import { AppButton, AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import { PortionMacrosRow, PortionStepperCard } from './components';
+import CloseIcon from '../../../../assets/icons/close.svg';
+
+import { PortionDial, PortionLegend, PortionMacrosRow, PortionStepper } from './components';
 import { useMealPortionsScreen } from './useMealPortionsScreen';
 
 export const MealPortionsScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes', 'common']);
     const {
-        myPortions,
-        othersPortions,
-        forOthers,
-        setForOthers,
-        myGrams,
-        othersGrams,
-        totalGrams,
+        image,
+        portions,
+        canDecrease,
+        share,
+        setShare,
         myMacros,
-        handleMyDecrease,
-        handleMyIncrease,
-        handleOthersDecrease,
-        handleOthersIncrease,
+        totalGrams,
+        handleDecrease,
+        handleIncrease,
         handleClose,
-        handleStartCooking,
+        handleConfirm,
     } = useMealPortionsScreen();
 
     return (
         <View style={styles.sheet}>
-            <View style={styles.headerBar}>
-                <AppText variant="titleMedium" style={styles.headerTitle}>
-                    {t('recipes:portions.title')}
-                </AppText>
+            <View style={styles.header}>
+                <View style={styles.headerText}>
+                    <AppText variant="titleMedium">{t('recipes:portions.title')}</AppText>
+                    <AppText variant="bodyMediumReg" style={styles.muted}>
+                        {t('recipes:portions.subtitle')}
+                    </AppText>
+                </View>
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t('common:actions.close')}
@@ -43,60 +44,55 @@ export const MealPortionsScreen = () => {
                     onPress={handleClose}
                     style={styles.closeButton}
                 >
-                    <Ionicons name="close" size={24} color={theme.colors.elements.primary} />
+                    <CloseIcon width={20} height={20} color={theme.colors.elements.primary} />
                 </Pressable>
             </View>
 
-            {/* Контент короткий і статичний — ScrollView всередині formSheet
-                зсувається системними інсетами під хедер, тому звичайний View. */}
-            <View style={styles.content}>
-                <AppText variant="bodyMediumReg" color="tertiary">
-                    {t('recipes:portions.subtitle')}
+            {/* The sheet is nearly full height in the design (811:58844); on a
+                short device the plate plus its readouts still overflow, so the
+                middle scrolls while the header and the action stay put. */}
+            <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+                <PortionStepper
+                    value={t('recipes:portions.count', { value: portions })}
+                    canDecrease={canDecrease}
+                    onDecrease={handleDecrease}
+                    onIncrease={handleIncrease}
+                    decreaseLabel={t('recipes:portions.decrease-a11y')}
+                    increaseLabel={t('recipes:portions.increase-a11y')}
+                />
+
+                <AppText variant="bodyMediumReg" style={[styles.centered, styles.muted]}>
+                    {t('recipes:portions.hint')}
                 </AppText>
 
-                <PortionStepperCard
-                    title={t('recipes:portions.my-portion')}
-                    portions={myPortions}
-                    grams={myGrams}
-                    onDecrease={handleMyDecrease}
-                    onIncrease={handleMyIncrease}
-                >
-                    <PortionMacrosRow
-                        kcal={myMacros.kcal}
-                        protein={myMacros.protein}
-                        fats={myMacros.fats}
-                        carbs={myMacros.carbs}
-                    />
-                </PortionStepperCard>
+                <PortionDial
+                    share={share}
+                    onShareChange={setShare}
+                    image={image}
+                    accessibilityLabel={t('recipes:portions.dial-a11y')}
+                />
 
-                <View style={styles.othersRow}>
-                    <AppText variant="bodyLargeBold">{t('recipes:portions.for-others')}</AppText>
-                    <AppSwitch
-                        value={forOthers}
-                        onValueChange={setForOthers}
-                        accessibilityLabel={t('recipes:portions.for-others-a11y')}
-                    />
-                </View>
+                <PortionLegend
+                    mineLabel={t('recipes:portions.legend-mine')}
+                    othersLabel={t('recipes:portions.legend-others')}
+                />
 
-                {forOthers ? (
-                    <PortionStepperCard
-                        title={t('recipes:portions.others-portion')}
-                        portions={othersPortions}
-                        grams={othersGrams}
-                        onDecrease={handleOthersDecrease}
-                        onIncrease={handleOthersIncrease}
-                    />
-                ) : null}
-            </View>
+                <PortionMacrosRow
+                    kcal={myMacros.kcal}
+                    protein={myMacros.protein}
+                    fats={myMacros.fats}
+                    carbs={myMacros.carbs}
+                />
+            </ScrollView>
 
             <View style={styles.footer}>
-                <View style={styles.totalRow}>
-                    <AppText variant="bodyLargeBold">{t('recipes:portions.total-weight')}</AppText>
-                    <AppText variant="bodyLargeBold">
+                <View style={styles.weightRow}>
+                    <AppText variant="bodyMediumBold">{t('recipes:portions.total-weight')}</AppText>
+                    <AppText variant="bodyMediumBold">
                         {t('recipes:portions.grams-value', { value: totalGrams })}
                     </AppText>
                 </View>
-                <AppButton fullWidth label={t('recipes:portions.start-cooking')} onPress={handleStartCooking} />
+                <AppButton fullWidth label={t('recipes:portions.confirm')} onPress={handleConfirm} />
             </View>
         </View>
     );
@@ -107,44 +103,45 @@ const styles = StyleSheet.create(theme => ({
         flex: 1,
         backgroundColor: theme.colors.semantic.white,
     },
-    headerBar: {
+    header: {
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
+        alignItems: 'flex-start',
+        gap: theme.spacing[3],
         paddingHorizontal: theme.spacing[4],
-        paddingTop: theme.spacing[5],
-        paddingBottom: theme.spacing[2],
+        paddingTop: theme.spacing[6],
     },
-    headerTitle: {
+    headerText: {
         flex: 1,
+        gap: theme.spacing[1],
     },
     closeButton: {
         width: 44,
         height: 44,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    content: {
-        flex: 1,
-        paddingHorizontal: theme.spacing[4],
-        paddingBottom: theme.spacing[4],
-        gap: theme.spacing[4],
-    },
-    othersRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: theme.spacing[3],
-        borderRadius: theme.radius.lg,
+        borderRadius: theme.radius.full,
         backgroundColor: theme.colors.semantic.lightGrey,
     },
-    footer: {
-        gap: theme.spacing[3],
+    list: {
+        flexGrow: 1,
+        alignItems: 'center',
+        gap: theme.spacing[4],
         paddingHorizontal: theme.spacing[4],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[6],
+        paddingTop: theme.spacing[4],
     },
-    totalRow: {
+    centered: {
+        width: '100%',
+        textAlign: 'center',
+    },
+    muted: {
+        color: theme.colors.semantic.darkGrey,
+    },
+    footer: {
+        gap: theme.spacing[4],
+        paddingHorizontal: theme.spacing[4],
+        paddingBottom: theme.spacing[10],
+    },
+    weightRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

@@ -64,7 +64,8 @@ export default function AppLayout() {
                         // Той самий патерн, що й recipes-filter: bottom sheet
                         // виглядом, але повноцінний екран.
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.75],
+                        // The dial sheet is nearly full height (811:58844).
+                        sheetAllowedDetents: [0.86],
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}

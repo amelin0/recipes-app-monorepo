@@ -2,59 +2,53 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
-import { ToastService } from '@/shared/services';
-import { useAppTranslation } from '@/shared/utils/translations';
-
 import { MOCK_MEAL_DETAIL } from '../recipe.constants';
 
-const PORTION_STEP = 0.5;
-const PORTION_MIN = 0.5;
+const PORTION_MIN = 1;
 const PORTION_MAX = 20;
-
-const clampPortion = (value: number) => Math.min(Math.max(value, PORTION_MIN), PORTION_MAX);
+/** How much of the dish the plate starts on. */
+const DEFAULT_SHARE = 0.5;
 
 export const useMealPortionsScreen = () => {
-    const { t } = useAppTranslation(['recipes', 'common']);
     // TODO: portions for the recipe opened in meal details (id param) once the API ships.
     const meal = MOCK_MEAL_DETAIL;
 
-    const [myPortions, setMyPortions] = useState(1);
-    const [othersPortions, setOthersPortions] = useState(1);
-    const [forOthers, setForOthers] = useState(false);
+    const [portions, setPortions] = useState(PORTION_MIN);
+    const [share, setShare] = useState(DEFAULT_SHARE);
 
     const per = meal.perPortion;
-    const myGrams = Math.round(per.grams * myPortions);
-    const othersGrams = forOthers ? Math.round(per.grams * othersPortions) : 0;
 
-    const myMacros = useMemo(
-        () => ({
-            kcal: Math.round(per.kcal * myPortions),
-            protein: Math.round(per.protein * myPortions),
-            fats: Math.round(per.fats * myPortions),
-            carbs: Math.round(per.carbs * myPortions),
-        }),
-        [per, myPortions],
-    );
+    // What the user actually ate: their share of everything that was cooked.
+    const myMacros = useMemo(() => {
+        const eaten = portions * share;
 
-    const handleStartCooking = useCallback(() => {
-        // TODO: cooking mode once designed.
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
+        return {
+            kcal: Math.round(per.kcal * eaten),
+            protein: Math.round(per.protein * eaten),
+            fats: Math.round(per.fats * eaten),
+            carbs: Math.round(per.carbs * eaten),
+        };
+    }, [per, portions, share]);
+
+    const handleConfirm = useCallback(() => {
+        // TODO: POST the logged entry; the receipt should read it back.
+        router.replace({
+            pathname: '/(app)/meal-logged',
+            params: { portions: String(portions * share) },
+        });
+    }, [portions, share]);
 
     return {
-        myPortions,
-        othersPortions,
-        forOthers,
-        setForOthers,
-        myGrams,
-        othersGrams,
-        totalGrams: myGrams + othersGrams,
+        image: meal.image,
+        portions,
+        share,
+        setShare,
+        canDecrease: portions > PORTION_MIN,
         myMacros,
-        handleMyDecrease: () => setMyPortions(prev => clampPortion(prev - PORTION_STEP)),
-        handleMyIncrease: () => setMyPortions(prev => clampPortion(prev + PORTION_STEP)),
-        handleOthersDecrease: () => setOthersPortions(prev => clampPortion(prev - PORTION_STEP)),
-        handleOthersIncrease: () => setOthersPortions(prev => clampPortion(prev + PORTION_STEP)),
+        totalGrams: Math.round(per.grams * portions),
+        handleDecrease: () => setPortions(prev => Math.max(prev - 1, PORTION_MIN)),
+        handleIncrease: () => setPortions(prev => Math.min(prev + 1, PORTION_MAX)),
         handleClose: () => router.back(),
-        handleStartCooking,
+        handleConfirm,
     };
 };
