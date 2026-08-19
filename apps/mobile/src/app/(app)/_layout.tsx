@@ -41,6 +41,9 @@ export default function AppLayout() {
                 <Stack.Screen name="paywall" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="subscription-success" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="goal-setup" />
+                {/* Flow endpoint: the meal is already logged, so going back
+                    into the portion picker would offer to log it again. */}
+                <Stack.Screen name="meal-logged" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />
                 <Stack.Screen name="profile" />

@@ -15,6 +15,12 @@ export interface NutritionSummaryRowProps {
     calories: string;
     /** Grams per macro, in Б/Ж/В order. */
     macros: Record<MacroKey, number>;
+    /**
+     * Give the calorie chip the same width as the macro ones. The dish detail
+     * lets it hug its content (984:57591); the logged-meal card spreads all
+     * four evenly (811:55249).
+     */
+    equalWidths?: boolean;
 }
 
 const ORDER: MacroKey[] = ['protein', 'fats', 'carbs'];
@@ -23,14 +29,14 @@ const ORDER: MacroKey[] = ['protein', 'fats', 'carbs'];
  * Energy + macros strip under a dish title (984:57590, 811:55247). The calorie
  * chip hugs its content; the three macro chips share the rest evenly.
  */
-export const NutritionSummaryRow = ({ calories, macros }: NutritionSummaryRowProps) => {
+export const NutritionSummaryRow = ({ calories, macros, equalWidths = false }: NutritionSummaryRowProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['tracking']);
     const palette = macroPalette(theme.colors);
 
     return (
         <View style={styles.row}>
-            <View style={styles.caloriesChip}>
+            <View style={styles.caloriesChip(equalWidths)}>
                 <View style={styles.caloriesBadge}>
                     <AppText variant="bodySmallReg">{t('tracking:home.kcal-label')}</AppText>
                 </View>
@@ -61,16 +67,21 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         gap: theme.spacing[1],
     },
-    caloriesChip: {
+    caloriesChip: (equalWidths: boolean) => ({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: theme.spacing[1],
-        paddingHorizontal: theme.spacing[3],
+        // The wide padding only holds while the chip hugs its content. Figma
+        // keeps it declared on the stretched variant too but the quarter-width
+        // box is narrower than content + padding, so it centres and the padding
+        // gives way — matching it here means dropping to the macro chips' 4.
+        paddingHorizontal: equalWidths ? theme.spacing[1] : theme.spacing[3],
         paddingVertical: theme.spacing[2],
         borderRadius: 14,
         backgroundColor: theme.colors.semantic.lightGrey,
-    },
+        ...(equalWidths ? { flex: 1, minWidth: 0 } : null),
+    }),
     caloriesBadge: {
         height: 20,
         alignItems: 'center',
@@ -81,6 +92,7 @@ const styles = StyleSheet.create(theme => ({
     },
     macroChip: {
         flex: 1,
+        minWidth: 0,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
