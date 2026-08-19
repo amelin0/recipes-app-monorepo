@@ -1,10 +1,8 @@
 export { CalorieStepper } from './CalorieStepper';
 export type { CalorieStepperProps } from './CalorieStepper';
+export { GoalParamsSection } from './GoalParamsSection';
+export type { GoalParam, GoalParamsSectionProps } from './GoalParamsSection';
 export { MacroBalanceCard } from './MacroBalanceCard';
 export type { MacroBalanceCardProps, MacroBalanceSegment } from './MacroBalanceCard';
-export { NutrientSliderCard } from './NutrientSliderCard';
-export type { NutrientSliderCardProps } from './NutrientSliderCard';
-export { TipCard } from './TipCard';
-export type { TipCardProps } from './TipCard';
-export { UserParamsCard } from './UserParamsCard';
-export type { UserParamsCardProps } from './UserParamsCard';
+export { NutrientRow } from './NutrientRow';
+export type { NutrientRowProps } from './NutrientRow';

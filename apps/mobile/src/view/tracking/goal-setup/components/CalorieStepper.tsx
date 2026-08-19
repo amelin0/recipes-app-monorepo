@@ -15,7 +15,11 @@ export interface CalorieStepperProps {
     onIncrease: () => void;
 }
 
-/** ± stepper with the glowing calorie circle (Figma `cal`, node 435:12703). */
+const RING = 152;
+/** RFDS shadow/positive: a 0-blur drop shadow with an 8px spread. */
+const HALO = 8;
+
+/** ± around the calorie ring (811:53497). */
 export const CalorieStepper = ({ calories, onDecrease, onIncrease }: CalorieStepperProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['tracking']);
@@ -30,8 +34,10 @@ export const CalorieStepper = ({ calories, onDecrease, onIncrease }: CalorieStep
                 <MinusIcon width={24} height={24} color={theme.colors.elements.primary} />
             </CircleIconButton>
 
-            <View style={styles.glow}>
-                <View style={styles.circle}>
+            <View style={styles.ringWrapper}>
+                {/* RN has no shadow spread, so the halo is a concentric view. */}
+                <View style={styles.halo} />
+                <View style={styles.ring}>
                     <AppText variant="titleLarge">{calories.toLocaleString('en-US')}</AppText>
                     <AppText variant="bodyLargeReg">{t('tracking:goal-setup.kcal')}</AppText>
                 </View>
@@ -50,25 +56,32 @@ export const CalorieStepper = ({ calories, onDecrease, onIncrease }: CalorieStep
 
 const styles = StyleSheet.create(theme => ({
     row: {
+        width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: theme.spacing[6],
-        width: '100%',
     },
-    // Figma shadow/positive is a 8px spread ring — RN has no spread, so the
-    // ring is a padded wrapper with the translucent fill.
-    glow: {
-        padding: theme.spacing[2],
+    ringWrapper: {
+        width: RING,
+        height: RING,
+    },
+    halo: {
+        position: 'absolute',
+        top: -HALO,
+        left: -HALO,
+        right: -HALO,
+        bottom: -HALO,
         borderRadius: theme.radius.full,
-        backgroundColor: 'rgba(0, 171, 60, 0.12)',
+        backgroundColor: theme.colors.semantic.positiveRing,
+        zIndex: -1,
     },
-    circle: {
-        width: 152,
-        height: 152,
-        gap: theme.spacing[1],
+    ring: {
+        width: RING,
+        height: RING,
         alignItems: 'center',
         justifyContent: 'center',
+        gap: theme.spacing[1],
         borderRadius: theme.radius.full,
         borderWidth: 4,
         borderColor: theme.colors.semantic.positive,

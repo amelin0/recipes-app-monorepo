@@ -43,7 +43,9 @@ const styles = StyleSheet.create(theme => ({
         flex: 1,
         minHeight: 80,
         minWidth: 56,
-        padding: theme.spacing[3],
+        // Figma centres the card stroke, RN lays it outside the padding box, so
+        // the padding gives back what the border takes (12 - borderWidth).
+        padding: theme.spacing[3] - (selected ? 2 : 1),
         gap: theme.spacing[2],
         alignItems: 'center',
         borderRadius: theme.radius.lg,

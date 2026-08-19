@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { AppButton, AppScreen, AppText, CircleBackButton, SectionHeader, SelectCard } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import { CalorieStepper, MacroBalanceCard, NutrientSliderCard, TipCard, UserParamsCard } from './components';
+import { CalorieStepper, GoalParamsSection, MacroBalanceCard, NutrientRow } from './components';
 import { useGoalSetupScreen } from './useGoalSetupScreen';
 
 export const GoalSetupScreen = () => {
@@ -21,8 +21,7 @@ export const GoalSetupScreen = () => {
         handleSelectGoal,
         handleDecreaseCalories,
         handleIncreaseCalories,
-        handleNutrientChange,
-        handleChangeParams,
+        handleChangeNutrient,
         handleSave,
     } = useGoalSetupScreen();
 
@@ -44,12 +43,7 @@ export const GoalSetupScreen = () => {
 
                 <View style={styles.section}>
                     <SectionHeader title={t('tracking:goal-setup.params-title')} />
-                    <UserParamsCard
-                        weight={params.weight}
-                        height={params.height}
-                        activity={params.activity}
-                        onChangePress={handleChangeParams}
-                    />
+                    <GoalParamsSection pair={params.pair} full={params.full} />
                 </View>
 
                 <View style={styles.section}>
@@ -77,21 +71,15 @@ export const GoalSetupScreen = () => {
                 <MacroBalanceCard segments={balanceSegments} />
 
                 {nutrients.map(nutrient => (
-                    <NutrientSliderCard
+                    <NutrientRow
                         key={nutrient.key}
                         emoji={nutrient.emoji}
                         title={t(`tracking:goal-setup.nutrients.${nutrient.key}`)}
-                        value={nutrient.value}
-                        min={nutrient.min}
-                        max={nutrient.max}
-                        color={nutrient.color}
+                        value={nutrient.value.toLocaleString('en-US')}
                         unit={t(nutrient.unit === 'ml' ? 'tracking:goal-setup.unit-ml' : 'tracking:goal-setup.unit-g')}
-                        step={nutrient.step}
-                        onChange={value => handleNutrientChange(nutrient.key, value)}
+                        onPress={() => handleChangeNutrient(nutrient.key)}
                     />
                 ))}
-
-                <TipCard label={t('tracking:goal-setup.tip-label')} text={t('tracking:goal-setup.tip-text')} />
             </ScrollView>
         </AppScreen>
     );

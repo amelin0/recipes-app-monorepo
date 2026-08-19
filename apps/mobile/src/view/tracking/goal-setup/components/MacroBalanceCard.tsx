@@ -3,30 +3,28 @@ import { View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppCard, AppText } from '@/shared/ui/components';
+import { AppCard, AppText, MacroBadge, macroPalette, type MacroKey } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 export interface MacroBalanceSegment {
-    key: string;
-    /** Legend badge label (Б / Ж / В / ккал). */
-    label: string;
-    /** Share 0..1 of total calories. */
+    key: MacroKey;
+    /** Share 0..1 of the macro calories. */
     share: number;
-    /** Segment / badge accent color. */
-    color: string;
-    /** Legend badge background; solid `color` with white text when omitted. */
-    badgeBg?: string;
 }
 
 export interface MacroBalanceCardProps {
     segments: MacroBalanceSegment[];
 }
 
-/** Stacked macro-calorie balance bar with a legend (Figma 435:12707). */
+/**
+ * How the calorie goal splits across the macros (811:53503). Each macro owns a
+ * column as wide as its share, so the bar's rounded ends belong to the outer
+ * two and the badge sits above its own segment.
+ */
 export const MacroBalanceCard = ({ segments }: MacroBalanceCardProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['tracking']);
-    const visible = segments.filter(segment => segment.share > 0);
+    const palette = macroPalette(theme.colors);
 
     return (
         <AppCard style={styles.card}>
@@ -34,27 +32,27 @@ export const MacroBalanceCard = ({ segments }: MacroBalanceCardProps) => {
                 {t('tracking:goal-setup.balance-title')}
             </AppText>
 
-            <View style={styles.bar}>
-                {visible.map(segment => (
-                    <View
-                        key={segment.key}
-                        style={[styles.segment(segment.share), { backgroundColor: segment.color }]}
-                    />
-                ))}
-            </View>
-
-            <View style={styles.legend}>
-                {segments.map(segment => (
-                    <View key={segment.key} style={styles.legendItem}>
-                        <View style={[styles.badge, { backgroundColor: segment.badgeBg ?? segment.color }]}>
-                            <AppText
-                                variant="bodySmallReg"
-                                style={{ color: segment.badgeBg ? segment.color : theme.colors.semantic.white }}
-                            >
-                                {segment.label}
+            <View style={styles.row}>
+                {segments.map((segment, index) => (
+                    <View key={segment.key} style={styles.column(segment.share)}>
+                        <View
+                            style={[
+                                styles.bar(index === 0, index === segments.length - 1),
+                                { backgroundColor: palette[segment.key].color },
+                            ]}
+                        />
+                        <View style={styles.legend}>
+                            <MacroBadge
+                                letter={t(`tracking:home.macros.${segment.key}`)}
+                                color={palette[segment.key].color}
+                                backgroundColor={palette[segment.key].backgroundColor}
+                            />
+                            <AppText variant="bodySmallReg">
+                                {t('tracking:goal-setup.percent', {
+                                    value: (segment.share * 100).toFixed(1).replace('.', ','),
+                                })}
                             </AppText>
                         </View>
-                        <AppText variant="bodySmallReg">{Math.round(segment.share * 100)}%</AppText>
                     </View>
                 ))}
             </View>
@@ -65,39 +63,37 @@ export const MacroBalanceCard = ({ segments }: MacroBalanceCardProps) => {
 const styles = StyleSheet.create(theme => ({
     card: {
         alignItems: 'flex-start',
+        gap: theme.spacing[2],
     },
     title: {
         width: '100%',
     },
-    bar: {
-        flexDirection: 'row',
+    row: {
         width: '100%',
-        borderRadius: theme.radius.full,
-        overflow: 'hidden',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
-    segment: (share: number) => ({
+    column: (share: number) => ({
         flexGrow: share,
         flexBasis: 0,
-        minWidth: 1,
+        // The legend may overflow a very thin column rather than stretch it.
+        minWidth: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: theme.spacing[1],
+    }),
+    bar: (first: boolean, last: boolean) => ({
+        width: '100%',
         height: 8,
+        borderTopLeftRadius: first ? theme.radius.full : 0,
+        borderBottomLeftRadius: first ? theme.radius.full : 0,
+        borderTopRightRadius: last ? theme.radius.full : 0,
+        borderBottomRightRadius: last ? theme.radius.full : 0,
     }),
     legend: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: theme.spacing[2],
-        flexWrap: 'wrap',
-    },
-    legendItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
         gap: theme.spacing[1],
-    },
-    badge: {
-        minWidth: 20,
-        height: 20,
-        paddingHorizontal: theme.spacing[1],
-        borderRadius: theme.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 }));

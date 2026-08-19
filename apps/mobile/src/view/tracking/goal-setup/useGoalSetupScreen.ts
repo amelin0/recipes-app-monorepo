@@ -1,15 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
-import { useUnistyles } from 'react-native-unistyles';
 
+import type { MacroKey } from '@/shared/ui/components';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import type { MacroBalanceSegment } from './components';
+import type { GoalParam, MacroBalanceSegment } from './components';
 
 export type GoalKey = 'loss' | 'maintain' | 'gain';
-export type NutrientKey = 'protein' | 'fats' | 'carbs' | 'water' | 'fiber';
+export type NutrientKey = MacroKey | 'water' | 'fiber';
 
 const CALORIE_STEP = 50;
 const CALORIE_MIN = 1000;
@@ -21,7 +21,27 @@ const GOALS: { key: GoalKey; emoji: string; calories: number }[] = [
     { key: 'gain', emoji: '💪', calories: 2500 },
 ];
 
-const KCAL_PER_GRAM: Record<'protein' | 'fats' | 'carbs', number> = {
+const NUTRIENTS: { key: NutrientKey; emoji: string; unit: 'g' | 'ml' }[] = [
+    { key: 'protein', emoji: '🥩', unit: 'g' },
+    { key: 'fats', emoji: '🫒', unit: 'g' },
+    { key: 'carbs', emoji: '🌾', unit: 'g' },
+    { key: 'water', emoji: '💧', unit: 'ml' },
+    { key: 'fiber', emoji: '🥦', unit: 'g' },
+];
+
+/**
+ * TODO: replace with the saved goal (nutrition domain). How the macro grams
+ * follow a calorie change is an open question — see the spec.
+ */
+const NUTRIENT_VALUES: Record<NutrientKey, number> = {
+    protein: 200,
+    fats: 48,
+    carbs: 100,
+    water: 2000,
+    fiber: 25,
+};
+
+const KCAL_PER_GRAM: Record<MacroKey, number> = {
     protein: 4,
     fats: 9,
     carbs: 4,
@@ -29,117 +49,54 @@ const KCAL_PER_GRAM: Record<'protein' | 'fats' | 'carbs', number> = {
 
 export const useGoalSetupScreen = () => {
     const { t } = useAppTranslation(['tracking']);
-    const { theme } = useUnistyles();
-
-    // TODO: replace mocks with API data (nutrition domain).
-    const params = { weight: '70 кг', height: '178см', activity: 'Середня активність' };
 
     const [calories, setCalories] = useState(1850);
-    const [values, setValues] = useState<Record<NutrientKey, number>>({
-        protein: 200,
-        fats: 48,
-        carbs: 100,
-        water: 2000,
-        fiber: 25,
-    });
+    const values = NUTRIENT_VALUES;
 
     const selectedGoal = useMemo(() => GOALS.find(goal => goal.calories === calories)?.key, [calories]);
 
-    const nutrients = [
-        {
-            key: 'protein' as const,
-            emoji: '🥩',
-            value: values.protein,
-            min: 40,
-            max: 350,
-            step: 5,
-            unit: 'g' as const,
-            color: theme.colors.semantic.negative,
+    const handleChangeParam = useCallback(
+        (key: string) => {
+            // TODO: open the matching profile parameter once its flow is designed.
+            void key;
+            ToastService.info(t('common:states.coming-soon'));
         },
-        {
-            key: 'fats' as const,
-            emoji: '🫒',
-            value: values.fats,
-            min: 20,
-            max: 200,
-            step: 2,
-            unit: 'g' as const,
-            color: theme.colors.semantic.positive,
-        },
-        {
-            key: 'carbs' as const,
-            emoji: '🌾',
-            value: values.carbs,
-            min: 30,
-            max: 500,
-            step: 5,
-            unit: 'g' as const,
-            color: theme.colors.semantic.ocean,
-        },
-        {
-            key: 'water' as const,
-            emoji: '💧',
-            value: values.water,
-            min: 500,
-            max: 5000,
-            step: 100,
-            unit: 'ml' as const,
-            color: theme.colors.semantic.ocean,
-        },
-        {
-            key: 'fiber' as const,
-            emoji: '🥦',
-            value: values.fiber,
-            min: 10,
-            max: 60,
-            step: 1,
-            unit: 'g' as const,
-            color: theme.colors.branding.accent,
-        },
-    ];
+        [t],
+    );
 
+    const params = useMemo(() => {
+        const build = (key: string, label: string, value: string): GoalParam => ({
+            key,
+            label,
+            value,
+            onPress: () => handleChangeParam(key),
+        });
+
+        return {
+            pair: [
+                build('weight', t('tracking:goal-setup.params.weight'), '70 кг'),
+                build('height', t('tracking:goal-setup.params.height'), '178 см'),
+            ] as [GoalParam, GoalParam],
+            full: build('activity', t('tracking:goal-setup.params.activity'), 'Середня активність'),
+        };
+    }, [t, handleChangeParam]);
+
+    const nutrients = useMemo(
+        () => NUTRIENTS.map(nutrient => ({ ...nutrient, value: values[nutrient.key] })),
+        [values],
+    );
+
+    /** Every macro's slice of the macro calories — the three always sum to 100%. */
     const balanceSegments = useMemo<MacroBalanceSegment[]>(() => {
-        const proteinKcal = values.protein * KCAL_PER_GRAM.protein;
-        const fatsKcal = values.fats * KCAL_PER_GRAM.fats;
-        const carbsKcal = values.carbs * KCAL_PER_GRAM.carbs;
-        const total = Math.max(calories, proteinKcal + fatsKcal + carbsKcal, 1);
-        const rest = Math.max(total - proteinKcal - fatsKcal - carbsKcal, 0);
+        const kcal = {
+            protein: values.protein * KCAL_PER_GRAM.protein,
+            fats: values.fats * KCAL_PER_GRAM.fats,
+            carbs: values.carbs * KCAL_PER_GRAM.carbs,
+        };
+        const total = Math.max(kcal.protein + kcal.fats + kcal.carbs, 1);
 
-        const segments: MacroBalanceSegment[] = [
-            {
-                key: 'protein',
-                label: t('tracking:home.macros.protein'),
-                share: proteinKcal / total,
-                color: theme.colors.semantic.negative,
-                badgeBg: theme.colors.semantic.lightNegative,
-            },
-            {
-                key: 'fats',
-                label: t('tracking:home.macros.fats'),
-                share: fatsKcal / total,
-                color: theme.colors.semantic.positive,
-                badgeBg: theme.colors.semantic.lightPositive,
-            },
-            {
-                key: 'carbs',
-                label: t('tracking:home.macros.carbs'),
-                share: carbsKcal / total,
-                color: theme.colors.semantic.ocean,
-                badgeBg: theme.colors.semantic.lightOcean,
-            },
-        ];
-
-        // Unallocated calories — grey "ккал" segment first, as in Figma 435:12836.
-        if (rest > 0) {
-            segments.unshift({
-                key: 'rest',
-                label: t('tracking:goal-setup.kcal'),
-                share: rest / total,
-                color: theme.colors.semantic.darkGrey,
-            });
-        }
-        return segments;
-    }, [calories, values, t, theme]);
+        return (Object.keys(kcal) as MacroKey[]).map(key => ({ key, share: kcal[key] / total }));
+    }, [values]);
 
     const handleSelectGoal = useCallback((goal: GoalKey) => {
         const preset = GOALS.find(item => item.key === goal);
@@ -154,14 +111,14 @@ export const useGoalSetupScreen = () => {
         setCalories(prev => Math.min(prev + CALORIE_STEP, CALORIE_MAX));
     }, []);
 
-    const handleNutrientChange = useCallback((key: NutrientKey, value: number) => {
-        setValues(prev => ({ ...prev, [key]: value }));
-    }, []);
-
-    const handleChangeParams = useCallback(() => {
-        // TODO: navigate to the profile/params flow once designed.
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
+    const handleChangeNutrient = useCallback(
+        (key: NutrientKey) => {
+            // TODO: open the per-nutrient editor once it is designed.
+            void key;
+            ToastService.info(t('common:states.coming-soon'));
+        },
+        [t],
+    );
 
     const handleSave = useCallback(() => {
         // TODO: PUT /nutrition/goal once the API ships — mock success.
@@ -181,8 +138,7 @@ export const useGoalSetupScreen = () => {
         handleSelectGoal,
         handleDecreaseCalories,
         handleIncreaseCalories,
-        handleNutrientChange,
-        handleChangeParams,
+        handleChangeNutrient,
         handleSave,
     };
 };
