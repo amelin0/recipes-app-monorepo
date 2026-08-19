@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Pressable, View } from 'react-native';
 
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -39,6 +40,9 @@ export interface DishRowProps {
     onActionPress?: () => void;
 }
 
+/** How far the row slides to uncover the action: the 44 button plus its gap. */
+const ACTION_WIDTH = 52;
+
 /** Gradient tile width — the design keeps it fixed while the row grows (435:6026). */
 const TILE_WIDTH = 68;
 
@@ -56,7 +60,14 @@ export const DishRow = ({ emoji, name, calories, macros, action = 'none', onActi
     const { t } = useAppTranslation(['tracking']);
     const palette = macroPalette(theme.colors);
 
-    return (
+    const swipeable = useRef<SwipeableMethods>(null);
+
+    const handleSwipeAction = () => {
+        swipeable.current?.close();
+        onActionPress?.();
+    };
+
+    const row = (
         <View style={styles.row}>
             <View style={styles.tile}>
                 <Svg style={StyleSheet.absoluteFill}>
@@ -113,6 +124,39 @@ export const DishRow = ({ emoji, name, calories, macros, action = 'none', onActi
             )}
         </View>
     );
+
+    // A meal still ahead carries no inline button, so the same action is only
+    // reachable by swiping the row aside (435:6170). A meal happening now has
+    // the button already, and one already eaten has nothing left to do.
+    if (action !== 'none' || !onActionPress) return row;
+
+    return (
+        <ReanimatedSwipeable
+            ref={swipeable}
+            // Both containers need the width spelt out: the row inside sizes
+            // itself against them, and Swipeable leaves them content-sized.
+            containerStyle={styles.swipeContainer}
+            childrenContainerStyle={styles.swipeContainer}
+            friction={2}
+            rightThreshold={ACTION_WIDTH / 2}
+            overshootRight={false}
+            renderRightActions={() => (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('tracking:home.dish-eat', { name })}
+                    onPress={handleSwipeAction}
+                    style={styles.swipeAction}
+                >
+                    <View style={styles.swipeButton}>
+                        <CutleryIcon width={20} height={20} color={theme.colors.elements.primary} />
+                    </View>
+                    <AppText variant="buttonTab">{t('tracking:home.eat')}</AppText>
+                </Pressable>
+            )}
+        >
+            {row}
+        </ReanimatedSwipeable>
+    );
 };
 
 const styles = StyleSheet.create(theme => ({
@@ -158,6 +202,23 @@ const styles = StyleSheet.create(theme => ({
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing[1],
+    },
+    swipeContainer: {
+        width: '100%',
+    },
+    swipeAction: {
+        width: ACTION_WIDTH,
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        gap: theme.spacing[1],
+    },
+    swipeButton: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.semantic.lightGrey,
     },
     action: (action: DishAction) => ({
         width: 44,

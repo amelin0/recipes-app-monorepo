@@ -16,6 +16,7 @@
         "kcal-label": "ккал",
         "dish-eat": "Зафіксувати «{{name}}» як зʼїдене",
         "dish-eaten": "«{{name}}» зʼїдено",
+        "eat": "Їсти",
         "water": "Споживання води",
         "water-progress": "{{current}} / {{max}} мл",
         "steps": "Кроки",
