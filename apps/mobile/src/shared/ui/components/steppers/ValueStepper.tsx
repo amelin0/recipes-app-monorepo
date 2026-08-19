@@ -1,32 +1,39 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
-
 import AddIcon from '../../../../../assets/icons/add.svg';
 import MinusIcon from '../../../../../assets/icons/minus.svg';
+import { AppText } from '../texts';
 
-export interface PortionStepperProps {
-    /** Portion count, already formatted («2п»). */
+export interface ValueStepperProps {
+    /** Value as it reads, unit included («2п», «78,2 кг»). */
     value: string;
-    canDecrease: boolean;
+    /** Makes the value typable; the numeric keyboard opens on focus. */
+    onChangeValue?: (value: string) => void;
+    canDecrease?: boolean;
     onDecrease: () => void;
     onIncrease: () => void;
     decreaseLabel: string;
     increaseLabel: string;
 }
 
-/** How many portions the dish was cooked in (811:58849). */
-export const PortionStepper = ({
+const BUTTON = 44;
+
+/**
+ * Round-ended stepper with the value in the middle — the portion picker
+ * (811:58849) and every «add a reading» sheet (673:41671).
+ */
+export const ValueStepper = ({
     value,
-    canDecrease,
+    onChangeValue,
+    canDecrease = true,
     onDecrease,
     onIncrease,
     decreaseLabel,
     increaseLabel,
-}: PortionStepperProps) => {
+}: ValueStepperProps) => {
     const { theme } = useUnistyles();
 
     return (
@@ -42,7 +49,17 @@ export const PortionStepper = ({
                 <MinusIcon width={32} height={32} color={theme.colors.semantic.darkGrey} />
             </Pressable>
 
-            <AppText variant="titleLarge">{value}</AppText>
+            {onChangeValue ? (
+                <TextInput
+                    value={value}
+                    onChangeText={onChangeValue}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    style={styles.input}
+                />
+            ) : (
+                <AppText variant="titleLarge">{value}</AppText>
+            )}
 
             <Pressable
                 accessibilityRole="button"
@@ -55,8 +72,6 @@ export const PortionStepper = ({
         </View>
     );
 };
-
-const BUTTON = 44;
 
 const styles = StyleSheet.create(theme => ({
     row: {
@@ -79,6 +94,15 @@ const styles = StyleSheet.create(theme => ({
         backgroundColor: theme.colors.semantic.lightGrey,
         opacity: enabled ? 1 : 0.5,
     }),
+    input: {
+        flex: 1,
+        minWidth: 0,
+        ...theme.typography.titleLarge,
+        color: theme.colors.elements.primary,
+        textAlign: 'center',
+        // The field carries no chrome of its own — the stepper is the control.
+        padding: 0,
+    },
     plus: {
         width: BUTTON,
         height: BUTTON,

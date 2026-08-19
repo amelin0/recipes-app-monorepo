@@ -42,6 +42,27 @@ export default function AppLayout() {
                 <Stack.Screen name="subscription-success" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="goal-setup" />
                 <Stack.Screen name="metric-detail" />
+                {/* Logging a reading: a sheet, then its receipt (673:41245,
+                    673:43135). The receipt is a flow endpoint. */}
+                <Stack.Screen
+                    name="metric-add"
+                    options={{
+                        presentation: 'formSheet',
+                        sheetAllowedDetents: [0.42],
+                        sheetCornerRadius: 24,
+                        sheetGrabberVisible: false,
+                    }}
+                />
+                <Stack.Screen name="metric-updated" options={{ gestureEnabled: false }} />
+                <Stack.Screen
+                    name="weigh-in-reminder"
+                    options={{
+                        presentation: 'formSheet',
+                        sheetAllowedDetents: [0.72],
+                        sheetCornerRadius: 24,
+                        sheetGrabberVisible: false,
+                    }}
+                />
                 {/* Flow endpoint: the meal is already logged, so going back
                     into the portion picker would offer to log it again. */}
                 <Stack.Screen name="meal-logged" options={{ gestureEnabled: false }} />

@@ -28,6 +28,7 @@ export const ProgressOverviewScreen = () => {
         handleEditGoal,
         handleReminders,
         handleAdd,
+        handleAddSteps,
     } = useProgressOverviewScreen();
 
     const editGoal = { key: 'edit-goal', label: t('progress:actions.edit-goal'), onPress: handleEditGoal };
@@ -73,7 +74,7 @@ export const ProgressOverviewScreen = () => {
                             editGoal,
                             { key: 'reminders', label: t('progress:actions.reminders'), onPress: handleReminders },
                         ]}
-                        onAdd={handleAdd}
+                        onAdd={() => handleAdd('weight')}
                         addLabel={t('progress:weight.add-a11y')}
                     />
                 </MetricCard>
@@ -175,7 +176,11 @@ export const ProgressOverviewScreen = () => {
                     />
                     <MetricBarChart groups={steps.groups} axis={steps.axis} max={steps.max} />
                     <PageDots count={2} activeIndex={1} size="lg" />
-                    <MetricActions actions={[editGoal]} onAdd={handleAdd} addLabel={t('progress:steps.add-a11y')} />
+                    <MetricActions
+                        actions={[editGoal]}
+                        onAdd={handleAddSteps}
+                        addLabel={t('progress:steps.add-a11y')}
+                    />
                 </MetricCard>
 
                 <MetricCard
@@ -201,7 +206,9 @@ export const ProgressOverviewScreen = () => {
                     <MetricLineChart points={waist.points} axis={waist.axis} />
                     <MetricActions
                         outlined
-                        actions={[{ key: 'add-waist', label: t('progress:waist.add'), onPress: handleAdd }]}
+                        actions={[
+                            { key: 'add-waist', label: t('progress:waist.add'), onPress: () => handleAdd('waist') },
+                        ]}
                     />
                 </MetricCard>
 
@@ -228,7 +235,9 @@ export const ProgressOverviewScreen = () => {
                     <MetricLineChart points={height.points} axis={height.axis} />
                     <MetricActions
                         outlined
-                        actions={[{ key: 'add-height', label: t('progress:height.add'), onPress: handleAdd }]}
+                        actions={[
+                            { key: 'add-height', label: t('progress:height.add'), onPress: () => handleAdd('height') },
+                        ]}
                     />
                 </MetricCard>
             </ScrollView>

@@ -16,6 +16,7 @@ export * from './pickers';
 export * from './placeholder';
 export * from './progress';
 export * from './sliders';
+export * from './steppers';
 export * from './switches';
 export * from './tabs';
 export * from './texts';

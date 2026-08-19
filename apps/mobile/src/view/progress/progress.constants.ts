@@ -226,3 +226,27 @@ export const MOCK_HEIGHT_DETAIL = {
         { id: 'h-1', title: '10 вересня 2026', value: 178 },
     ] as MockMetricRecord[],
 };
+
+/** Metrics the user can log a reading for by hand. */
+export type ReadingMetricKey = 'weight' | 'waist' | 'height';
+
+export interface ReadingMetricConfig {
+    /** Nudge per tap on the stepper. */
+    step: number;
+    min: number;
+    max: number;
+    /** Decimals kept when typing or nudging. */
+    precision: number;
+}
+
+export const READING_METRIC_CONFIG: Record<ReadingMetricKey, ReadingMetricConfig> = {
+    weight: { step: 0.1, min: 20, max: 300, precision: 1 },
+    waist: { step: 0.1, min: 30, max: 200, precision: 1 },
+    height: { step: 0.1, min: 50, max: 250, precision: 1 },
+};
+
+/**
+ * TODO: the recommended calorie goal after a weight change is recalculated on
+ * the server from the whole profile, not from the reading alone.
+ */
+export const RECOMMENDED_CALORIE_GOAL = 2000;

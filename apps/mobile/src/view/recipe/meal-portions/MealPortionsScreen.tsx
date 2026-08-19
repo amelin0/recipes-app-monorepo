@@ -3,12 +3,12 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppText } from '@/shared/ui/components';
+import { AppButton, AppText, ValueStepper } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import CloseIcon from '../../../../assets/icons/close.svg';
 
-import { PortionDial, PortionLegend, PortionMacrosRow, PortionStepper } from './components';
+import { PortionDial, PortionLegend, PortionMacrosRow } from './components';
 import { useMealPortionsScreen } from './useMealPortionsScreen';
 
 export const MealPortionsScreen = () => {
@@ -52,7 +52,7 @@ export const MealPortionsScreen = () => {
                 short device the plate plus its readouts still overflow, so the
                 middle scrolls while the header and the action stay put. */}
             <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-                <PortionStepper
+                <ValueStepper
                     value={t('recipes:portions.count', { value: portions })}
                     canDecrease={canDecrease}
                     onDecrease={handleDecrease}

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useUnistyles } from 'react-native-unistyles';
 
 import { formatThousands } from '@/shared/helpers';
@@ -326,8 +326,10 @@ export const useMetricDetailScreen = () => {
         nutrientTab,
         setNutrientTab,
         format,
-        handleAdd: comingSoon,
+        // Daily metrics are logged from the home screen, not from here.
+        handleAdd: () =>
+            isReading ? router.push({ pathname: '/(app)/metric-add', params: { metric } }) : comingSoon(),
         handleEditGoal: comingSoon,
-        handleReminders: comingSoon,
+        handleReminders: () => (metric === 'weight' ? router.push('/(app)/weigh-in-reminder') : comingSoon()),
     };
 };
