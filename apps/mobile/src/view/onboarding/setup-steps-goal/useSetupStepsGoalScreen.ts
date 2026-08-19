@@ -20,8 +20,7 @@ export const useSetupStepsGoalScreen = () => {
 
     const handleNext = useCallback(() => {
         setAnswer('stepsGoal', value);
-        // The questionnaire ends here until further steps arrive.
-        router.push('/(app)/(tabs)/home');
+        router.push('/(app)/setup-summary');
     }, [setAnswer, value]);
 
     return {

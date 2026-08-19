@@ -28,6 +28,15 @@ export interface WheelPickerColumn {
 
 export interface WheelPickerProps {
     columns: WheelPickerColumn[];
+    /**
+     * Static label between the columns — the time wheel puts a colon there
+     * (882:169874).
+     */
+    separator?: string;
+    /** Colour the top/bottom fades blend into. @default Semantic/white */
+    fadeColor?: string;
+    /** Drops the card chrome for a wheel already sitting inside one. */
+    plain?: boolean;
 }
 
 const Column = ({ column }: { column: WheelPickerColumn }) => {
@@ -78,9 +87,9 @@ const Column = ({ column }: { column: WheelPickerColumn }) => {
  * overlays; only the labels move, which is what keeps the settled state
  * identical to the design while scrolling stays readable.
  */
-export const WheelPicker = ({ columns }: WheelPickerProps) => {
+export const WheelPicker = ({ columns, separator, fadeColor, plain = false }: WheelPickerProps) => {
     const { theme } = useUnistyles();
-    const white = theme.colors.semantic.white;
+    const white = fadeColor ?? theme.colors.semantic.white;
 
     const fades = useMemo(
         () => (
@@ -112,12 +121,19 @@ export const WheelPicker = ({ columns }: WheelPickerProps) => {
         // The shadow lives on the outer view: iOS drops it entirely when the
         // same view clips with `overflow: hidden`, which the rounded inner box
         // needs.
-        <View style={styles.card}>
+        <View style={plain ? undefined : styles.card}>
             <View style={styles.clip}>
                 <View style={styles.viewport}>
                     <View style={styles.columns(columns.length)}>
-                        {columns.map(column => (
-                            <Column key={column.key} column={column} />
+                        {columns.map((column, index) => (
+                            <React.Fragment key={column.key}>
+                                {separator && index > 0 ? (
+                                    <View style={styles.separator}>
+                                        <AppText variant="bodyLargeBold">{separator}</AppText>
+                                    </View>
+                                ) : null}
+                                <Column column={column} />
+                            </React.Fragment>
                         ))}
                     </View>
                 </View>
@@ -147,9 +163,16 @@ const styles = StyleSheet.create(theme => ({
     // 855:100403).
     columns: (count: number) => ({
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: count > 1 ? 'space-between' : 'center',
         height: VIEWPORT,
     }),
+    separator: {
+        height: ROW_HEIGHT,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: theme.spacing[2],
+    },
     column: {
         width: 100,
         height: VIEWPORT,
