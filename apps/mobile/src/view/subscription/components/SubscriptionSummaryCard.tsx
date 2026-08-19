@@ -3,7 +3,10 @@ import { View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText, ProgressBar } from '@/shared/ui/components';
+import { AppText, GradientOutline, ProgressBar } from '@/shared/ui/components';
+
+/** Card corner the gradient outline traces. */
+const CARD_RADIUS = 24;
 
 export interface SubscriptionSummaryCardProps {
     /** «План підписки». */
@@ -45,6 +48,8 @@ export const SubscriptionSummaryCard = ({
 
     return (
         <View style={styles.root}>
+            <GradientOutline radius={CARD_RADIUS} />
+
             <View style={styles.headerRow}>
                 <View style={styles.plan}>
                     <View style={styles.emojiBox}>
@@ -117,12 +122,8 @@ const styles = StyleSheet.create(theme => ({
     root: {
         width: '100%',
         gap: theme.spacing[3],
-        // Same centered 1px stroke as the paywall's plans card — the padding
-        // absorbs it so the content box keeps its designed 311 width.
-        padding: theme.spacing[4] - 1,
+        padding: theme.spacing[4],
         borderRadius: theme.radius.xl,
-        borderWidth: 1,
-        borderColor: theme.colors.forms.softOrangeBorder,
         backgroundColor: theme.colors.semantic.white,
         ...theme.shadow.block,
     },

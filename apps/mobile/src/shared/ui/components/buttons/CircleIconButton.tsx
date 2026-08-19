@@ -55,7 +55,9 @@ const styles = StyleSheet.create(theme => ({
     }),
     badge: {
         position: 'absolute',
-        top: 0,
-        right: 0,
+        // The design insets the dot 8 into the 44 button rather than hanging it
+        // off the corner (435:6613 — dot at 24,8 of a 44 box).
+        top: theme.spacing[2],
+        right: theme.spacing[2],
     },
 }));

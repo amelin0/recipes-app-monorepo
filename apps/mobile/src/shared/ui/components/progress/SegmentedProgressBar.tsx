@@ -6,7 +6,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 export interface SegmentedProgressBarProps {
     /** Total number of segments. @default 10 */
     segments?: number;
-    /** How many segments are filled (clamped to `segments`). */
+    /**
+     * How many segments are filled (clamped to `segments`). Fractional values
+     * partly fill the segment they land in — 240 of 2000 ml is 1.2 segments,
+     * which the design draws as one full pill and a stub (435:6152).
+     */
     filled: number;
     /** Fill color. Defaults to Semantic/ocean. */
     color?: string;
@@ -30,12 +34,17 @@ export const SegmentedProgressBar = ({
 
     return (
         <View style={[styles.row, style]}>
-            {Array.from({ length: segments }).map((_, index) => (
-                <View
-                    key={index}
-                    style={[styles.segment(height), index < clamped ? { backgroundColor: fillColor } : null]}
-                />
-            ))}
+            {Array.from({ length: segments }).map((_, index) => {
+                const share = Math.min(Math.max(clamped - index, 0), 1);
+
+                return (
+                    <View key={index} style={styles.segment(height)}>
+                        {share > 0 ? (
+                            <View style={[styles.fill(height, share), { backgroundColor: fillColor }]} />
+                        ) : null}
+                    </View>
+                );
+            })}
         </View>
     );
 };
@@ -52,5 +61,13 @@ const styles = StyleSheet.create(theme => ({
         height,
         borderRadius: theme.radius.full,
         backgroundColor: theme.colors.active.tertiary,
+        overflow: 'hidden',
+    }),
+    fill: (height: number, share: number) => ({
+        height,
+        // A part-filled segment keeps the rounded left cap and is cut square on
+        // the right by the segment's own clip — that is how Figma draws it.
+        width: `${share * 100}%`,
+        borderRadius: theme.radius.full,
     }),
 }));

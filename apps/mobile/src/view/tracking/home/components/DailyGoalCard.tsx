@@ -9,13 +9,13 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import ArrowRightIcon from '../../../../../assets/icons/arrow-right.svg';
 
+import type { MacroKey } from './macro-palette';
 import { MacroTile } from './MacroTile';
 
 export interface MacroData {
-    key: 'protein' | 'fats' | 'carbs';
+    key: MacroKey;
     current: number;
     target: number;
-    barColor: string;
 }
 
 export interface DailyGoalCardProps {
@@ -27,15 +27,12 @@ export interface DailyGoalCardProps {
 
 const formatNumber = (value: number) => value.toLocaleString('en-US');
 
+/** RFDS `chart speed` box — see GaugeChart's `frame` (435:5999). */
+const GAUGE_FRAME = { width: 224, height: 188, offsetTop: 17, contentOffsetY: -5 };
+
 export const DailyGoalCard = ({ caloriesCurrent, caloriesTarget, macros, onPress }: DailyGoalCardProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['tracking']);
-
-    const macroPalette = {
-        protein: { letterColor: theme.colors.semantic.negative, letterBg: theme.colors.semantic.lightNegative },
-        fats: { letterColor: theme.colors.semantic.positive, letterBg: theme.colors.semantic.lightPositive },
-        carbs: { letterColor: theme.colors.semantic.ocean, letterBg: theme.colors.semantic.lightOcean },
-    } as const;
 
     return (
         <AppCard>
@@ -46,7 +43,7 @@ export const DailyGoalCard = ({ caloriesCurrent, caloriesTarget, macros, onPress
                 <ArrowRightIcon width={16} height={16} color={theme.colors.elements.primary} />
             </Pressable>
 
-            <GaugeChart progress={caloriesTarget > 0 ? caloriesCurrent / caloriesTarget : 0}>
+            <GaugeChart progress={caloriesTarget > 0 ? caloriesCurrent / caloriesTarget : 0} frame={GAUGE_FRAME}>
                 <AppText variant="titleLarge">{formatNumber(caloriesCurrent)}</AppText>
                 <AppText variant="bodySmallReg" style={styles.gaugeSubtitle}>
                     {t('tracking:home.of-kcal', { value: formatNumber(caloriesTarget) })}
@@ -55,16 +52,7 @@ export const DailyGoalCard = ({ caloriesCurrent, caloriesTarget, macros, onPress
 
             <View style={styles.macros}>
                 {macros.map(macro => (
-                    <MacroTile
-                        key={macro.key}
-                        letter={t(`tracking:home.macros.${macro.key}`)}
-                        letterColor={macroPalette[macro.key].letterColor}
-                        letterBg={macroPalette[macro.key].letterBg}
-                        current={macro.current}
-                        target={macro.target}
-                        unit={t('tracking:home.grams')}
-                        barColor={macro.barColor}
-                    />
+                    <MacroTile key={macro.key} macroKey={macro.key} current={macro.current} target={macro.target} />
                 ))}
             </View>
         </AppCard>

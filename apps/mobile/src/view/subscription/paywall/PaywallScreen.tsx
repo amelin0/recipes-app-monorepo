@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppButton, AppInput, AppScreen, AppSwitch, AppText } from '@/shared/ui/components';
+import { AppButton, AppInput, AppScreen, AppSwitch, AppText, GradientOutline } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import MascotChef from '../../../../assets/images/brand/mascot-chef.svg';
@@ -14,6 +14,9 @@ import { formatPrice } from '../subscription.helpers';
 import { usePaywallScreen } from './usePaywallScreen';
 
 const BRAND_ICON_SIZE = 64;
+
+/** Card corner the gradient outline traces. */
+const CARD_RADIUS = 24;
 
 /** Subscription pitch shown once the questionnaire is done (911:52758). */
 export const PaywallScreen = () => {
@@ -87,6 +90,8 @@ export const PaywallScreen = () => {
                 </View>
 
                 <View style={styles.plansCard}>
+                    <GradientOutline radius={CARD_RADIUS} />
+
                     <AppText variant="bodyLargeBold" style={styles.cardTitle}>
                         {t('subscription:paywall.plans-title')}
                     </AppText>
@@ -262,15 +267,8 @@ const styles = StyleSheet.create(theme => ({
     plansCard: {
         width: '100%',
         gap: theme.spacing[6],
-        // Figma centers this card's 1px stroke on the 343 box (its export keeps
-        // padding at 16, unlike the inside-stroked pill which reports 17), so
-        // the content box stays 311 wide. RN draws borders inside the box, so
-        // the padding absorbs the stroke — at 16 the trial line loses the 2px
-        // it needs and wraps.
-        padding: theme.spacing[4] - 1,
+        padding: theme.spacing[4],
         borderRadius: theme.radius.xl,
-        borderWidth: 1,
-        borderColor: theme.colors.forms.softOrangeBorder,
         backgroundColor: theme.colors.semantic.white,
         ...theme.shadow.block,
     },

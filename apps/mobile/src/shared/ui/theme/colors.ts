@@ -78,6 +78,20 @@ export const colors = {
         positive: '#00802D',
     },
 
+    // Gradients — decorative fills with no RFDS variable behind them.
+    gradient: {
+        /** Dish thumbnail on Home (435:6026): 131.82°, peach → pink. */
+        dishFrom: '#FFEDD4',
+        dishTo: '#FCE7F3',
+        /**
+         * Highlight outline shared by the subscription cards and the meal card
+         * for the meal happening now (911:52889, 911:52521, 435:6045). Runs
+         * corner to corner: peach, through white at the anti-diagonal, to pink.
+         */
+        outlineFrom: '#FFBEA0',
+        outlineTo: '#FFB5FB',
+    },
+
     // Forms (outlines for elements)
     forms: {
         /** RF-mobile-app `Forms/border` — text-input outlines. */
@@ -89,11 +103,6 @@ export const colors = {
         negativeBorder: '#FF0021',
         positiveBorder: '#00AB3C',
         orangeBorder: '#FF5200',
-        /**
-         * Warm outline of the subscription cards (911:52889, 911:52521).
-         * App-file literal, not an RFDS variable.
-         */
-        softOrangeBorder: '#FFBEA0',
     },
 
     // Elements — text/icon colors (from RFDS Typography frame + RF-mobile-app screens).

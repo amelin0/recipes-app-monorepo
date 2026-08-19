@@ -1,10 +1,10 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
 
-import { StyleSheet } from 'react-native-unistyles';
-
-import { AppCard, AppText, SegmentedProgressBar } from '@/shared/ui/components';
+import { SegmentedProgressBar } from '@/shared/ui/components';
+import { formatThousands } from '@/shared/helpers';
 import { useAppTranslation } from '@/shared/utils/translations';
+
+import { TrackerCard } from './TrackerCard';
 
 export interface WaterCardProps {
     /** Consumed volume, ml. */
@@ -13,56 +13,27 @@ export interface WaterCardProps {
     target: number;
     /** Number of bar segments. @default 10 */
     segments?: number;
+    onPress?: () => void;
     onAdd: () => void;
 }
 
-const formatNumber = (value: number) => value.toLocaleString('en-US');
-
-export const WaterCard = ({ current, target, segments = 10, onAdd }: WaterCardProps) => {
+/** Water tracker — segmented bar, one segment per tenth of the target (435:6144). */
+export const WaterCard = ({ current, target, segments = 10, onPress, onAdd }: WaterCardProps) => {
     const { t } = useAppTranslation(['tracking']);
-    const filled = target > 0 ? Math.round((current / target) * segments) : 0;
+    // Fractional on purpose: 240 of 2,000 ml part-fills the second segment.
+    const filled = target > 0 ? (current / target) * segments : 0;
 
     return (
-        <AppCard>
-            <View style={styles.header}>
-                <AppText variant="bodyMediumBold" style={styles.title}>
-                    {t('tracking:home.water')}
-                </AppText>
-                <Pressable accessibilityRole="button" hitSlop={8} onPress={onAdd}>
-                    <AppText variant="bodySmallReg" style={styles.add}>
-                        {t('tracking:home.add')}
-                    </AppText>
-                </Pressable>
-            </View>
-
-            <View style={styles.progress}>
-                <AppText variant="bodySmallBold">
-                    {t('tracking:home.water-progress', {
-                        current: formatNumber(current),
-                        max: formatNumber(target),
-                    })}
-                </AppText>
-                <SegmentedProgressBar segments={segments} filled={filled} />
-            </View>
-        </AppCard>
+        <TrackerCard
+            title={t('tracking:home.water')}
+            value={t('tracking:home.water-progress', {
+                current: formatThousands(current),
+                max: formatThousands(target),
+            })}
+            onPress={onPress}
+            onAdd={onAdd}
+        >
+            <SegmentedProgressBar segments={segments} filled={filled} />
+        </TrackerCard>
     );
 };
-
-const styles = StyleSheet.create(theme => ({
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-        width: '100%',
-    },
-    title: {
-        flex: 1,
-    },
-    add: {
-        color: theme.colors.branding.accent,
-    },
-    progress: {
-        gap: theme.spacing[1],
-        width: '100%',
-    },
-}));
