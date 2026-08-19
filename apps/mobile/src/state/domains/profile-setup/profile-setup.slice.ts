@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand';
 
 export type Gender = 'male' | 'female';
 export type UnitSystem = 'metric' | 'imperial';
+export type Goal = 'maintain' | 'gain-muscle' | 'lose-weight' | 'learn-cooking';
 
 /** Answers collected by the post-registration questionnaire. */
 export interface ProfileSetupAnswers {
@@ -13,6 +14,10 @@ export interface ProfileSetupAnswers {
     /** Always stored metric; the wheels convert for display. */
     weightKg: number | null;
     heightCm: number | null;
+    /** 1–8, matching the legend on the activity step. */
+    activityLevel: number | null;
+    goal: Goal | null;
+    targetWeightKg: number | null;
 }
 
 export interface ProfileSetupSlice {
@@ -28,6 +33,9 @@ export const PROFILE_SETUP_DEFAULTS: ProfileSetupAnswers = {
     unitSystem: null,
     weightKg: null,
     heightCm: null,
+    activityLevel: null,
+    goal: null,
+    targetWeightKg: null,
 };
 
 /**

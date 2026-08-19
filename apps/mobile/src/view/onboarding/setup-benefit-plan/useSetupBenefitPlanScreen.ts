@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 
 export const useSetupBenefitPlanScreen = () => {
     const handleNext = useCallback(() => {
-        router.push('/(app)/(tabs)/home');
+        router.push('/(app)/setup-activity');
     }, []);
 
     return { handleNext };

@@ -21,11 +21,11 @@ export interface SetupFooterProps {
 /**
  * Questionnaire footer — RFDS 66:2340 (two buttons) and 852:96934 (stretched).
  *
- * The CTA label follows the layout: «Далі» next to the back button,
- * «Продовжити» when it takes the full width. That matches 66:2333, 852:96676,
- * 852:96816, 855:101238, 855:101071, 855:109474, 864:111841 and 864:114915;
- * only the gender step (855:98346) is drawn with «Продовжити» in the two-button
- * layout, which reads as a slip in the design rather than a rule.
+ * The design labels this button both ways with no discernible rule — «Далі» on
+ * 66:2333, 855:101238, 855:101071 and 855:109474, «Продовжити» on 855:98346,
+ * 984:58062, 864:118671, 1000:78742 and every stretched variant. The app uses
+ * «Продовжити» throughout: it is what the most recent frames and all the
+ * full-width CTAs say, and one wizard should not rename its own next button.
  */
 export const SetupFooter = ({
     canProceed,
@@ -38,7 +38,7 @@ export const SetupFooter = ({
 
     const cta = (
         <AppButton
-            label={t(fullWidth ? 'onboarding:setup.actions.continue' : 'onboarding:setup.actions.next')}
+            label={t('onboarding:setup.actions.continue')}
             onPress={onNext}
             disabled={!canProceed}
             fullWidth={fullWidth}

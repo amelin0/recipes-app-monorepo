@@ -1,12 +1,15 @@
 export { OnboardingSlidesScreen } from './onboarding-slides';
+export { SetupActivityScreen } from './setup-activity';
 export { SetupBenefitDietScreen } from './setup-benefit-diet';
 export { SetupBenefitMacrosScreen } from './setup-benefit-macros';
 export { SetupBenefitPlanScreen } from './setup-benefit-plan';
 export { SetupBirthDateScreen } from './setup-birth-date';
 export { SetupGenderScreen } from './setup-gender';
+export { SetupGoalScreen } from './setup-goal';
 export { SetupGreetingScreen } from './setup-greeting';
 export { SetupHeightScreen } from './setup-height';
 export { SetupIntroScreen } from './setup-intro';
 export { SetupNameScreen } from './setup-name';
+export { SetupTargetWeightScreen } from './setup-target-weight';
 export { SetupUnitsScreen } from './setup-units';
 export { SetupWeightScreen } from './setup-weight';

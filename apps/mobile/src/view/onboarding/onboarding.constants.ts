@@ -78,3 +78,14 @@ export const DEFAULT_HEIGHT_CM = 170;
 
 export const KG_PER_LB = 0.45359237;
 export const CM_PER_INCH = 2.54;
+
+/** Activity levels on the «Наскільки ви активні» step (984:58077). */
+export const ACTIVITY_LEVEL_MIN = 1;
+export const ACTIVITY_LEVEL_MAX = 8;
+
+/** Goals offered on the «Яка ваша мета?» step, in the designed order. */
+export const GOAL_KEYS = ['maintain', 'gain-muscle', 'lose-weight', 'learn-cooking'] as const;
+
+/** Target-weight wheel shares the range of the current-weight step. */
+export const TARGET_WEIGHT_KG_MIN = WEIGHT_KG_MIN;
+export const TARGET_WEIGHT_KG_MAX = WEIGHT_KG_MAX;
