@@ -49,8 +49,7 @@ export const useSetupTargetWeightScreen = () => {
 
     const handleNext = useCallback(() => {
         setAnswer('targetWeightKg', targetKg);
-        // Step 14 is not designed yet — the questionnaire stops here for now.
-        router.push('/(app)/(tabs)/home');
+        router.push('/(app)/setup-calorie-goal');
     }, [setAnswer, targetKg]);
 
     return { columns, handleNext };

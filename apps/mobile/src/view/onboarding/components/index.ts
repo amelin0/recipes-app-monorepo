@@ -14,3 +14,6 @@ export type { SetupHeaderProps } from './SetupHeader';
 
 export { SetupProgress } from './SetupProgress';
 export type { SetupProgressProps } from './SetupProgress';
+
+export { SetupTargetStep } from './SetupTargetStep';
+export type { SetupTargetStepProps } from './SetupTargetStep';

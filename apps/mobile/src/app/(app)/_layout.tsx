@@ -29,6 +29,9 @@ export default function AppLayout() {
                 <Stack.Screen name="setup-activity" />
                 <Stack.Screen name="setup-goal" />
                 <Stack.Screen name="setup-target-weight" />
+                <Stack.Screen name="setup-calorie-goal" />
+                <Stack.Screen name="setup-water-goal" />
+                <Stack.Screen name="setup-steps-goal" />
                 <Stack.Screen name="goal-setup" />
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />

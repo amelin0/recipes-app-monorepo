@@ -18,6 +18,10 @@ export interface ProfileSetupAnswers {
     activityLevel: number | null;
     goal: Goal | null;
     targetWeightKg: number | null;
+    /** Daily goals the user can nudge away from the recommendation. */
+    calorieGoal: number | null;
+    waterGoalMl: number | null;
+    stepsGoal: number | null;
 }
 
 export interface ProfileSetupSlice {
@@ -36,6 +40,9 @@ export const PROFILE_SETUP_DEFAULTS: ProfileSetupAnswers = {
     activityLevel: null,
     goal: null,
     targetWeightKg: null,
+    calorieGoal: null,
+    waterGoalMl: null,
+    stepsGoal: null,
 };
 
 /**

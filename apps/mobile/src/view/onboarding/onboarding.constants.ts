@@ -52,7 +52,7 @@ export const SETUP_MASCOT_SIZE = 200;
  * bar: the filled run grows by exactly 10pt per step on a 143pt track (13 on
  * step 1 → 43 on step 4), so it reaches full width on step 14.
  */
-export const SETUP_STEPS = 14;
+export const SETUP_STEPS = 16;
 
 /** Selectable birth years — wide enough to cover the whole adult audience. */
 export const BIRTH_YEAR_MIN = 1940;
@@ -89,3 +89,34 @@ export const GOAL_KEYS = ['maintain', 'gain-muscle', 'lose-weight', 'learn-cooki
 /** Target-weight wheel shares the range of the current-weight step. */
 export const TARGET_WEIGHT_KG_MIN = WEIGHT_KG_MIN;
 export const TARGET_WEIGHT_KG_MAX = WEIGHT_KG_MAX;
+
+/**
+ * Daily goals. The recommendations stand in for the values the API will compute
+ * from the questionnaire; the increments are not stated in the design.
+ * TODO: replace with GET /profile/recommendations once the API ships.
+ */
+export const CALORIE_GOAL_DEFAULT = 2000;
+export const CALORIE_GOAL_STEP = 50;
+export const WATER_GOAL_ML_DEFAULT = 2000;
+export const WATER_GOAL_ML_STEP = 100;
+export const STEPS_GOAL_DEFAULT = 15000;
+export const STEPS_GOAL_STEP = 500;
+
+/**
+ * How far the calorie goal may drift from the recommendation before the screen
+ * warns about it. The design shows the states but not the thresholds.
+ */
+export const CALORIE_WARNING_RATIO = 0.2;
+
+/**
+ * 12%-alpha halos around the dial (shadow/positive and friends). The orange one
+ * is the odd one out: its halo is built from #FF8C40, not from the #FF5200
+ * border it surrounds.
+ */
+export const DIAL_RING = {
+    positive: 'rgba(0, 171, 60, 0.12)',
+    orange: 'rgba(255, 140, 64, 0.12)',
+    negative: 'rgba(255, 0, 33, 0.12)',
+    ocean: 'rgba(43, 127, 255, 0.12)',
+    grey: 'rgba(30, 41, 50, 0.12)',
+} as const;
