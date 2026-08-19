@@ -47,6 +47,15 @@ export const colors = {
         ocean: '#2B7FFF',
         /** Light elements */
         lightOcean: '#EBF1FF',
+        /** Rating star fill. App-file literal (911:52879), not an RFDS variable. */
+        gold: '#FFD700',
+        /**
+         * RFDS `shadow/positive` / `shadow/orange` — a 0-blur drop shadow with
+         * an 8px spread, i.e. a flat halo around the selected plan card. RN has
+         * no shadow spread, so these are painted as a concentric view behind it.
+         */
+        positiveRing: 'rgba(0, 171, 60, 0.12)',
+        orangeRing: 'rgba(255, 140, 64, 0.12)',
     },
 
     // Background
@@ -80,6 +89,11 @@ export const colors = {
         negativeBorder: '#FF0021',
         positiveBorder: '#00AB3C',
         orangeBorder: '#FF5200',
+        /**
+         * Warm outline of the subscription cards (911:52889, 911:52521).
+         * App-file literal, not an RFDS variable.
+         */
+        softOrangeBorder: '#FFBEA0',
     },
 
     // Elements — text/icon colors (from RFDS Typography frame + RF-mobile-app screens).

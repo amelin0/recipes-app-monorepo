@@ -35,6 +35,11 @@ export default function AppLayout() {
                 <Stack.Screen name="setup-summary" />
                 <Stack.Screen name="setup-notifications" />
                 <Stack.Screen name="setup-reminders" />
+                {/* Closes the funnel: the pitch, then the receipt. Both are
+                    flow endpoints — swiping back would offer to buy again or
+                    re-show a purchase that already went through. */}
+                <Stack.Screen name="paywall" options={{ gestureEnabled: false }} />
+                <Stack.Screen name="subscription-success" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="goal-setup" />
                 <Stack.Screen name="recipe-search" />
                 <Stack.Screen name="meal-details" />

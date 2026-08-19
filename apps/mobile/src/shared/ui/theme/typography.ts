@@ -116,6 +116,19 @@ export const typography = {
         textTransform: 'uppercase' as const,
     },
 
+    // brand/ — the "RationFit" lockup in the paywall header (911:52852).
+    // The one token that opts out of the Inter-only rule: the design draws the
+    // wordmark in the platform system font at Black weight (Figma reports
+    // "SF Pro Black" 20/1.3 +0.4 tracking), whose advance for "RationFit" is
+    // 99px against 89.9 for Inter Bold — swapping in Inter visibly shrinks the
+    // lockup, so this leaves fontFamily unset and lets the platform resolve it.
+    brandWordmark: {
+        fontSize: 20,
+        lineHeight: 26,
+        letterSpacing: 0.4,
+        fontWeight: '900' as const,
+    },
+
     // button/ — SemiBold (link — Medium), LH 130%
     buttonLarge: {
         fontFamily: fontFamily.semiBold,

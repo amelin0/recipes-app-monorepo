@@ -27,3 +27,5 @@ RF-mobile-app) — знайомство працює локально й не з
   `apps/mobile/src/shared/ui/widgets/app-splash/`
 - Код (вибір стартового екрана): `apps/mobile/src/app/index.tsx`
 - Суміжний домен: [`auth/`](../auth) — реєстрація, вхід, сесії
+- Суміжний домен: [`subscription/`](../subscription) — пейвол, який
+  відкривається одразу після останнього кроку анкети

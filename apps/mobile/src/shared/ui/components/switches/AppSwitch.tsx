@@ -48,11 +48,16 @@ const styles = StyleSheet.create(theme => ({
         height: 28,
         padding: 2,
         borderRadius: theme.radius.full,
+        // Off is a light-grey track with a hairline outline in both files that
+        // define the component (RFDS 54714:634, app-file 848:23710) — it was
+        // Active/tertiary here, which reads as a much darker "off".
         backgroundColor: on
             ? tone === 'positive'
                 ? theme.colors.semantic.positive
                 : theme.colors.branding.accent
-            : theme.colors.active.tertiary,
+            : theme.colors.semantic.lightGrey,
+        borderWidth: on ? 0 : 1,
+        borderColor: theme.colors.forms.lightBorder,
         justifyContent: 'center',
         opacity: disabled ? 0.5 : 1,
     }),

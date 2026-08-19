@@ -1,3 +1,11 @@
+// Hermes ships Intl.DateTimeFormat/NumberFormat but not Intl.PluralRules, so
+// i18next's v4 plural suffixes (`key_one` / `_few` / `_many`) never resolve and
+// the raw key renders. Polyfill it before i18next initialises.
+import '@formatjs/intl-pluralrules/polyfill';
+import '@formatjs/intl-pluralrules/locale-data/uk';
+import '@formatjs/intl-pluralrules/locale-data/en';
+import '@formatjs/intl-pluralrules/locale-data/es';
+
 import i18n from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 
@@ -21,7 +29,16 @@ export const SUPPORTED_LANGUAGES = {
 
 export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 
-const NAMESPACES = ['common', 'auth', 'onboarding', 'tracking', 'recipes', 'shopping', 'profile'] as const;
+const NAMESPACES = [
+    'common',
+    'auth',
+    'onboarding',
+    'subscription',
+    'tracking',
+    'recipes',
+    'shopping',
+    'profile',
+] as const;
 export type AppNamespace = (typeof NAMESPACES)[number];
 
 export const getInitialLanguage = (): SupportedLanguage => {
@@ -59,6 +76,7 @@ i18n.use(initReactI18next).init({
             common: uk.common,
             auth: uk.auth,
             onboarding: uk.onboarding,
+            subscription: uk.subscription,
             tracking: uk.tracking,
             recipes: uk.recipes,
             shopping: uk.shopping,

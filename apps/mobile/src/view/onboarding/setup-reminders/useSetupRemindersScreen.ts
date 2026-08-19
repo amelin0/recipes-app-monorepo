@@ -68,13 +68,14 @@ export const useSetupRemindersScreen = () => {
         [hours, meals, minutes, setTime],
     );
 
+    // Reminders are the last question; the paywall closes the funnel either way.
     const handleClose = useCallback(() => {
-        router.replace('/(app)/(tabs)/home');
+        router.replace('/(app)/paywall');
     }, []);
 
     const handleSave = useCallback(() => {
         // TODO: persist the schedule and register the local notifications.
-        router.replace('/(app)/(tabs)/home');
+        router.replace('/(app)/paywall');
     }, []);
 
     return {
