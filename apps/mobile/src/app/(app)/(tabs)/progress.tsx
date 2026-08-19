@@ -1,5 +1,3 @@
-import { PlaceholderScreen } from '@/shared/ui/components';
+import { ProgressOverviewScreen } from '@/view/progress';
 
-export default function ProgressRoute() {
-    return <PlaceholderScreen titleKey="common:tabs.progress" />;
-}
+export default ProgressOverviewScreen;

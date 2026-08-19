@@ -53,7 +53,12 @@ const styles = StyleSheet.create(theme => ({
         width: '100%',
     },
     segment: (active: boolean) => ({
-        flex: 1,
+        // Sized by its label, then given an equal share of what is left over.
+        // A flat `flex: 1` divides the track evenly instead, which truncates
+        // «Вуглеводи» next to three short labels (670:26757).
+        flexGrow: 1,
+        flexShrink: 1,
+        flexBasis: 'auto',
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
