@@ -5,6 +5,8 @@ import * as Application from 'expo-application';
 export const isIOS = Platform.OS === 'ios';
 export const isAndroid = Platform.OS === 'android';
 export const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
+/** Binary build number — `CFBundleVersion` / `versionCode`. */
+export const appBuild = Application.nativeBuildVersion ?? '1';
 
 const ENV = process.env.EXPO_PUBLIC_ENV ?? 'development';
 const envSuffix = ENV === 'development' ? ' DEV' : ENV === 'stage' ? ' STAGE' : '';

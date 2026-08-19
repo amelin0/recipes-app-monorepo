@@ -2,21 +2,31 @@
     "title": "Профіль і налаштування",
     "edit": "Редагувати",
     "avatar-a11y": "Аватар",
-    "version": "v {{version}}",
+    "version": "v {{version}} ({{build}})",
     "account": {
         "title": "Обліковий запис",
         "subscription": "Підписка",
-        "premium-tag": "Premium Pro",
-        "rate-us": "Оцініть нас"
+        "valid-until": "До {{date}}",
+        "plans": {
+            "month": "Місячна",
+            "year": "Річна"
+        },
+        "rate-us": "Оцініть нас",
+        "referral": "Реферальна програма",
+        "change-password": "Змінити пароль"
     },
     "settings": {
         "title": "Налаштування",
+        "reminders": "Нагадування",
         "language": "Мова",
+        "theme": "Тема",
         "units": "Одиниці виміру"
     },
     "support": {
         "title": "Підтримка",
+        "feedback": "Залишити відгук",
         "faq": "Часті питання",
+        "chat": "Чат підтримки",
         "privacy": "Політика конфіденційності",
         "terms": "Умови надання послуг"
     },

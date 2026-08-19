@@ -1,14 +1,11 @@
 import { useCallback } from 'react';
 
-import Constants from 'expo-constants';
-
 import { ToastService } from '@/shared/services';
-import { requestRateApp } from '@/shared/utils';
+import { appBuild, appVersion, requestRateApp } from '@/shared/utils';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 
-// TODO: replace with GET /me once the API ships.
-const MOCK_USER_NAME = 'Олександр Купрінський';
+import { MOCK_PROFILE, MOCK_SUBSCRIPTION } from '../user.constants';
 
 const buildInitials = (name: string) =>
     name
@@ -21,21 +18,34 @@ const buildInitials = (name: string) =>
 export const useProfileScreen = () => {
     const { t } = useAppTranslation(['profile', 'common']);
     const reset = useStore(state => state.reset);
+    // The questionnaire is the only place the app learns a real name so far.
+    const setupName = useStore(state => state.profileSetup.name);
 
     const comingSoon = useCallback(() => {
         ToastService.info(t('common:states.coming-soon'));
     }, [t]);
 
+    const name = setupName || MOCK_PROFILE.name;
+
     return {
-        name: MOCK_USER_NAME,
-        initials: buildInitials(MOCK_USER_NAME),
-        versionLabel: t('profile:version', { version: Constants.expoConfig?.version ?? '1.0.0' }),
+        name,
+        email: MOCK_PROFILE.email,
+        initials: buildInitials(name),
+        subscriptionTag: t(`profile:account.plans.${MOCK_SUBSCRIPTION.plan}`),
+        subscriptionUntil: t('profile:account.valid-until', { date: MOCK_SUBSCRIPTION.validUntil }),
+        versionLabel: t('profile:version', { version: appVersion, build: appBuild }),
         handleEdit: comingSoon,
         handleSubscription: comingSoon,
         handleRateUs: () => void requestRateApp(),
+        handleReferral: comingSoon,
+        handleChangePassword: comingSoon,
+        handleReminders: comingSoon,
         handleLanguage: comingSoon,
+        handleTheme: comingSoon,
         handleUnits: comingSoon,
+        handleFeedback: comingSoon,
         handleFaq: comingSoon,
+        handleSupportChat: comingSoon,
         handlePrivacy: comingSoon,
         handleTerms: comingSoon,
         // TODO: confirm dialog + DELETE /me once the API ships.

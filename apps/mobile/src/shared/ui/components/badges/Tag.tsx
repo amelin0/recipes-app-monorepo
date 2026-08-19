@@ -8,8 +8,11 @@ import { AppText } from '../texts';
 /**
  * RFDS `tag` tones. `neutral` is the outlined chip used for ingredient lists
  * (984:57614); the coloured ones are solid tints (984:57618, 911:56914).
+ * `accent` is the odd one out — white on a solid accent fill rather than a
+ * tint on a light background — and marks the current subscription plan
+ * (804:24005).
  */
-export type TagTone = 'neutral' | 'negative' | 'positive' | 'orange' | 'ocean';
+export type TagTone = 'neutral' | 'negative' | 'positive' | 'orange' | 'ocean' | 'accent';
 
 export interface TagProps {
     label: string;
@@ -28,6 +31,7 @@ export const Tag = ({ label, tone = 'neutral', style }: TagProps) => {
         positive: { color: theme.colors.semantic.positive, backgroundColor: theme.colors.semantic.lightPositive },
         orange: { color: theme.colors.semantic.orange, backgroundColor: theme.colors.semantic.lightOrange },
         ocean: { color: theme.colors.semantic.ocean, backgroundColor: theme.colors.semantic.lightOcean },
+        accent: { color: theme.colors.semantic.white, backgroundColor: theme.colors.branding.accent },
     }[tone];
 
     return (
