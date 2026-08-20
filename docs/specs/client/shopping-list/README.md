@@ -17,8 +17,8 @@ UI екранів уже реалізовано в мобільному заст
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Weekly list (Список продуктів)](./weekly-list/spec.md) | Draft | @amelin0 | 2026-07-18 |
-| [Add product (Додати продукт)](./add-product/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Weekly list (Список продуктів)](./weekly-list/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Add product (Додати продукт)](./add-product/spec.md) | Draft | @amelin0 | 2026-08-20 |
 
 ## Related
 

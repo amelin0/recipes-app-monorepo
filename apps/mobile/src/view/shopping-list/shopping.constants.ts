@@ -7,12 +7,14 @@ export interface CatalogProduct {
     emoji: string;
     categoryKey: string;
     kcalPer100: number;
+    /** Grams in one piece — drives the «≈ Nг» hint (665:11895). */
+    pieceGrams?: number;
 }
 
 // TODO: replace with GET /products once the API ships. Order mirrors the
 // «Додати продукти» Figma mock (435:16021).
 export const PRODUCT_CATALOG: CatalogProduct[] = [
-    { key: 'chicken-fillet', emoji: '🍗', categoryKey: 'meat', kcalPer100: 110 },
+    { key: 'chicken-fillet', emoji: '🍗', categoryKey: 'meat', kcalPer100: 110, pieceGrams: 89 },
     { key: 'egg', emoji: '🥚', categoryKey: 'other', kcalPer100: 155 },
     { key: 'tomato', emoji: '🍅', categoryKey: 'vegetables', kcalPer100: 18 },
     { key: 'rice', emoji: '🍚', categoryKey: 'cereals', kcalPer100: 130 },

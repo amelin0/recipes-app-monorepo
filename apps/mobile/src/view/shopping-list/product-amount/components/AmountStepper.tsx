@@ -15,12 +15,21 @@ export interface AmountStepperProps {
     onChangeValueText: (text: string) => void;
     /** Unit suffix rendered after the value, e.g. «г». */
     suffix: string;
+    /** Grey conversion hint after the value, e.g. «≈ 89г» (665:11895). */
+    hint?: string;
     onDecrease: () => void;
     onIncrease: () => void;
 }
 
 /** Amount picker: − / editable value with unit / + (Figma 476:19411). */
-export const AmountStepper = ({ valueText, onChangeValueText, suffix, onDecrease, onIncrease }: AmountStepperProps) => {
+export const AmountStepper = ({
+    valueText,
+    onChangeValueText,
+    suffix,
+    hint,
+    onDecrease,
+    onIncrease,
+}: AmountStepperProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['shopping']);
 
@@ -45,6 +54,11 @@ export const AmountStepper = ({ valueText, onChangeValueText, suffix, onDecrease
                     maxLength={6}
                 />
                 <AppText variant="titleLarge">{` ${suffix}`}</AppText>
+                {hint ? (
+                    <AppText variant="bodySmallReg" style={styles.hint}>
+                        {` ${hint}`}
+                    </AppText>
+                ) : null}
             </View>
             <Pressable
                 accessibilityRole="button"
@@ -60,17 +74,19 @@ export const AmountStepper = ({ valueText, onChangeValueText, suffix, onDecrease
 };
 
 const styles = StyleSheet.create(theme => ({
+    // The row spans the sheet width with the buttons at its edges (665:11752).
     container: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         gap: theme.spacing[1],
+        width: '100%',
         minHeight: 64,
         padding: theme.spacing[2],
         borderRadius: theme.radius.full,
         borderWidth: 1,
         borderColor: theme.colors.forms.lightBorder,
         backgroundColor: theme.colors.semantic.white,
-        alignSelf: 'center',
     },
     stepButton: (pressed: boolean, positive: boolean) => ({
         width: 44,
@@ -90,8 +106,11 @@ const styles = StyleSheet.create(theme => ({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 164,
+        flex: 1,
         paddingHorizontal: theme.spacing[2],
+    },
+    hint: {
+        color: theme.colors.semantic.darkGrey,
     },
     valueInput: {
         ...theme.typography.titleLarge,

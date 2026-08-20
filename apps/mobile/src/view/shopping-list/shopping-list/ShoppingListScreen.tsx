@@ -8,6 +8,7 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import AddIcon from '../../../../assets/icons/add.svg';
 import AddSquareIcon from '../../../../assets/icons/add-square.svg';
+import DreamingMascot from '../../../../assets/images/brand/mascot-dreaming.svg';
 
 import { AddFromPlanCard, ShoppingItemRow } from './components';
 import { useShoppingListScreen } from './useShoppingListScreen';
@@ -34,6 +35,7 @@ export const ShoppingListScreen = () => {
 
                 {isEmpty ? (
                     <View style={styles.empty}>
+                        <DreamingMascot width={200} height={200} />
                         <AppText variant="bodySmallReg" color="tertiary" style={styles.emptyText}>
                             {t('shopping:list.empty')}
                         </AppText>

@@ -7,6 +7,7 @@ import { AppInput, AppScreen, AppText, CircleBackButton } from '@/shared/ui/comp
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
+import ShrugMascot from '../../../../assets/images/brand/mascot-shrug.svg';
 
 import { ProductRow } from './components';
 import { useAddProductScreen } from './useAddProductScreen';
@@ -56,9 +57,12 @@ export const AddProductScreen = () => {
                         />
                     ))
                 ) : (
-                    <AppText variant="bodyMediumReg" color="tertiary" style={styles.emptyText}>
-                        {t('shopping:add.empty')}
-                    </AppText>
+                    <View style={styles.empty}>
+                        <ShrugMascot width={200} height={200} />
+                        <AppText variant="bodyMediumReg" color="tertiary" style={styles.emptyText}>
+                            {t('shopping:add.empty')}
+                        </AppText>
+                    </View>
                 )}
             </ScrollView>
         </AppScreen>
@@ -88,8 +92,13 @@ const styles = StyleSheet.create(theme => ({
         paddingBottom: theme.spacing[10],
         gap: theme.spacing[2],
     },
+    empty: {
+        alignItems: 'center',
+        gap: theme.spacing[2],
+        paddingTop: theme.spacing[4],
+        width: '100%',
+    },
     emptyText: {
         textAlign: 'center',
-        paddingVertical: theme.spacing[6],
     },
 }));

@@ -23,8 +23,9 @@ export const useProductAmountScreen = () => {
 
     const product = PRODUCT_CATALOG.find(candidate => candidate.key === productKey);
 
-    const [unit, setUnit] = useState<AmountUnitKey>('gram');
-    const [valueText, setValueText] = useState(() => formatValue(AMOUNT_UNITS.gram.initial));
+    // The sheet opens on «Порція» (665:11663).
+    const [unit, setUnit] = useState<AmountUnitKey>('portion');
+    const [valueText, setValueText] = useState(() => formatValue(AMOUNT_UNITS.portion.initial));
 
     // Невалідний/відсутній productKey (діплінк, відновлений стан) — тихо
     // закриваємо шит замість показу першого-ліпшого продукту.
@@ -48,11 +49,13 @@ export const useProductAmountScreen = () => {
         [unit, valueText],
     );
 
+    const pieceGrams = product?.pieceGrams ?? AMOUNT_UNITS.piece.grams;
+
     const handleAdd = useCallback(() => {
         if (!product) return;
         const config = AMOUNT_UNITS[unit];
         const value = Math.min(Math.max(parseValue(valueText), config.min), config.max);
-        const grams = Math.round(value * config.grams);
+        const grams = Math.round(value * (unit === 'piece' ? pieceGrams : config.grams));
         addShoppingItem({
             productKey: product.key,
             categoryKey: product.categoryKey,
@@ -62,7 +65,7 @@ export const useProductAmountScreen = () => {
         });
         ToastService.success(t('shopping:amount.added-toast'));
         router.back();
-    }, [addShoppingItem, product, t, unit, valueText]);
+    }, [addShoppingItem, pieceGrams, product, t, unit, valueText]);
 
     return {
         product,
@@ -72,6 +75,11 @@ export const useProductAmountScreen = () => {
         valueText,
         setValueText,
         suffix: t(`shopping:amount.suffix.${unit}`),
+        /** «≈ 89г» next to the value in piece mode (665:11895). */
+        hint:
+            unit === 'piece'
+                ? t('shopping:amount.piece-hint', { grams: Math.round(parseValue(valueText) * pieceGrams) })
+                : undefined,
         handleDecrease: () => step(-1),
         handleIncrease: () => step(1),
         handleAdd,

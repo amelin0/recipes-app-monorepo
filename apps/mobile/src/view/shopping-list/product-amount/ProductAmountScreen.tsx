@@ -22,6 +22,7 @@ export const ProductAmountScreen = () => {
         valueText,
         setValueText,
         suffix,
+        hint,
         handleDecrease,
         handleIncrease,
         handleAdd,
@@ -49,6 +50,7 @@ export const ProductAmountScreen = () => {
                     valueText={valueText}
                     onChangeValueText={setValueText}
                     suffix={suffix}
+                    hint={hint}
                     onDecrease={handleDecrease}
                     onIncrease={handleIncrease}
                 />

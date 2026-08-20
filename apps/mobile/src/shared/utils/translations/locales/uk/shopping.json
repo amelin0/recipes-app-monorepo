@@ -25,7 +25,7 @@
         "subtitle": "на {{date}}",
         "search-placeholder": "Пошук інгредієнтів...",
         "add-a11y": "Додати {{name}}",
-        "empty": "Нічого не знайдено"
+        "empty": "На жаль, ми не знайшли продукт."
     },
     "amount": {
         "units": {
@@ -42,7 +42,8 @@
         "added-toast": "Продукт додано до списку",
         "value-a11y": "Кількість",
         "decrease-a11y": "Зменшити кількість",
-        "increase-a11y": "Збільшити кількість"
+        "increase-a11y": "Збільшити кількість",
+        "piece-hint": "≈ {{grams}}г"
     },
     "products": {
         "chicken-fillet": "Куряче філе",
