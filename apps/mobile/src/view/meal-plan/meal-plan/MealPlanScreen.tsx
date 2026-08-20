@@ -57,7 +57,7 @@ export const MealPlanScreen = () => {
                         resolveDishAction={dish => resolveDishAction(dish.id)}
                         dishSwipeAction="delete"
                         onPress={mealHasDetails(meal.key) ? handleMealPress : undefined}
-                        onAdd={handleAddDish}
+                        onAdd={() => handleAddDish(meal.key)}
                         onDishAction={handleToggleBasket}
                         onDishSwipe={dishId => handleDeleteDish(meal.key, dishId)}
                     />

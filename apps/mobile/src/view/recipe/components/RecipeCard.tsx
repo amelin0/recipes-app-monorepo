@@ -3,14 +3,12 @@ import { ImageBackground, Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import { AppText, MacroChipsRow } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import HeartIcon from '../../../../assets/icons/heart.svg';
 import TimerIcon from '../../../../assets/icons/timer.svg';
 import type { MockRecipe } from '../recipe.constants';
-
-import { MacroChipsRow } from './MacroChipsRow';
 
 export interface RecipeCardProps {
     recipe: MockRecipe;

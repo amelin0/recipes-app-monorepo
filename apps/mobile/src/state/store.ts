@@ -4,12 +4,14 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { applyAppTheme, createAppSlice, UNIT_DEFAULTS, type AppSlice } from './domains/app';
 import { createAuthSlice, type AuthSlice } from './domains/auth';
+import { createMealPlanSlice, type MealPlanSlice } from './domains/meal-plan';
 import { createProfileSetupSlice, PROFILE_SETUP_DEFAULTS, type ProfileSetupSlice } from './domains/profile-setup';
 import { createRecipeFiltersSlice, type RecipeFiltersSlice } from './domains/recipe';
 import { createShoppingListSlice, type ShoppingListSlice } from './domains/shopping-list';
 
 type AppStore = AppSlice &
     AuthSlice &
+    MealPlanSlice &
     ProfileSetupSlice &
     RecipeFiltersSlice &
     ShoppingListSlice & {
@@ -23,6 +25,7 @@ export const useStore = create<AppStore>()(
         (...a) => ({
             ...createAppSlice(...a),
             ...createAuthSlice(...a),
+            ...createMealPlanSlice(...a),
             ...createProfileSetupSlice(...a),
             ...createRecipeFiltersSlice(...a),
             ...createShoppingListSlice(...a),
@@ -31,6 +34,7 @@ export const useStore = create<AppStore>()(
                 get().switchAuthenticatedAction(false);
                 get().resetProfileSetup();
                 get().resetRecipeFilters();
+                get().resetPlanWeek();
                 get().resetShoppingList();
             },
         }),

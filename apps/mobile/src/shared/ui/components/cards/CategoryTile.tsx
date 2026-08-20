@@ -3,7 +3,7 @@ import { Image, Pressable, type ImageSourcePropType, type StyleProp, type ViewSt
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import { AppText } from '../texts';
 
 export interface CategoryTileProps {
     image: ImageSourcePropType;

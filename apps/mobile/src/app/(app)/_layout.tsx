@@ -124,6 +124,7 @@ export default function AppLayout() {
                         sheetGrabberVisible: false,
                     }}
                 />
+                <Stack.Screen name="add-dish" />
                 <Stack.Screen name="recipes-filter" />
                 <Stack.Screen
                     name="copy-plan"

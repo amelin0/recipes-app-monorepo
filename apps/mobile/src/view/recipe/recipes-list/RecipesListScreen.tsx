@@ -3,14 +3,14 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText, Chip, CountDot, SectionHeader, SegmentedTabs, AppScreen } from '@/shared/ui/components';
+import { AppScreen, AppText, CategoryTile, Chip, CountDot, SectionHeader, SegmentedTabs } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import GridViewIcon from '../../../../assets/icons/grid-view.svg';
 import ListViewIcon from '../../../../assets/icons/list-view.svg';
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
-import { CategoryTile, RecipeCard } from '../components';
+import { RecipeCard } from '../components';
 import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
 
 import { AddRecipeTile } from './components';
@@ -187,10 +187,11 @@ const styles = StyleSheet.create(theme => ({
         backgroundColor: theme.colors.semantic.lightGrey,
         paddingVertical: theme.spacing[2],
     },
+    // The dot's top-right corner sits flush with the icon's (594:43242).
     filterBadge: {
         position: 'absolute',
-        top: -4,
-        right: -6,
+        top: 0,
+        right: 0,
     },
     scroll: {
         paddingHorizontal: theme.spacing[4],

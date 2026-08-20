@@ -4,15 +4,18 @@ import { router } from 'expo-router';
 
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { useStore } from '@/state';
 
-import { MOCK_PLAN_WEEK, MOCK_PLAN_WEEK_RANGE, type PlanDay, type PlanMealKey } from '../meal-plan.constants';
+import { MOCK_PLAN_WEEK_RANGE, type PlanMealKey } from '../meal-plan.constants';
 
 export const useMealPlanScreen = () => {
     const { t } = useAppTranslation(['meal-plan', 'common']);
 
-    const [selectedDayKey, setSelectedDayKey] = useState(MOCK_PLAN_WEEK[0]?.key ?? 'mon');
-    // Local copy so deleting dishes and basket toggles survive day switching.
-    const [week, setWeek] = useState<PlanDay[]>(MOCK_PLAN_WEEK);
+    // The week lives in the store so the dish picker edits the same plan.
+    const week = useStore(state => state.planWeek);
+    const removePlanDish = useStore(state => state.removePlanDish);
+
+    const [selectedDayKey, setSelectedDayKey] = useState(week[0]?.key ?? 'mon');
     // Keyed per day — mock dish ids repeat across days.
     const [inBasket, setInBasket] = useState<Record<string, boolean>>({ 'mon:pancakes': true });
 
@@ -22,24 +25,10 @@ export const useMealPlanScreen = () => {
 
     const handleDeleteDish = useCallback(
         (mealKey: PlanMealKey, dishId: string) => {
-            // TODO: DELETE /meal-plan/days/:day/dishes/:id once the API ships.
-            setWeek(prev =>
-                prev.map(item =>
-                    item.key === selectedDayKey
-                        ? {
-                              ...item,
-                              meals: item.meals.map(meal =>
-                                  meal.key === mealKey
-                                      ? { ...meal, dishes: meal.dishes.filter(dish => dish.id !== dishId) }
-                                      : meal,
-                              ),
-                          }
-                        : item,
-                ),
-            );
+            removePlanDish(selectedDayKey, mealKey, dishId);
             ToastService.success(t('meal-plan:screen.dish-deleted'));
         },
-        [selectedDayKey, t],
+        [removePlanDish, selectedDayKey, t],
     );
 
     const handleToggleBasket = useCallback(
@@ -73,9 +62,10 @@ export const useMealPlanScreen = () => {
         /** «Перекус» has no time and no details entry in the design (961:59371). */
         mealHasDetails: (mealKey: PlanMealKey) => mealKey !== 'snack',
         handleChangeGoal: () => router.push('/(app)/goal-setup'),
-        // TODO: route to the meal editor / dish picker once they are designed.
+        // TODO: route to the meal editor once it is designed.
         handleMealPress: () => ToastService.info(t('common:states.coming-soon')),
-        handleAddDish: () => ToastService.info(t('common:states.coming-soon')),
+        handleAddDish: (mealKey: PlanMealKey) =>
+            router.push({ pathname: '/(app)/add-dish', params: { day: selectedDayKey, meal: mealKey } }),
         handleToggleBasket,
         handleDeleteDish,
         handleAddAllToList,

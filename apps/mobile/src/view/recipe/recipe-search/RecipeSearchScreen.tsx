@@ -4,12 +4,19 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppInput, AppScreen, AppText, SectionHeader, TopBar } from '@/shared/ui/components';
+import {
+    AppInput,
+    AppScreen,
+    AppText,
+    CategoryTile,
+    MacroChipsRow,
+    SectionHeader,
+    TopBar,
+} from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
-import { CategoryTile, MacroChipsRow } from '../components';
 import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
 
 import { useRecipeSearchScreen } from './useRecipeSearchScreen';

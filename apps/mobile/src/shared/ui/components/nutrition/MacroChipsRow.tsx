@@ -3,8 +3,9 @@ import { View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
+
+import { AppText } from '../texts';
 
 export type MacroChipsSize = 'sm' | 'md';
 

@@ -1,205 +1,13 @@
-import type { MealDish } from '@/shared/ui/widgets';
-
-/** Colors a goal metric by how the day's plan relates to the target. */
-export type PlanMetricTone = 'neutral' | 'progress' | 'positive' | 'negative';
-
-export interface PlanMetric {
-    current: number;
-    target: number;
-    /** Colors the 3pt progress bar. */
-    tone: PlanMetricTone;
-    /** Colors the value text — the design darkens it outside warning states. */
-    valueTone?: PlanMetricTone;
-}
-
-/** Which advisory the goal card shows under the metrics (435:13917/14102/14287). */
-export type PlanTip = 'low' | 'over' | 'near' | 'none';
-
-export type PlanMealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-
-export interface PlanMeal {
-    key: PlanMealKey;
-    /** Planned time, absent for «Перекус» (961:59371). */
-    time?: string;
-    dishes: MealDish[];
-}
-
-/** Colors the day tile in the week strip (961:59184). */
-export type PlanDayStatus = 'ok' | 'over' | 'empty';
-
-export interface PlanDay {
-    key: string;
-    /** «ПН» */
-    weekday: string;
-    /** «18» */
-    date: string;
-    status: PlanDayStatus;
-    kcal: PlanMetric;
-    protein: PlanMetric;
-    fats: PlanMetric;
-    carbs: PlanMetric;
-    tip: PlanTip;
-    meals: PlanMeal[];
-}
-
-const MEAL_TIMES: Record<PlanMealKey, string | undefined> = {
-    breakfast: '11:00',
-    lunch: '14:00',
-    dinner: '19:00',
-    snack: undefined,
-};
-
-const DISH_PANCAKES: MealDish = {
-    id: 'pancakes',
-    emoji: '🥞',
-    name: 'Панкейки',
-    calories: 320,
-    macros: [
-        { key: 'protein', value: 150 },
-        { key: 'fats', value: 120 },
-        { key: 'carbs', value: 23 },
-    ],
-};
-
-const DISH_GREEK_SALAD: MealDish = {
-    id: 'greek-salad',
-    emoji: '🥗',
-    name: 'Грецький салат',
-    calories: 350,
-    macros: [
-        { key: 'protein', value: 150 },
-        { key: 'fats', value: 0 },
-        { key: 'carbs', value: 30 },
-    ],
-};
-
-const DISH_SALMON: MealDish = {
-    id: 'salmon',
-    emoji: '🐟',
-    name: 'Смажений лосось',
-    calories: 389,
-    macros: [
-        { key: 'protein', value: 150 },
-        { key: 'fats', value: 120 },
-        { key: 'carbs', value: 30 },
-    ],
-};
-
-const emptyMeals = (): PlanMeal[] =>
-    (['breakfast', 'lunch', 'dinner', 'snack'] as const).map(key => ({ key, time: MEAL_TIMES[key], dishes: [] }));
-
-const filledMeals = (): PlanMeal[] => [
-    { key: 'breakfast', time: MEAL_TIMES.breakfast, dishes: [{ ...DISH_PANCAKES }] },
-    { key: 'lunch', time: MEAL_TIMES.lunch, dishes: [{ ...DISH_GREEK_SALAD }, { ...DISH_SALMON }] },
-    {
-        key: 'dinner',
-        time: MEAL_TIMES.dinner,
-        dishes: [
-            { ...DISH_GREEK_SALAD, id: 'greek-salad-2' },
-            { ...DISH_SALMON, id: 'salmon-2' },
-        ],
-    },
-    { key: 'snack', dishes: [] },
-];
-
-const metric = (current: number, target: number, tone: PlanMetricTone, valueTone?: PlanMetricTone): PlanMetric => ({
-    current,
-    target,
-    tone,
-    valueTone,
-});
-
-/**
- * A mock week of plans — day statuses and metric tones are precomputed the way
- * the system will send them; the coloring thresholds stay with the backend.
- */
-// TODO: replace with GET /meal-plan?week= once the API ships.
-export const MOCK_PLAN_WEEK: PlanDay[] = [
-    {
-        key: 'mon',
-        weekday: 'ПН',
-        date: '18',
-        status: 'ok',
-        kcal: metric(1400, 1800, 'progress'),
-        protein: metric(96, 100, 'positive'),
-        fats: metric(96, 100, 'positive'),
-        carbs: metric(96, 100, 'positive'),
-        tip: 'none',
-        meals: filledMeals(),
-    },
-    {
-        key: 'tue',
-        weekday: 'ВТ',
-        date: '19',
-        status: 'ok',
-        kcal: metric(1750, 1800, 'positive'),
-        protein: metric(96, 100, 'positive'),
-        fats: metric(96, 100, 'positive'),
-        carbs: metric(96, 100, 'positive'),
-        tip: 'near',
-        meals: filledMeals(),
-    },
-    {
-        key: 'wed',
-        weekday: 'СР',
-        date: '20',
-        status: 'empty',
-        kcal: metric(0, 1800, 'neutral'),
-        protein: metric(0, 100, 'neutral'),
-        fats: metric(0, 100, 'neutral'),
-        carbs: metric(0, 100, 'neutral'),
-        tip: 'none',
-        meals: emptyMeals(),
-    },
-    {
-        key: 'thu',
-        weekday: 'ЧТ',
-        date: '21',
-        status: 'ok',
-        kcal: metric(1100, 1800, 'progress'),
-        protein: metric(34, 100, 'progress', 'progress'),
-        fats: metric(34, 100, 'progress', 'progress'),
-        carbs: metric(110, 100, 'negative', 'negative'),
-        tip: 'low',
-        meals: filledMeals(),
-    },
-    {
-        key: 'fri',
-        weekday: 'ПТ',
-        date: '22',
-        status: 'over',
-        kcal: metric(2100, 1800, 'negative', 'negative'),
-        protein: metric(34, 100, 'progress', 'progress'),
-        fats: metric(34, 100, 'progress', 'progress'),
-        carbs: metric(110, 100, 'negative', 'negative'),
-        tip: 'over',
-        meals: filledMeals(),
-    },
-    {
-        key: 'sat',
-        weekday: 'СБ',
-        date: '23',
-        status: 'empty',
-        kcal: metric(0, 1800, 'neutral'),
-        protein: metric(0, 100, 'neutral'),
-        fats: metric(0, 100, 'neutral'),
-        carbs: metric(0, 100, 'neutral'),
-        tip: 'none',
-        meals: emptyMeals(),
-    },
-    {
-        key: 'sun',
-        weekday: 'НД',
-        date: '24',
-        status: 'empty',
-        kcal: metric(0, 1800, 'neutral'),
-        protein: metric(0, 100, 'neutral'),
-        fats: metric(0, 100, 'neutral'),
-        carbs: metric(0, 100, 'neutral'),
-        tip: 'none',
-        meals: emptyMeals(),
-    },
-];
+export {
+    type PlanDay,
+    type PlanDayStatus,
+    type PlanDish,
+    type PlanMeal,
+    type PlanMealKey,
+    type PlanMetric,
+    type PlanMetricTone,
+    type PlanTip,
+} from '@/state/domains/meal-plan';
 
 /** «18 - 24 Травня» in the header subtitle (961:59383). */
 export const MOCK_PLAN_WEEK_RANGE = '18 - 24 Травня';
@@ -231,4 +39,131 @@ export const MOCK_COPY_NEXT_WEEK: CopyPlanDay[] = [
     { key: 'next-fri', name: 'П’ятниця', date: '29 Травня' },
     { key: 'next-sat', name: 'Субота', date: '30 Травня' },
     { key: 'next-sun', name: 'Неділя', date: '31 Травня' },
+];
+
+export type AddDishTabKey = 'dishes' | 'ingredients' | 'own' | 'favorites' | 'create';
+
+/** Tab order of the dish picker (594:30108). */
+export const ADD_DISH_TABS: AddDishTabKey[] = ['dishes', 'ingredients', 'own', 'favorites', 'create'];
+
+export interface PickerDish {
+    id: string;
+    title: string;
+    emoji: string;
+    /** Pastel thumb tint from the mock (594:30155). */
+    thumbBg: string;
+    /** Rail-category key — lets the quick rail pick filter the mock list. */
+    category: string;
+    kcal: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+}
+
+export interface PickerIngredient {
+    id: string;
+    title: string;
+    /** «1 порція(30мл) 350 ккал» */
+    subtitle: string;
+    protein: number;
+    fats: number;
+    carbs: number;
+}
+
+/** Mock total the design quotes for every list (594:41618). */
+export const MOCK_PICKER_RESULTS_COUNT = 239;
+
+// TODO: replace with GET /recipes?meal= once the API ships.
+export const MOCK_PICKER_DISHES: PickerDish[] = [
+    {
+        id: 'greek-salad',
+        title: 'Грецький салат',
+        emoji: '🥗',
+        thumbBg: '#FCE8E8',
+        category: 'salads',
+        kcal: 350,
+        protein: 150,
+        fats: 0,
+        carbs: 30,
+    },
+    {
+        id: 'salmon',
+        title: 'Смажений лосось',
+        emoji: '🐟',
+        thumbBg: '#E8F1FC',
+        category: 'dinner',
+        kcal: 389,
+        protein: 150,
+        fats: 120,
+        carbs: 30,
+    },
+    {
+        id: 'rice-chicken',
+        title: 'Рис з овочами та куркою',
+        emoji: '🍛',
+        thumbBg: '#FCF3E8',
+        category: 'lunch',
+        kcal: 420,
+        protein: 180,
+        fats: 90,
+        carbs: 50,
+    },
+    {
+        id: 'pork-steak',
+        title: 'Стейк зі свинини',
+        emoji: '🥩',
+        thumbBg: '#FCE8EE',
+        category: 'lunch',
+        kcal: 500,
+        protein: 220,
+        fats: 160,
+        carbs: 10,
+    },
+    {
+        id: 'pumpkin-soup',
+        title: 'Гарбузовий суп-пюре',
+        emoji: '🍲',
+        thumbBg: '#F0FCE8',
+        category: 'lunch',
+        kcal: 250,
+        protein: 50,
+        fats: 15,
+        carbs: 40,
+    },
+    {
+        id: 'pesto-pasta',
+        title: 'Паста з соусом песто',
+        emoji: '🍝',
+        thumbBg: '#FCF3E8',
+        category: 'pasta',
+        kcal: 480,
+        protein: 120,
+        fats: 180,
+        carbs: 60,
+    },
+];
+
+// TODO: replace with GET /products/search once the API ships. «Свіє яблуко» з
+// макета виправлено на «Свіже» (spec).
+export const MOCK_PICKER_INGREDIENTS: PickerIngredient[] = [
+    { id: 'espresso', title: 'Кава еспресо', subtitle: '1 порція(30мл) 350 ккал', protein: 150, fats: 0, carbs: 30 },
+    {
+        id: 'white-rice',
+        title: 'Білий рис, приготовлений',
+        subtitle: '1 порція(47г) 2 ккал',
+        protein: 0,
+        fats: 0,
+        carbs: 0.5,
+    },
+    { id: 'milk', title: 'Молоко 2.5%', subtitle: '100 мл 50 ккал', protein: 3.3, fats: 2.5, carbs: 5 },
+    {
+        id: 'chocolate-cake',
+        title: 'Шоколадний торт',
+        subtitle: '1 шматок(80г) 350 ккал',
+        protein: 5,
+        fats: 20,
+        carbs: 35,
+    },
+    { id: 'white-bread', title: 'Білий хліб', subtitle: '1 скибка(30г) 80 ккал', protein: 3, fats: 1, carbs: 15 },
+    { id: 'apple', title: 'Свіже яблуко', subtitle: '1 шт.(150г) 95 ккал', protein: 0.5, fats: 0.3, carbs: 25 },
 ];
