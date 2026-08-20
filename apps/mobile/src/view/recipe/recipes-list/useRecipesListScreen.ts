@@ -44,17 +44,26 @@ export const useRecipesListScreen = () => {
               ? t('recipes:list.own-section')
               : t('recipes:list.section');
 
+    // Applied chips carry plain labels — the design strips the option emojis (594:44769).
     const appliedFilters = useMemo<AppliedFilterChip[]>(() => {
         const chips: AppliedFilterChip[] = [];
+        recipeFilters.ingredients.forEach(value =>
+            chips.push({
+                key: `ingredients-${value}`,
+                group: 'ingredients',
+                value,
+                label: t(`recipes:ingredients.${value}`),
+            }),
+        );
         recipeFilters.categories.forEach(value =>
             chips.push({
                 key: `categories-${value}`,
                 group: 'categories',
                 value,
-                label: t(`recipes:categories.${value}`),
+                label: t(`recipes:rail-categories.${value}`),
             }),
         );
-        (['meals', 'methods', 'diets', 'ingredients'] as const).forEach(group => {
+        (['products', 'cuisines', 'diets'] as const).forEach(group => {
             recipeFilters[group].forEach(value =>
                 chips.push({ key: `${group}-${value}`, group, value, label: t(`recipes:options.${value}`) }),
             );
@@ -82,9 +91,8 @@ export const useRecipesListScreen = () => {
         filtersCount: countRecipeFilters(recipeFilters),
         handleSearchPress: () => router.push('/(app)/recipe-search'),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
-        // `rail` tells the search screen to resolve the label from the rail taxonomy.
         handleCategoryPress: (category: string) =>
-            router.push({ pathname: '/(app)/recipe-search', params: { category, rail: '1' } }),
+            router.push({ pathname: '/(app)/recipe-search', params: { category } }),
         handleRecipePress,
         handleToggleFavorite,
         handleRemoveFilter: (chip: AppliedFilterChip) => toggleRecipeFilter(chip.group, chip.value),

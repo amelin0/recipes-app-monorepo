@@ -6,9 +6,13 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppText } from '../texts';
 
+export type ChipSize = 'sm' | 'md';
+
 export interface ChipProps {
     /** Chip copy (may include a leading emoji). */
     label: string;
+    /** md — 40pt filter options (594:43425); sm — 36pt applied chips (594:44769). */
+    size?: ChipSize;
     /** Selected style: light-positive fill + 2px accent border. */
     selected?: boolean;
     onPress?: () => void;
@@ -17,7 +21,7 @@ export interface ChipProps {
 }
 
 /** Pill option chip — RFDS filter chips (default lightGrey / selected accent). */
-export const Chip = ({ label, selected = false, onPress, onRemove }: ChipProps) => {
+export const Chip = ({ label, size = 'md', selected = false, onPress, onRemove }: ChipProps) => {
     const { theme } = useUnistyles();
 
     return (
@@ -25,7 +29,7 @@ export const Chip = ({ label, selected = false, onPress, onRemove }: ChipProps) 
             accessibilityRole="button"
             accessibilityState={{ selected }}
             onPress={onPress}
-            style={styles.chip(selected)}
+            style={styles.chip(selected, size)}
         >
             <AppText variant="bodyMediumBold" numberOfLines={1}>
                 {label}
@@ -40,11 +44,11 @@ export const Chip = ({ label, selected = false, onPress, onRemove }: ChipProps) 
 };
 
 const styles = StyleSheet.create(theme => ({
-    chip: (selected: boolean) => ({
+    chip: (selected: boolean, size: ChipSize) => ({
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing[1],
-        height: 40,
+        height: size === 'sm' ? 36 : 40,
         paddingLeft: theme.spacing[2],
         paddingRight: theme.spacing[3],
         paddingVertical: theme.spacing[1],

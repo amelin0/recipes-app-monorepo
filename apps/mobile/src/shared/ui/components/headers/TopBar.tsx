@@ -9,6 +9,8 @@ import { AppText } from '../texts';
 export interface TopBarProps {
     /** Centered title — RFDS nav bar (body/large-bold). */
     title?: string;
+    /** Optional line under the title, e.g. «Категорія» (594:43293). */
+    subtitle?: string;
     /** Hides the back button when the screen is a flow endpoint. @default true */
     showBack?: boolean;
     /** Overrides the default `router.back()` of the back button. */
@@ -22,15 +24,22 @@ export interface TopBarProps {
  * leading edge, centered title, and a 44×36 trailing spacer that balances the
  * button so the title stays optically centered.
  */
-export const TopBar = ({ title, showBack = true, onBack, trailing }: TopBarProps) => {
+export const TopBar = ({ title, subtitle, showBack = true, onBack, trailing }: TopBarProps) => {
     return (
         <View style={styles.root}>
             <View style={styles.leading}>{showBack ? <CircleBackButton onPress={onBack} /> : null}</View>
 
             {title ? (
-                <AppText variant="bodyLargeBold" accessibilityRole="header" numberOfLines={1}>
-                    {title}
-                </AppText>
+                <View style={styles.titleBlock}>
+                    <AppText variant="bodyLargeBold" accessibilityRole="header" numberOfLines={1}>
+                        {title}
+                    </AppText>
+                    {subtitle ? (
+                        <AppText variant="bodySmallReg" numberOfLines={1} style={styles.subtitle}>
+                            {subtitle}
+                        </AppText>
+                    ) : null}
+                </View>
             ) : null}
 
             <View style={styles.trailing}>{trailing}</View>
@@ -58,6 +67,12 @@ const styles = StyleSheet.create(theme => ({
     leading: {
         width: 44,
         justifyContent: 'center',
+    },
+    titleBlock: {
+        alignItems: 'center',
+    },
+    subtitle: {
+        color: theme.colors.semantic.darkGrey,
     },
     trailing: {
         width: 44,

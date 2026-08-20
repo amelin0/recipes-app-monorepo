@@ -83,12 +83,18 @@ export const RecipesListScreen = () => {
                         contentContainerStyle={styles.chipsRow}
                     >
                         {appliedFilters.map(filter => (
-                            <Chip key={filter.key} label={filter.label} onRemove={() => handleRemoveFilter(filter)} />
+                            <Chip
+                                key={filter.key}
+                                size="sm"
+                                label={filter.label}
+                                onRemove={() => handleRemoveFilter(filter)}
+                            />
                         ))}
                     </ScrollView>
                 ) : null}
 
-                {activeTab === 'all' ? (
+                {/* Applied filters take the rail's place (594:44282). */}
+                {activeTab === 'all' && appliedFilters.length === 0 ? (
                     <View style={styles.section}>
                         <SectionHeader title={t('recipes:list.popular-categories')} />
                         <ScrollView

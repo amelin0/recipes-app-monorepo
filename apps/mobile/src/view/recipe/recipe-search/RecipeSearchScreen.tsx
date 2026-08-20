@@ -4,16 +4,17 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppInput, AppScreen, AppText, CircleBackButton, SectionHeader } from '@/shared/ui/components';
+import { AppInput, AppScreen, AppText, SectionHeader, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
 import { CategoryTile, MacroChipsRow } from '../components';
-import { RECIPE_CATEGORIES } from '../recipe.constants';
+import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
 
 import { useRecipeSearchScreen } from './useRecipeSearchScreen';
 
+/** Пошук — categories grid, live results, and category mode (594:43242/43181/43293). */
 export const RecipeSearchScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes']);
@@ -34,30 +35,57 @@ export const RecipeSearchScreen = () => {
     const showCategories = !categoryKey && query.length === 0;
     const showQueryResults = !categoryKey && query.length > 0;
 
+    const renderSectionTitle = (title: string, count: number) => (
+        <View style={styles.sectionTitleRow}>
+            <SectionHeader title={title} style={styles.sectionTitle} />
+            <AppText variant="buttonTab" style={styles.countText}>
+                {t('recipes:search.results-count', { count })}
+            </AppText>
+        </View>
+    );
+
+    const renderDishCard = (dish: (typeof dishResults)[number]) => (
+        <Pressable
+            key={dish.id}
+            accessibilityRole="button"
+            onPress={() => handleDishPress(dish.id)}
+            style={styles.resultCard}
+        >
+            <View style={[styles.dishThumb, { backgroundColor: dish.thumbBg }]}>
+                <AppText style={styles.dishEmoji}>{dish.emoji}</AppText>
+            </View>
+            <View style={styles.resultBody}>
+                <AppText variant="bodySmallBold" numberOfLines={1}>
+                    {dish.title}
+                </AppText>
+                <AppText variant="bodySmallReg" style={styles.mutedText}>
+                    {t('recipes:list.kcal', { count: dish.kcal })}
+                </AppText>
+                <MacroChipsRow size="md" protein={dish.protein} fats={dish.fats} carbs={dish.carbs} />
+            </View>
+        </Pressable>
+    );
+
     return (
         <AppScreen>
-            <View style={styles.headerBar}>
-                <CircleBackButton />
-                <View style={styles.headerCenter}>
-                    <AppText variant="bodyLargeBold">
-                        {categoryLabelKey ? t(categoryLabelKey) : t('recipes:search.title')}
-                    </AppText>
-                    {categoryKey ? (
-                        <AppText variant="bodySmallReg" color="tertiary">
-                            {t('recipes:search.category-subtitle')}
-                        </AppText>
-                    ) : null}
-                </View>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('recipes:list.filter-a11y')}
-                    hitSlop={8}
-                    onPress={handleFilterPress}
-                    style={styles.filterButton}
-                >
-                    <SortIcon width={24} height={24} color={theme.colors.elements.primary} />
-                </Pressable>
-            </View>
+            {/* Category mode has no filter entry (594:43293). */}
+            <TopBar
+                title={categoryLabelKey ? t(categoryLabelKey) : t('recipes:search.title')}
+                subtitle={categoryKey ? t('recipes:search.category-subtitle') : undefined}
+                trailing={
+                    !categoryKey ? (
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t('recipes:list.filter-a11y')}
+                            hitSlop={8}
+                            onPress={handleFilterPress}
+                            style={styles.filterButton}
+                        >
+                            <SortIcon width={24} height={24} color={theme.colors.elements.primary} />
+                        </Pressable>
+                    ) : undefined
+                }
+            />
 
             {!categoryKey ? (
                 <View style={styles.searchField}>
@@ -97,11 +125,11 @@ export const RecipeSearchScreen = () => {
                     <View style={styles.section}>
                         <SectionHeader title={t('recipes:list.popular-categories')} />
                         <View style={styles.categoriesGrid}>
-                            {RECIPE_CATEGORIES.map(category => (
+                            {RECIPE_RAIL_CATEGORIES.map(category => (
                                 <CategoryTile
                                     key={category.key}
                                     image={category.image}
-                                    label={t(`recipes:categories.${category.key}`)}
+                                    label={t(`recipes:rail-categories.${category.key}`)}
                                     onPress={() => handleCategoryPress(category.key)}
                                     style={styles.categoryTile}
                                 />
@@ -113,12 +141,7 @@ export const RecipeSearchScreen = () => {
                 {showQueryResults ? (
                     <>
                         <View style={styles.section}>
-                            <View style={styles.sectionTitleRow}>
-                                <SectionHeader title={t('recipes:search.ingredients-section')} />
-                                <AppText variant="bodySmallReg" color="tertiary">
-                                    {t('recipes:search.results-count', { count: ingredientResults.length })}
-                                </AppText>
-                            </View>
+                            {renderSectionTitle(t('recipes:search.ingredients-section'), ingredientResults.length)}
                             {ingredientResults.map(item => (
                                 <Pressable
                                     key={item.id}
@@ -126,71 +149,37 @@ export const RecipeSearchScreen = () => {
                                     onPress={() => handleResultPress(item.id)}
                                     style={styles.resultCard}
                                 >
-                                    <View style={styles.resultBody}>
-                                        <AppText variant="bodyMediumBold">{item.title}</AppText>
-                                        <AppText variant="bodySmallReg" color="tertiary">
+                                    <View style={[styles.resultBody, styles.ingredientBody]}>
+                                        <AppText variant="bodySmallBold" numberOfLines={1}>
+                                            {item.title}
+                                        </AppText>
+                                        <AppText variant="bodySmallReg" style={styles.mutedText}>
                                             {item.subtitle}
                                         </AppText>
-                                        <MacroChipsRow protein={item.protein} fats={item.fats} carbs={item.carbs} />
+                                        <MacroChipsRow
+                                            size="md"
+                                            protein={item.protein}
+                                            fats={item.fats}
+                                            carbs={item.carbs}
+                                        />
                                     </View>
                                 </Pressable>
                             ))}
                         </View>
 
                         <View style={styles.section}>
-                            <View style={styles.sectionTitleRow}>
-                                <SectionHeader title={t('recipes:search.dishes-section')} />
-                                <AppText variant="bodySmallReg" color="tertiary">
-                                    {t('recipes:search.results-count', { count: dishResults.length })}
-                                </AppText>
-                            </View>
-                            {dishResults.map(dish => (
-                                <Pressable
-                                    key={dish.id}
-                                    accessibilityRole="button"
-                                    onPress={() => handleDishPress(dish.id)}
-                                    style={styles.resultCard}
-                                >
-                                    <View style={[styles.dishThumb, { backgroundColor: dish.thumbBg }]}>
-                                        <AppText style={styles.dishEmoji}>{dish.emoji}</AppText>
-                                    </View>
-                                    <View style={styles.resultBody}>
-                                        <AppText variant="bodyMediumBold">{dish.title}</AppText>
-                                        <AppText variant="bodySmallReg" color="tertiary">
-                                            {t('recipes:list.kcal', { count: dish.kcal })}
-                                        </AppText>
-                                        <MacroChipsRow protein={dish.protein} fats={dish.fats} carbs={dish.carbs} />
-                                    </View>
-                                </Pressable>
-                            ))}
+                            {renderSectionTitle(t('recipes:search.dishes-section'), dishResults.length)}
+                            {dishResults.map(renderDishCard)}
                         </View>
                     </>
                 ) : null}
 
                 {categoryKey ? (
                     <View style={styles.section}>
-                        <AppText variant="bodySmallReg" color="tertiary">
+                        <AppText variant="buttonTab" style={styles.countText}>
                             {t('recipes:search.results-count', { count: dishResults.length })}
                         </AppText>
-                        {dishResults.map(dish => (
-                            <Pressable
-                                key={dish.id}
-                                accessibilityRole="button"
-                                onPress={() => handleDishPress(dish.id)}
-                                style={styles.resultCard}
-                            >
-                                <View style={[styles.dishThumbLarge, { backgroundColor: dish.thumbBg }]}>
-                                    <AppText style={styles.dishEmoji}>{dish.emoji}</AppText>
-                                </View>
-                                <View style={styles.resultBody}>
-                                    <AppText variant="bodyMediumBold">{dish.title}</AppText>
-                                    <AppText variant="bodySmallReg" color="tertiary">
-                                        {t('recipes:list.kcal', { count: dish.kcal })}
-                                    </AppText>
-                                    <MacroChipsRow protein={dish.protein} fats={dish.fats} carbs={dish.carbs} />
-                                </View>
-                            </Pressable>
-                        ))}
+                        {dishResults.map(renderDishCard)}
                     </View>
                 ) : null}
             </ScrollView>
@@ -198,18 +187,7 @@ export const RecipeSearchScreen = () => {
     );
 };
 
-const styles = StyleSheet.create(theme => ({
-    headerBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-        paddingHorizontal: theme.spacing[4],
-        paddingBottom: theme.spacing[2],
-    },
-    headerCenter: {
-        flex: 1,
-        alignItems: 'center',
-    },
+const styles = StyleSheet.create((theme, rt) => ({
     filterButton: {
         minWidth: 44,
         minHeight: 44,
@@ -225,7 +203,7 @@ const styles = StyleSheet.create(theme => ({
     scroll: {
         paddingHorizontal: theme.spacing[4],
         paddingBottom: theme.spacing[10],
-        gap: theme.spacing[6],
+        gap: theme.spacing[4],
     },
     section: {
         gap: theme.spacing[2],
@@ -235,8 +213,17 @@ const styles = StyleSheet.create(theme => ({
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing[2],
-        justifyContent: 'space-between',
         width: '100%',
+    },
+    sectionTitle: {
+        width: 'auto',
+        flexShrink: 1,
+    },
+    countText: {
+        color: theme.colors.semantic.darkGrey,
+    },
+    mutedText: {
+        color: theme.colors.semantic.darkGrey,
     },
     categoriesGrid: {
         flexDirection: 'row',
@@ -244,10 +231,10 @@ const styles = StyleSheet.create(theme => ({
         gap: theme.spacing[2],
         width: '100%',
     },
+    // A third of the content row even when the last row is short (594:43242).
     categoryTile: {
-        flexGrow: 1,
-        flexBasis: '30%',
-        minWidth: 100,
+        flexGrow: 0,
+        width: (rt.screen.width - theme.spacing[4] * 2 - theme.spacing[2] * 2) / 3,
     },
     resultCard: {
         flexDirection: 'row',
@@ -261,22 +248,26 @@ const styles = StyleSheet.create(theme => ({
     resultBody: {
         flex: 1,
         gap: theme.spacing[1],
-        padding: theme.spacing[3],
+        paddingVertical: theme.spacing[2],
+        paddingRight: theme.spacing[3],
+    },
+    // The ingredient row has no thumb — the card carries its own 16pt inset
+    // (594:43189). Longhand edges only: shorthands lose to resultBody's
+    // more specific paddingVertical/paddingRight regardless of merge order.
+    ingredientBody: {
+        paddingTop: theme.spacing[4],
+        paddingBottom: theme.spacing[4],
+        paddingLeft: theme.spacing[4],
+        paddingRight: theme.spacing[4],
     },
     dishThumb: {
         alignSelf: 'stretch',
-        width: 64,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    dishThumbLarge: {
-        alignSelf: 'stretch',
-        width: 64,
+        width: 68,
         alignItems: 'center',
         justifyContent: 'center',
     },
     dishEmoji: {
-        fontSize: 24,
-        lineHeight: 32,
+        fontSize: 30,
+        lineHeight: 36,
     },
 }));

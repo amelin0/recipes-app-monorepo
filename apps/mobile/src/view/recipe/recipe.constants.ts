@@ -5,27 +5,10 @@ export interface RecipeCategory {
     image: ImageSourcePropType;
 }
 
-/** 12 popular categories — labels live in `recipes:categories.*`. */
-export const RECIPE_CATEGORIES: RecipeCategory[] = [
-    { key: 'breakfast', image: require('../../../assets/images/categories/breakfast.png') },
-    { key: 'lunch', image: require('../../../assets/images/categories/lunch.png') },
-    { key: 'dinner', image: require('../../../assets/images/categories/dinner.png') },
-    { key: 'vegan', image: require('../../../assets/images/categories/vegan.png') },
-    { key: 'high-protein', image: require('../../../assets/images/categories/high-protein.png') },
-    { key: 'low-carb', image: require('../../../assets/images/categories/low-carb.png') },
-    { key: 'low-fat', image: require('../../../assets/images/categories/low-fat.png') },
-    { key: 'low-calorie', image: require('../../../assets/images/categories/low-calorie.png') },
-    { key: 'sugar-free', image: require('../../../assets/images/categories/sugar-free.png') },
-    { key: 'vegetarian', image: require('../../../assets/images/categories/vegetarian.png') },
-    { key: 'few-ingredients', image: require('../../../assets/images/categories/few-ingredients.png') },
-    { key: 'quick', image: require('../../../assets/images/categories/quick.png') },
-];
-
 /**
- * Dish-type rail on the recipes tab (642:39792) — labels live in
- * `recipes:rail-categories.*`. The filter and search screens still run the
- * older diet-type taxonomy above; the two sets converge once the API defines
- * the canonical category list.
+ * Dish-type categories (642:39792) — labels live in `recipes:rail-categories.*`.
+ * Shared by the recipes-tab rail, the search grid and, as emoji chips, the
+ * filter screen.
  */
 export const RECIPE_RAIL_CATEGORIES: RecipeCategory[] = [
     { key: 'savory-breakfast', image: require('../../../assets/images/categories/rail-savory-breakfast.png') },
@@ -41,27 +24,27 @@ export const RECIPE_RAIL_CATEGORIES: RecipeCategory[] = [
     { key: 'baking', image: require('../../../assets/images/categories/rail-baking.png') },
 ];
 
-/** Filter option keys — labels live in `recipes:options.*`. */
-export const MEAL_OPTIONS = [
-    'meal-breakfast',
-    'meal-lunch',
-    'meal-dinner',
-    'meal-snack',
-    'meal-dessert',
-    'meal-salad',
-    'meal-shake',
-    'meal-soup',
-    'meal-smoothie',
+/**
+ * Filter option keys — plain labels live in `recipes:options.*`, the emoji
+ * companions in OPTION_EMOJI (the applied-filter chips drop the emoji,
+ * 594:44769).
+ */
+export const PRODUCT_OPTIONS = [
+    'product-vegetables',
+    'product-fruits',
+    'product-meat',
+    'product-fish',
+    'product-sweets',
+    'product-dairy',
 ];
 
-export const METHOD_OPTIONS = [
-    'method-quick',
-    'method-on-the-go',
-    'method-few-ingredients',
-    'method-baking',
-    'method-casserole',
-    'method-simple',
-    'method-basic',
+export const CUISINE_OPTIONS = [
+    'cuisine-georgian',
+    'cuisine-italian',
+    'cuisine-greek',
+    'cuisine-mexican',
+    'cuisine-asian',
+    'cuisine-ukrainian',
 ];
 
 export const DIET_OPTIONS = [
@@ -80,13 +63,72 @@ export const DIET_OPTIONS = [
     'diet-detox',
 ];
 
-export const INGREDIENT_OPTIONS = [
-    'ingredient-vegetables',
-    'ingredient-fruits',
-    'ingredient-meat',
-    'ingredient-fish',
-    'ingredient-sweets',
+/** Emoji companions for the filter option chips (594:43425). */
+export const OPTION_EMOJI: Record<string, string> = {
+    'product-vegetables': '🥦',
+    'product-fruits': '🍓',
+    'product-meat': '🥩',
+    'product-fish': '🐟',
+    'product-sweets': '🍬',
+    'product-dairy': '🥛',
+    'cuisine-georgian': '🇬🇪',
+    'cuisine-italian': '🇮🇹',
+    'cuisine-greek': '🇬🇷',
+    'cuisine-mexican': '🇲🇽',
+    'cuisine-asian': '🌏',
+    'cuisine-ukrainian': '🇺🇦',
+    'diet-vegetarian': '🌿',
+    'diet-vegan': '🌱',
+    'diet-low-carb': '🥦',
+    'diet-low-fat': '🫀',
+    'diet-low-calorie': '🥬',
+    'diet-high-protein': '💪',
+    'diet-high-fiber': '🌾',
+    'diet-keto': '🥑',
+    'diet-pescatarian': '🐟',
+    'diet-sugar-free': '🍭',
+    'diet-lactose-free': '🥛',
+    'diet-gluten-free': '🌾',
+    'diet-detox': '🌿',
+};
+
+/** «Пошук за інгредієнтами» quick picks — labels in `recipes:ingredients.*`. */
+export const FILTER_INGREDIENTS = [
+    'spinach',
+    'beans',
+    'tomatoes',
+    'beetroot',
+    'cabbage',
+    'carrot',
+    'onion',
+    'pepper',
+    'corn',
+    'radish',
+    'cucumbers',
+    'celery',
+    'garlic',
+    'parsley',
+    'zucchini',
 ];
+
+/**
+ * Emoji companions for the category chips on the filter screen (594:43425).
+ * «Перекуси» has no emoji in the mock — an obvious slip among 10 emoji chips,
+ * so the app gives it one (recorded in the spec).
+ */
+export const RAIL_CATEGORY_EMOJI: Record<string, string> = {
+    'savory-breakfast': '🥓',
+    'sweet-breakfast': '🍩',
+    lunch: '🍲',
+    dinner: '🍽️',
+    snacks: '🍿',
+    salads: '🥗',
+    pasta: '🍝',
+    bowls: '🥣',
+    smoothies: '🍹',
+    desserts: '🍰',
+    baking: '🥐',
+};
 
 export interface MealIngredient {
     id: string;
@@ -254,5 +296,109 @@ export const MOCK_RECIPES: MockRecipe[] = [
         image: require('../../../assets/images/recipes/mock-2.jpg'),
         isFavorite: false,
         isOwn: false,
+    },
+];
+
+export interface SearchIngredientResult {
+    id: string;
+    title: string;
+    subtitle: string;
+    protein: number;
+    fats: number;
+    carbs: number;
+}
+
+export interface SearchDishResult {
+    id: string;
+    title: string;
+    emoji: string;
+    /** Pastel thumb tint from the mock (594:43293) — the API will supply it per dish. */
+    thumbBg: string;
+    kcal: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+}
+
+// TODO: replace with GET /products/search?q= once the API ships.
+export const MOCK_SEARCH_INGREDIENTS: SearchIngredientResult[] = [
+    { id: 'ing-1', title: 'Банан', subtitle: '1 шт(89г) 350 ккал', protein: 150, fats: 0, carbs: 30 },
+];
+
+// TODO: replace with GET /recipes/search?q= once the API ships.
+export const MOCK_SEARCH_DISHES: SearchDishResult[] = [
+    {
+        id: 'dish-1',
+        title: 'Банановий пиріг',
+        emoji: '🍰',
+        thumbBg: '#FCE8E8',
+        kcal: 400,
+        protein: 150,
+        fats: 0,
+        carbs: 30,
+    },
+];
+
+// TODO: replace with GET /recipes?category= once the API ships.
+export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
+    {
+        id: 'cat-1',
+        title: 'Грецький салат',
+        emoji: '🥗',
+        thumbBg: '#FCE8E8',
+        kcal: 350,
+        protein: 150,
+        fats: 0,
+        carbs: 30,
+    },
+    {
+        id: 'cat-2',
+        title: 'Смажений лосось',
+        emoji: '🐟',
+        thumbBg: '#E8F1FC',
+        kcal: 389,
+        protein: 150,
+        fats: 120,
+        carbs: 30,
+    },
+    {
+        id: 'cat-3',
+        title: 'Рис з овочами та куркою',
+        emoji: '🍛',
+        thumbBg: '#FCF3E8',
+        kcal: 420,
+        protein: 180,
+        fats: 90,
+        carbs: 50,
+    },
+    {
+        id: 'cat-4',
+        title: 'Стейк зі свинини',
+        emoji: '🥩',
+        thumbBg: '#FCE8EE',
+        kcal: 500,
+        protein: 220,
+        fats: 160,
+        carbs: 10,
+    },
+    {
+        id: 'cat-5',
+        title: 'Гарбузовий суп-пюре',
+        emoji: '🍲',
+        thumbBg: '#F0FCE8',
+        kcal: 250,
+        protein: 50,
+        fats: 15,
+        carbs: 40,
+    },
+    {
+        id: 'cat-6',
+        title: 'Паста з соусом песто',
+        emoji: '🍝',
+        thumbBg: '#FCF3E8',
+        kcal: 480,
+        protein: 120,
+        fats: 180,
+        carbs: 60,
     },
 ];

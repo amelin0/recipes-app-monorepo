@@ -6,18 +6,25 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
+export type MacroChipsSize = 'sm' | 'md';
+
 export interface MacroChipsRowProps {
     protein: number;
     fats: number;
     carbs: number;
     /** Prepends the grey «ккал N» chip (list card / search rows). */
     kcal?: number;
+    /** sm — 16pt badges on recipe cards; md — 20pt on search result rows (594:43195). */
+    size?: MacroChipsSize;
 }
 
 /** Compact Б/Ж/В chip row used on recipe cards and search results. */
-export const MacroChipsRow = ({ protein, fats, carbs, kcal }: MacroChipsRowProps) => {
+export const MacroChipsRow = ({ protein, fats, carbs, kcal, size = 'sm' }: MacroChipsRowProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes', 'tracking']);
+
+    const valueVariant = size === 'md' ? 'bodySmallReg' : 'overline';
+    const badgeVariant = size === 'md' ? 'bodySmallBold' : 'overline';
 
     const chips = [
         {
@@ -44,7 +51,7 @@ export const MacroChipsRow = ({ protein, fats, carbs, kcal }: MacroChipsRowProps
     ];
 
     return (
-        <View style={styles.row}>
+        <View style={styles.row(size)}>
             {kcal !== undefined ? (
                 <View style={styles.kcalChip}>
                     <AppText variant="bodySmallReg" style={styles.kcalLabel}>
@@ -55,12 +62,12 @@ export const MacroChipsRow = ({ protein, fats, carbs, kcal }: MacroChipsRowProps
             ) : null}
             {chips.map(chip => (
                 <View key={chip.key} style={styles.chip}>
-                    <View style={[styles.badge, { backgroundColor: chip.bg }]}>
-                        <AppText variant="overline" style={{ color: chip.color }}>
+                    <View style={[styles.badge(size), { backgroundColor: chip.bg }]}>
+                        <AppText variant={badgeVariant} style={{ color: chip.color }}>
                             {chip.label}
                         </AppText>
                     </View>
-                    <AppText variant="overline">{chip.value}</AppText>
+                    <AppText variant={valueVariant}>{chip.value}</AppText>
                 </View>
             ))}
         </View>
@@ -68,11 +75,11 @@ export const MacroChipsRow = ({ protein, fats, carbs, kcal }: MacroChipsRowProps
 };
 
 const styles = StyleSheet.create(theme => ({
-    row: {
+    row: (size: MacroChipsSize) => ({
         flexDirection: 'row',
         alignItems: 'center',
-        gap: theme.spacing[1],
-    },
+        gap: size === 'md' ? theme.spacing[2] : theme.spacing[1],
+    }),
     chip: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -90,12 +97,12 @@ const styles = StyleSheet.create(theme => ({
     kcalLabel: {
         color: theme.colors.semantic.white,
     },
-    badge: {
-        minWidth: 16,
-        height: 16,
+    badge: (size: MacroChipsSize) => ({
+        minWidth: size === 'md' ? 20 : 16,
+        height: size === 'md' ? 20 : 16,
         paddingHorizontal: theme.spacing[1],
         borderRadius: theme.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
-    },
+    }),
 }));

@@ -116,8 +116,7 @@ export default function AppLayout() {
                 <Stack.Screen
                     name="meal-portions"
                     options={{
-                        // Той самий патерн, що й recipes-filter: bottom sheet
-                        // виглядом, але повноцінний екран.
+                        // Bottom sheet виглядом, але повноцінний екран.
                         presentation: 'formSheet',
                         // The dial sheet is nearly full height (811:58844).
                         sheetAllowedDetents: [0.86],
@@ -125,17 +124,7 @@ export default function AppLayout() {
                         sheetGrabberVisible: false,
                     }}
                 />
-                <Stack.Screen
-                    name="recipes-filter"
-                    options={{
-                        // Виглядає як bottom sheet, але це повноцінний екран
-                        // (вимога дизайну): iOS formSheet з детентом.
-                        presentation: 'formSheet',
-                        sheetAllowedDetents: [0.92],
-                        sheetCornerRadius: 24,
-                        sheetGrabberVisible: false,
-                    }}
-                />
+                <Stack.Screen name="recipes-filter" />
             </Stack.Protected>
         </Stack>
     );

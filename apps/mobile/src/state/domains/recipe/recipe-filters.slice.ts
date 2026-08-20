@@ -1,25 +1,27 @@
 import type { StateCreator } from 'zustand';
 
-export type RecipeFilterGroup = 'categories' | 'meals' | 'methods' | 'diets' | 'ingredients';
+export type RecipeFilterGroup = 'ingredients' | 'categories' | 'products' | 'cuisines' | 'diets';
 
 export interface RecipeFiltersState {
-    categories: string[];
-    meals: string[];
-    methods: string[];
-    diets: string[];
+    /** Named ingredients from «Пошук за інгредієнтами» (594:43425). */
     ingredients: string[];
+    categories: string[];
+    products: string[];
+    cuisines: string[];
+    diets: string[];
     /** Kcal per portion range; max 800 means "800+". */
     kcalRange: [number, number];
 }
 
 export const RECIPE_KCAL_RANGE: [number, number] = [0, 800];
+export const RECIPE_KCAL_STEP = 10;
 
 const INITIAL_FILTERS: RecipeFiltersState = {
-    categories: [],
-    meals: [],
-    methods: [],
-    diets: [],
     ingredients: [],
+    categories: [],
+    products: [],
+    cuisines: [],
+    diets: [],
     kcalRange: RECIPE_KCAL_RANGE,
 };
 
@@ -32,11 +34,11 @@ export interface RecipeFiltersSlice {
 
 /** Number of active filter selections (kcal range not counted). */
 export const countRecipeFilters = (filters: RecipeFiltersState): number =>
+    filters.ingredients.length +
     filters.categories.length +
-    filters.meals.length +
-    filters.methods.length +
-    filters.diets.length +
-    filters.ingredients.length;
+    filters.products.length +
+    filters.cuisines.length +
+    filters.diets.length;
 
 export const createRecipeFiltersSlice: StateCreator<RecipeFiltersSlice, [], [], RecipeFiltersSlice> = set => ({
     recipeFilters: INITIAL_FILTERS,
