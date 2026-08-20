@@ -70,7 +70,7 @@ export interface PickerIngredient {
     carbs: number;
 }
 
-/** Mock total the design quotes for every list (594:41618). */
+/** Mock total for un-narrowed lists and the ingredients tab (594:41618, 594:30951). */
 export const MOCK_PICKER_RESULTS_COUNT = 239;
 
 // TODO: replace with GET /recipes?meal= once the API ships.

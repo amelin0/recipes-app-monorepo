@@ -89,15 +89,15 @@ export const useAddDishScreen = () => {
         return chips;
     }, [recipeFilters, t]);
 
-    // Мок фільтрується лише швидким вибором на рейці; повну фільтрацію
-    // виконуватиме система.
-    const dishes = useMemo(
-        () =>
-            railCategory === null
-                ? MOCK_PICKER_DISHES
-                : MOCK_PICKER_DISHES.filter(dish => dish.category === railCategory),
-        [railCategory],
-    );
+    // Мок звужується рейкою або категоріями зі спільних фільтрів (594:31262);
+    // решту груп (інгредієнти, продукти, кухні, дієти, ккал) фільтрує система.
+    const categoryFilters = recipeFilters.categories;
+    const dishes = useMemo(() => {
+        if (railCategory !== null) return MOCK_PICKER_DISHES.filter(dish => dish.category === railCategory);
+        if (categoryFilters.length > 0)
+            return MOCK_PICKER_DISHES.filter(dish => categoryFilters.includes(dish.category));
+        return MOCK_PICKER_DISHES;
+    }, [railCategory, categoryFilters]);
 
     // The chips replace the rail (594:30640) — a hidden rail pick must not keep
     // narrowing the list with nothing to show or clear it.
@@ -105,10 +105,13 @@ export const useAddDishScreen = () => {
         if (appliedFilters.length > 0) setRailCategory(null);
     }, [appliedFilters.length]);
 
+    // TODO: створення власної страви — флоу ще не задизайнений (594:31406).
+    const handleCreateDish = () => ToastService.info(t('common:states.coming-soon'));
+
     const handleTabChange = (key: string) => {
         // «Створити» — власна страва, флоу ще не задизайнений.
         if (key === 'create') {
-            ToastService.info(t('common:states.coming-soon'));
+            handleCreateDish();
             return;
         }
         setActiveTab(key as AddDishTabKey);
@@ -142,12 +145,18 @@ export const useAddDishScreen = () => {
         appliedFilters,
         filtersCount: countRecipeFilters(recipeFilters),
         handleRemoveFilter: (chip: AppliedFilterChip) => toggleRecipeFilter(chip.group, chip.value),
-        resultsCount: activeTab === 'dishes' && railCategory !== null ? dishes.length : MOCK_PICKER_RESULTS_COUNT,
+        // «Інгредієнти» завжди цитує мок-загал (594:30951); списки страв
+        // показують довжину, щойно діє будь-яке звуження (594:31262).
+        resultsCount:
+            activeTab !== 'ingredients' && (railCategory !== null || appliedFilters.length > 0)
+                ? dishes.length
+                : MOCK_PICKER_RESULTS_COUNT,
         dishes,
         ingredients: MOCK_PICKER_INGREDIENTS,
         isAdded: (dishId: string) => Boolean(added[dishId]),
         addedCount: Object.keys(added).length,
         handleToggleDish,
+        handleCreateDish,
         // TODO: пошук у пікері — дизайну ще немає.
         handleSearchPress: () => ToastService.info(t('common:states.coming-soon')),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),

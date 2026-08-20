@@ -45,6 +45,7 @@ export const AddDishScreen = () => {
         isAdded,
         addedCount,
         handleToggleDish,
+        handleCreateDish,
         handleSearchPress,
         handleFilterPress,
         handleIngredientPress,
@@ -151,10 +152,22 @@ export const AddDishScreen = () => {
                         <ShrugMascot width={200} height={200} />
                         <View style={styles.notFoundMessage}>
                             <AppText variant="bodyLargeBold">{t('meal-plan:add-dish.not-found-title')}</AppText>
-                            <AppText variant="bodyLargeReg" style={styles.mutedText}>
-                                {t('meal-plan:add-dish.not-found-subtitle')}
+                            <AppText variant="bodyLargeReg" style={styles.notFoundSubtitle}>
+                                {t(
+                                    activeTab === 'own'
+                                        ? 'meal-plan:add-dish.not-found-subtitle-own'
+                                        : 'meal-plan:add-dish.not-found-subtitle',
+                                )}
                             </AppText>
                         </View>
+                        {/* «Власні» пропонує одразу створити страву (594:31406). */}
+                        {activeTab === 'own' ? (
+                            <AppButton
+                                label={t('meal-plan:add-dish.create-dish')}
+                                onPress={handleCreateDish}
+                                fullWidth
+                            />
+                        ) : null}
                     </View>
                 ) : showDishes ? (
                     dishes.map(dish => (
@@ -249,6 +262,10 @@ const styles = StyleSheet.create(theme => ({
     },
     chipsViewport: {
         marginHorizontal: -theme.spacing[4],
+        // 16 down to the count; without chips/rail the count sits 16 under
+        // the tabs on the paddings alone (594:31121). 594:31262/30951 draw
+        // this one as 8 — inconsistent with 594:31406/30106, kept at 16.
+        marginBottom: theme.spacing[2],
     },
     chipsRow: {
         gap: theme.spacing[2],
@@ -257,6 +274,8 @@ const styles = StyleSheet.create(theme => ({
     section: {
         gap: theme.spacing[2],
         width: '100%',
+        // 16 down to the count (594:30106).
+        marginBottom: theme.spacing[2],
     },
     railViewport: {
         marginHorizontal: -theme.spacing[4],
@@ -267,8 +286,6 @@ const styles = StyleSheet.create(theme => ({
     },
     countText: {
         color: theme.colors.semantic.darkGrey,
-        // 16 below the rail/chips — the list keeps the scroll's 8 (594:30106).
-        marginTop: theme.spacing[2],
     },
     notFound: {
         alignItems: 'center',
@@ -280,7 +297,8 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         gap: theme.spacing[2],
     },
-    mutedText: {
+    notFoundSubtitle: {
         color: theme.colors.semantic.darkGrey,
+        textAlign: 'center',
     },
 }));
