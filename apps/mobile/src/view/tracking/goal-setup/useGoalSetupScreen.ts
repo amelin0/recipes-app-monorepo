@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { router } from 'expo-router';
+import { usePreventRemove } from '@react-navigation/native';
+import { router, useNavigation } from 'expo-router';
 
 import type { MacroKey } from '@/shared/ui/components';
 import { ToastService } from '@/shared/services';
@@ -11,6 +12,8 @@ import type { GoalParam, MacroBalanceSegment } from './components';
 export type GoalKey = 'loss' | 'maintain' | 'gain';
 export type NutrientKey = MacroKey | 'water' | 'fiber';
 
+/** Where the questionnaire leaves the goal; TODO: read the saved one. */
+const CALORIE_GOAL_DEFAULT = 1850;
 const CALORIE_STEP = 50;
 const CALORIE_MIN = 1000;
 const CALORIE_MAX = 5000;
@@ -50,8 +53,19 @@ const KCAL_PER_GRAM: Record<MacroKey, number> = {
 export const useGoalSetupScreen = () => {
     const { t } = useAppTranslation(['tracking']);
 
-    const [calories, setCalories] = useState(1850);
+    const navigation = useNavigation();
+
+    const [savedCalories, setSavedCalories] = useState(CALORIE_GOAL_DEFAULT);
+    const [calories, setCalories] = useState(CALORIE_GOAL_DEFAULT);
     const values = NUTRIENT_VALUES;
+
+    // Leaving with unsaved changes asks first (811:37310).
+    const isDirty = calories !== savedCalories;
+    const [pendingExit, setPendingExit] = useState<(() => void) | null>(null);
+
+    usePreventRemove(isDirty, ({ data }) => {
+        setPendingExit(() => () => navigation.dispatch(data.action));
+    });
 
     const selectedGoal = useMemo(() => GOALS.find(goal => goal.calories === calories)?.key, [calories]);
 
@@ -120,13 +134,37 @@ export const useGoalSetupScreen = () => {
         [t],
     );
 
-    const handleSave = useCallback(() => {
+    const commit = useCallback(() => {
         // TODO: PUT /nutrition/goal once the API ships — mock success.
+        setSavedCalories(calories);
         ToastService.success(t('tracking:goal-setup.saved'));
+    }, [calories, t]);
+
+    const handleSave = useCallback(() => {
+        commit();
         if (router.canGoBack()) {
             router.back();
         }
-    }, [t]);
+    }, [commit]);
+
+    /** «Зберегти зміни» in the sheet: save, then continue leaving. */
+    const handleConfirmExit = useCallback(() => {
+        const leave = pendingExit;
+        setPendingExit(null);
+        commit();
+        leave?.();
+    }, [commit, pendingExit]);
+
+    /** «Продовжити без змін»: drop the edits and leave. */
+    const handleDiscardExit = useCallback(() => {
+        const leave = pendingExit;
+        setPendingExit(null);
+        setCalories(savedCalories);
+        leave?.();
+    }, [pendingExit, savedCalories]);
+
+    /** The × and the scrim: stay on the screen. */
+    const handleDismissExit = useCallback(() => setPendingExit(null), []);
 
     return {
         params,
@@ -140,5 +178,9 @@ export const useGoalSetupScreen = () => {
         handleIncreaseCalories,
         handleChangeNutrient,
         handleSave,
+        isExitPending: pendingExit !== null,
+        handleConfirmExit,
+        handleDiscardExit,
+        handleDismissExit,
     };
 };

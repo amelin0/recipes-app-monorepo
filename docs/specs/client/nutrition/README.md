@@ -18,7 +18,7 @@ UI обох екранів уже реалізовано в мобільному
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
 | [Daily tracking (Головний екран)](./daily-tracking/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Goal setup (Налаштування цілі)](./goal-setup/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Goal setup (Налаштування цілі)](./goal-setup/spec.md) | Draft | @amelin0 | 2026-08-20 |
 | [Meal logging (Відмітити прийом їжі)](./meal-logging/spec.md) | Draft | @amelin0 | 2026-08-19 |
 
 ## Related

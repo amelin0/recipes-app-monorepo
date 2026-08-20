@@ -3,14 +3,22 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppButton, AppScreen, AppText, CircleBackButton, SectionHeader, SelectCard } from '@/shared/ui/components';
+import {
+    AppButton,
+    AppScreen,
+    AppText,
+    CircleBackButton,
+    ConfirmSheet,
+    SectionHeader,
+    SelectCard,
+} from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { CalorieStepper, GoalParamsSection, MacroBalanceCard, NutrientRow } from './components';
 import { useGoalSetupScreen } from './useGoalSetupScreen';
 
 export const GoalSetupScreen = () => {
-    const { t } = useAppTranslation(['tracking']);
+    const { t } = useAppTranslation(['tracking', 'common']);
     const {
         params,
         goals,
@@ -23,6 +31,10 @@ export const GoalSetupScreen = () => {
         handleIncreaseCalories,
         handleChangeNutrient,
         handleSave,
+        isExitPending,
+        handleConfirmExit,
+        handleDiscardExit,
+        handleDismissExit,
     } = useGoalSetupScreen();
 
     return (
@@ -81,6 +93,18 @@ export const GoalSetupScreen = () => {
                     />
                 ))}
             </ScrollView>
+
+            <ConfirmSheet
+                visible={isExitPending}
+                title={t('tracking:goal-setup.unsaved.title')}
+                description={t('tracking:goal-setup.unsaved.description')}
+                confirmLabel={t('tracking:goal-setup.unsaved.save')}
+                onConfirm={handleConfirmExit}
+                cancelLabel={t('tracking:goal-setup.unsaved.discard')}
+                onCancel={handleDiscardExit}
+                onDismiss={handleDismissExit}
+                closeAccessibilityLabel={t('common:actions.close')}
+            />
         </AppScreen>
     );
 };
