@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import {
@@ -10,6 +11,7 @@ import {
     AppText,
     CategoryTile,
     MacroChipsRow,
+    PickRow,
     SectionHeader,
     TopBar,
 } from '@/shared/ui/components';
@@ -21,6 +23,9 @@ import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
 
 import { useRecipeSearchScreen } from './useRecipeSearchScreen';
 
+/** Тумб страви заливається дизайновим градієнтом (594:42913). */
+const GRADIENT = { x1: '-0.056', y1: '0.055', x2: '1.056', y2: '0.945' };
+
 /** Пошук — categories grid, live results, and category mode (594:43242/43181/43293). */
 export const RecipeSearchScreen = () => {
     const { theme } = useUnistyles();
@@ -29,9 +34,13 @@ export const RecipeSearchScreen = () => {
         categoryKey,
         categoryLabelKey,
         query,
+        debouncedQuery,
         setQuery,
         ingredientResults,
         dishResults,
+        isPicker,
+        isAdded,
+        handleToggleSearchDish,
         handleClear,
         handleCategoryPress,
         handleFilterPress,
@@ -39,8 +48,9 @@ export const RecipeSearchScreen = () => {
         handleDishPress,
     } = useRecipeSearchScreen();
 
-    const showCategories = !categoryKey && query.length === 0;
-    const showQueryResults = !categoryKey && query.length > 0;
+    // Сітка тримається, поки відкладений запит порожній (594:43001).
+    const showCategories = !categoryKey && debouncedQuery.length === 0;
+    const showQueryResults = !categoryKey && debouncedQuery.length > 0;
 
     const renderSectionTitle = (title: string, count: number) => (
         <View style={styles.sectionTitleRow}>
@@ -58,7 +68,16 @@ export const RecipeSearchScreen = () => {
             onPress={() => handleDishPress(dish.id)}
             style={styles.resultCard}
         >
-            <View style={[styles.dishThumb, { backgroundColor: dish.thumbBg }]}>
+            <View style={styles.dishThumb}>
+                <Svg style={StyleSheet.absoluteFill}>
+                    <Defs>
+                        <LinearGradient id="searchThumb" {...GRADIENT}>
+                            <Stop offset="0" stopColor={theme.colors.gradient.dishFrom} />
+                            <Stop offset="1" stopColor={theme.colors.gradient.dishTo} />
+                        </LinearGradient>
+                    </Defs>
+                    <Rect x="0" y="0" width="100%" height="100%" fill="url(#searchThumb)" />
+                </Svg>
                 <AppText style={styles.dishEmoji}>{dish.emoji}</AppText>
             </View>
             <View style={styles.resultBody}>
@@ -149,34 +168,61 @@ export const RecipeSearchScreen = () => {
                     <>
                         <View style={styles.section}>
                             {renderSectionTitle(t('recipes:search.ingredients-section'), ingredientResults.length)}
-                            {ingredientResults.map(item => (
-                                <Pressable
-                                    key={item.id}
-                                    accessibilityRole="button"
-                                    onPress={() => handleResultPress(item.id)}
-                                    style={styles.resultCard}
-                                >
-                                    <View style={[styles.resultBody, styles.ingredientBody]}>
-                                        <AppText variant="bodySmallBold" numberOfLines={1}>
-                                            {item.title}
-                                        </AppText>
-                                        <AppText variant="bodySmallReg" style={styles.mutedText}>
-                                            {item.subtitle}
-                                        </AppText>
-                                        <MacroChipsRow
-                                            size="md"
-                                            protein={item.protein}
-                                            fats={item.fats}
-                                            carbs={item.carbs}
-                                        />
-                                    </View>
-                                </Pressable>
-                            ))}
+                            {isPicker
+                                ? ingredientResults.map(item => (
+                                      <PickRow
+                                          key={item.id}
+                                          title={item.title}
+                                          subtitle={item.subtitle}
+                                          protein={item.protein}
+                                          fats={item.fats}
+                                          carbs={item.carbs}
+                                          onAdd={() => handleResultPress(item.id)}
+                                      />
+                                  ))
+                                : ingredientResults.map(item => (
+                                      <Pressable
+                                          key={item.id}
+                                          accessibilityRole="button"
+                                          onPress={() => handleResultPress(item.id)}
+                                          style={styles.resultCard}
+                                      >
+                                          <View style={[styles.resultBody, styles.ingredientBody]}>
+                                              <AppText variant="bodySmallBold" numberOfLines={1}>
+                                                  {item.title}
+                                              </AppText>
+                                              <AppText variant="bodySmallReg" style={styles.mutedText}>
+                                                  {item.subtitle}
+                                              </AppText>
+                                              <MacroChipsRow
+                                                  size="md"
+                                                  protein={item.protein}
+                                                  fats={item.fats}
+                                                  carbs={item.carbs}
+                                              />
+                                          </View>
+                                      </Pressable>
+                                  ))}
                         </View>
 
                         <View style={styles.section}>
                             {renderSectionTitle(t('recipes:search.dishes-section'), dishResults.length)}
-                            {dishResults.map(renderDishCard)}
+                            {isPicker
+                                ? dishResults.map(dish => (
+                                      <PickRow
+                                          key={dish.id}
+                                          title={dish.title}
+                                          subtitle={t('recipes:list.kcal', { count: dish.kcal })}
+                                          emoji={dish.emoji}
+                                          protein={dish.protein}
+                                          fats={dish.fats}
+                                          carbs={dish.carbs}
+                                          added={isAdded(dish.id)}
+                                          onAdd={() => handleToggleSearchDish(dish)}
+                                          onPress={() => handleDishPress(dish.id)}
+                                      />
+                                  ))
+                                : dishResults.map(renderDishCard)}
                         </View>
                     </>
                 ) : null}
@@ -186,7 +232,22 @@ export const RecipeSearchScreen = () => {
                         <AppText variant="buttonTab" style={styles.countText}>
                             {t('recipes:search.results-count', { count: dishResults.length })}
                         </AppText>
-                        {dishResults.map(renderDishCard)}
+                        {isPicker
+                            ? dishResults.map(dish => (
+                                  <PickRow
+                                      key={dish.id}
+                                      title={dish.title}
+                                      subtitle={t('recipes:list.kcal', { count: dish.kcal })}
+                                      emoji={dish.emoji}
+                                      protein={dish.protein}
+                                      fats={dish.fats}
+                                      carbs={dish.carbs}
+                                      added={isAdded(dish.id)}
+                                      onAdd={() => handleToggleSearchDish(dish)}
+                                      onPress={() => handleDishPress(dish.id)}
+                                  />
+                              ))
+                            : dishResults.map(renderDishCard)}
                     </View>
                 ) : null}
             </ScrollView>

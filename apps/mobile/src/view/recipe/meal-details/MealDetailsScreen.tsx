@@ -15,6 +15,7 @@ import {
 } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
+import AddIcon from '../../../../assets/icons/add.svg';
 import CutleryIcon from '../../../../assets/icons/cutlery.svg';
 import EditIcon from '../../../../assets/icons/edit.svg';
 import ExportIcon from '../../../../assets/icons/export.svg';
@@ -32,13 +33,14 @@ export const MealDetailsScreen = () => {
     const { t } = useAppTranslation(['recipes']);
     const {
         meal,
+        isPlanMode,
         activeTab,
         setActiveTab,
         isFavorite,
         handleToggleFavorite,
         handleEdit,
         handleShare,
-        handleAddToShoppingList,
+        handleAddToPlan,
         handleLogMeal,
     } = useMealDetailsScreen();
 
@@ -65,31 +67,45 @@ export const MealDetailsScreen = () => {
 
                     <SegmentedControl
                         items={[
-                            { key: 'method', label: t('recipes:details.tabs.method') },
                             { key: 'ingredients', label: t('recipes:details.tabs.ingredients') },
+                            { key: 'method', label: t('recipes:details.tabs.method') },
                         ]}
                         activeKey={activeTab}
                         onChange={setActiveTab}
+                        equalWidths
                     />
 
                     {activeTab === 'ingredients' ? (
                         <View style={styles.tabContent}>
+                            <AppText variant="bodyLargeBold" accessibilityRole="header">
+                                {t('recipes:details.tabs.ingredients')}
+                            </AppText>
                             {meal.ingredients.map(ingredient => (
                                 <IngredientRow key={ingredient.id} ingredient={ingredient} />
                             ))}
-                            <AppButton
-                                variant="secondary"
-                                size="md"
-                                fullWidth
-                                label={t('recipes:details.add-to-shopping-list')}
-                                onPress={handleAddToShoppingList}
-                            />
                         </View>
                     ) : (
                         <MethodCard
                             ingredients={meal.ingredients.map(ingredient => ingredient.name)}
                             time={t('recipes:list.minutes', { count: meal.minutes })}
                             steps={meal.steps}
+                        />
+                    )}
+
+                    {/* CTA скролиться разом зі змістом (984:58839). */}
+                    {isPlanMode ? (
+                        <AppButton
+                            fullWidth
+                            label={t('recipes:details.add-to-ration')}
+                            onPress={handleAddToPlan}
+                            leftSlot={<AddIcon width={24} height={24} color={theme.colors.semantic.white} />}
+                        />
+                    ) : (
+                        <AppButton
+                            fullWidth
+                            label={t('recipes:details.log-meal')}
+                            onPress={handleLogMeal}
+                            leftSlot={<CutleryIcon width={24} height={24} color={theme.colors.semantic.white} />}
                         />
                     )}
                 </View>
@@ -116,15 +132,6 @@ export const MealDetailsScreen = () => {
                     </CircleIconButton>
                 </View>
             </View>
-
-            <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing[2] }]}>
-                <AppButton
-                    fullWidth
-                    label={t('recipes:details.log-meal')}
-                    onPress={handleLogMeal}
-                    leftSlot={<CutleryIcon width={24} height={24} color={theme.colors.semantic.white} />}
-                />
-            </View>
         </View>
     );
 };
@@ -135,7 +142,8 @@ const styles = StyleSheet.create(theme => ({
         backgroundColor: theme.colors.semantic.white,
     },
     scroll: {
-        paddingBottom: 140,
+        // Разом із нижнім падінгом «полотна» дає 40 під CTA (984:58841).
+        paddingBottom: theme.spacing[6],
     },
     hero: {
         width: '100%',
@@ -174,20 +182,5 @@ const styles = StyleSheet.create(theme => ({
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing[2],
-    },
-    footer: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-        paddingHorizontal: theme.spacing[4],
-        paddingTop: theme.spacing[2],
-        backgroundColor: theme.colors.semantic.white,
-    },
-    footerButton: {
-        flex: 1,
     },
 }));

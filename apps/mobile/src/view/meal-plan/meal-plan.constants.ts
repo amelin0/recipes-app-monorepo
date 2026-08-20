@@ -50,10 +50,10 @@ export interface PickerDish {
     id: string;
     title: string;
     emoji: string;
-    /** Pastel thumb tint from the mock (594:30155). */
-    thumbBg: string;
     /** Rail-category key — lets the quick rail pick filter the mock list. */
     category: string;
+    /** «Улюблені» показують лише позначені страви (594:31435). */
+    isFavorite?: boolean;
     kcal: number;
     protein: number;
     fats: number;
@@ -79,8 +79,8 @@ export const MOCK_PICKER_DISHES: PickerDish[] = [
         id: 'greek-salad',
         title: 'Грецький салат',
         emoji: '🥗',
-        thumbBg: '#FCE8E8',
         category: 'salads',
+        isFavorite: true,
         kcal: 350,
         protein: 150,
         fats: 0,
@@ -90,7 +90,6 @@ export const MOCK_PICKER_DISHES: PickerDish[] = [
         id: 'salmon',
         title: 'Смажений лосось',
         emoji: '🐟',
-        thumbBg: '#E8F1FC',
         category: 'dinner',
         kcal: 389,
         protein: 150,
@@ -101,7 +100,6 @@ export const MOCK_PICKER_DISHES: PickerDish[] = [
         id: 'rice-chicken',
         title: 'Рис з овочами та куркою',
         emoji: '🍛',
-        thumbBg: '#FCF3E8',
         category: 'lunch',
         kcal: 420,
         protein: 180,
@@ -112,7 +110,6 @@ export const MOCK_PICKER_DISHES: PickerDish[] = [
         id: 'pork-steak',
         title: 'Стейк зі свинини',
         emoji: '🥩',
-        thumbBg: '#FCE8EE',
         category: 'lunch',
         kcal: 500,
         protein: 220,
@@ -123,7 +120,6 @@ export const MOCK_PICKER_DISHES: PickerDish[] = [
         id: 'pumpkin-soup',
         title: 'Гарбузовий суп-пюре',
         emoji: '🍲',
-        thumbBg: '#F0FCE8',
         category: 'lunch',
         kcal: 250,
         protein: 50,
@@ -134,7 +130,6 @@ export const MOCK_PICKER_DISHES: PickerDish[] = [
         id: 'pesto-pasta',
         title: 'Паста з соусом песто',
         emoji: '🍝',
-        thumbBg: '#FCF3E8',
         category: 'pasta',
         kcal: 480,
         protein: 120,

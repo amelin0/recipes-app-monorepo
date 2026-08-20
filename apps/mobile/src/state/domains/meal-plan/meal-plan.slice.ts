@@ -19,6 +19,84 @@ export type PlanMealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export const PLAN_MEAL_KEYS: PlanMealKey[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+/**
+ * Розбирає day/meal з діплінка: невідомий день/прийом відкидається на
+ * mon/lunch, щоб додавання не «зникало» в неіснуючому прийомі.
+ */
+export const resolvePlanTarget = (
+    planWeek: PlanDay[],
+    dayParam: unknown,
+    mealParam: unknown,
+): { day: string; meal: PlanMealKey } => {
+    const dayValue = typeof dayParam === 'string' ? dayParam : undefined;
+    const mealValue = typeof mealParam === 'string' ? mealParam : undefined;
+    return {
+        day: dayValue !== undefined && planWeek.some(planDay => planDay.key === dayValue) ? dayValue : 'mon',
+        meal: PLAN_MEAL_KEYS.find(key => key === mealValue) ?? 'lunch',
+    };
+};
+
+export interface PlanDishInput {
+    id: string;
+    emoji: string;
+    name: string;
+    calories: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+}
+
+/** Збирає PlanDish з плоских КБЖВ — спільне для всіх шляхів додавання. */
+export const buildPlanDish = (input: PlanDishInput): PlanDish => ({
+    id: input.id,
+    emoji: input.emoji,
+    name: input.name,
+    calories: input.calories,
+    macros: [
+        { key: 'protein', value: input.protein },
+        { key: 'fats', value: input.fats },
+        { key: 'carbs', value: input.carbs },
+    ],
+});
+
+/**
+ * Страви, додані через пікер, позначаються в id — так тік у пікері,
+ * пошуку й деталях читається прямо зі стору, без локальних мап.
+ */
+const PICKED_PREFIX = 'picked:';
+
+export const pickedPlanId = (pickerId: string) => `${PICKED_PREFIX}${pickerId}:${Date.now()}`;
+
+/** Повертає pickerId, якщо страву додано пікером, інакше null. */
+export const pickedIdOf = (planDishId: string): string | null => {
+    if (!planDishId.startsWith(PICKED_PREFIX)) return null;
+    const rest = planDishId.slice(PICKED_PREFIX.length);
+    const sep = rest.lastIndexOf(':');
+    return sep === -1 ? null : rest.slice(0, sep);
+};
+
+/** Страви прийому та лічильник доданих пікером — спільний селектор. */
+export const pickedInMeal = (planWeek: PlanDay[], dayKey: string, mealKey: PlanMealKey) => {
+    const dishes = planWeek.find(day => day.key === dayKey)?.meals.find(meal => meal.key === mealKey)?.dishes ?? [];
+    const pickedIds = new Set<string>();
+    dishes.forEach(dish => {
+        const pickerId = pickedIdOf(dish.id);
+        if (pickerId !== null) pickedIds.add(pickerId);
+    });
+    return {
+        isAdded: (pickerId: string) => pickedIds.has(pickerId),
+        addedCount: pickedIds.size,
+        /** Останній доданий запис цієї страви — його знімає повторний тап. */
+        lastPlanIdOf: (pickerId: string) => {
+            for (let index = dishes.length - 1; index >= 0; index -= 1) {
+                const dish = dishes[index];
+                if (dish !== undefined && pickedIdOf(dish.id) === pickerId) return dish.id;
+            }
+            return null;
+        },
+    };
+};
+
 export type PlanMacroKey = 'protein' | 'fats' | 'carbs';
 
 export interface PlanDishMacro {

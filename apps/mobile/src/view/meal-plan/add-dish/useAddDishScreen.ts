@@ -5,8 +5,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
-import { PLAN_MEAL_KEYS, type PlanDish } from '@/state/domains/meal-plan';
 import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/recipe';
+
+import { buildPlanDish, pickedInMeal, pickedPlanId, resolvePlanTarget } from '@/state/domains/meal-plan';
 
 import { RECIPE_RAIL_CATEGORIES } from '../../recipe/recipe.constants';
 import {
@@ -25,18 +26,6 @@ export interface AppliedFilterChip {
     label: string;
 }
 
-const toPlanDish = (dish: PickerDish, planId: string): PlanDish => ({
-    id: planId,
-    emoji: dish.emoji,
-    name: dish.title,
-    calories: dish.kcal,
-    macros: [
-        { key: 'protein', value: dish.protein },
-        { key: 'fats', value: dish.fats },
-        { key: 'carbs', value: dish.carbs },
-    ],
-});
-
 export const useAddDishScreen = () => {
     const { t } = useAppTranslation(['meal-plan', 'recipes', 'common']);
     const params = useLocalSearchParams<{ day?: string; meal?: string }>();
@@ -49,18 +38,16 @@ export const useAddDishScreen = () => {
 
     // A deep link may carry anything — an unknown day/meal must not silently
     // no-op in the store while the rows still flip to «додано».
-    const dayParam = typeof params.day === 'string' ? params.day : undefined;
-    const mealParam = typeof params.meal === 'string' ? params.meal : undefined;
-    const day = dayParam !== undefined && planWeek.some(planDay => planDay.key === dayParam) ? dayParam : 'mon';
-    const meal = PLAN_MEAL_KEYS.find(key => key === mealParam) ?? 'lunch';
+    const { day, meal } = resolvePlanTarget(planWeek, params.day, params.meal);
+
+    // Тік і лічильник читаються зі стору — додавання з деталей страви
+    // (984:58839) підсвічує рядок так само, як «+» у списку.
+    const picked = pickedInMeal(planWeek, day, meal);
 
     const [activeTab, setActiveTab] = useState<AddDishTabKey>('dishes');
 
     /** Quick rail pick — local, unlike the filter screen's shared set (594:30462). */
     const [railCategory, setRailCategory] = useState<string | null>(null);
-    // pickerId → the unique id the dish got in the plan (the plan may already
-    // hold the same mock dish, so ids must not collide).
-    const [added, setAdded] = useState<Record<string, string>>({});
 
     // Applied chips mirror the recipes tab (594:30640) — plain labels, removable.
     const appliedFilters = useMemo<AppliedFilterChip[]>(() => {
@@ -93,11 +80,12 @@ export const useAddDishScreen = () => {
     // решту груп (інгредієнти, продукти, кухні, дієти, ккал) фільтрує система.
     const categoryFilters = recipeFilters.categories;
     const dishes = useMemo(() => {
-        if (railCategory !== null) return MOCK_PICKER_DISHES.filter(dish => dish.category === railCategory);
-        if (categoryFilters.length > 0)
-            return MOCK_PICKER_DISHES.filter(dish => categoryFilters.includes(dish.category));
-        return MOCK_PICKER_DISHES;
-    }, [railCategory, categoryFilters]);
+        const base =
+            activeTab === 'favorites' ? MOCK_PICKER_DISHES.filter(dish => dish.isFavorite) : MOCK_PICKER_DISHES;
+        if (railCategory !== null) return base.filter(dish => dish.category === railCategory);
+        if (categoryFilters.length > 0) return base.filter(dish => categoryFilters.includes(dish.category));
+        return base;
+    }, [activeTab, railCategory, categoryFilters]);
 
     // The chips replace the rail (594:30640) — a hidden rail pick must not keep
     // narrowing the list with nothing to show or clear it.
@@ -120,18 +108,22 @@ export const useAddDishScreen = () => {
     };
 
     const handleToggleDish = (dish: PickerDish) => {
-        const planId = added[dish.id];
-        if (planId) {
+        const planId = picked.lastPlanIdOf(dish.id);
+        if (planId !== null) {
             removePlanDish(day, meal, planId);
-            setAdded(prev => {
-                const { [dish.id]: _removed, ...rest } = prev;
-                return rest;
-            });
             return;
         }
-        const newId = `${dish.id}-${Date.now()}`;
-        addPlanDishes(day, meal, [toPlanDish(dish, newId)]);
-        setAdded(prev => ({ ...prev, [dish.id]: newId }));
+        addPlanDishes(day, meal, [
+            buildPlanDish({
+                id: pickedPlanId(dish.id),
+                emoji: dish.emoji,
+                name: dish.title,
+                calories: dish.kcal,
+                protein: dish.protein,
+                fats: dish.fats,
+                carbs: dish.carbs,
+            }),
+        ]);
     };
 
     return {
@@ -145,20 +137,26 @@ export const useAddDishScreen = () => {
         appliedFilters,
         filtersCount: countRecipeFilters(recipeFilters),
         handleRemoveFilter: (chip: AppliedFilterChip) => toggleRecipeFilter(chip.group, chip.value),
-        // «Інгредієнти» завжди цитує мок-загал (594:30951); списки страв
-        // показують довжину, щойно діє будь-яке звуження (594:31262).
+        // «Інгредієнти» завжди цитує мок-загал (594:30951); «Улюблені» —
+        // власну довжину (594:31435); решта списків — кількість збігів,
+        // щойно діє будь-яке звуження (594:31262).
         resultsCount:
-            activeTab !== 'ingredients' && (railCategory !== null || appliedFilters.length > 0)
+            activeTab === 'favorites'
                 ? dishes.length
-                : MOCK_PICKER_RESULTS_COUNT,
+                : activeTab !== 'ingredients' && (railCategory !== null || appliedFilters.length > 0)
+                  ? dishes.length
+                  : MOCK_PICKER_RESULTS_COUNT,
         dishes,
         ingredients: MOCK_PICKER_INGREDIENTS,
-        isAdded: (dishId: string) => Boolean(added[dishId]),
-        addedCount: Object.keys(added).length,
+        isAdded: picked.isAdded,
+        addedCount: picked.addedCount,
         handleToggleDish,
+        // Тап по рядку — деталі страви з CTA «Додати до раціону» (984:58839).
+        handleDishPress: (dishId: string) =>
+            router.push({ pathname: '/(app)/meal-details', params: { id: dishId, mode: 'plan', day, meal } }),
         handleCreateDish,
-        // TODO: пошук у пікері — дизайну ще немає.
-        handleSearchPress: () => ToastService.info(t('common:states.coming-soon')),
+        // Пошук у режимі пікера — результати додаються до цього прийому (594:41918).
+        handleSearchPress: () => router.push({ pathname: '/(app)/recipe-search', params: { picker: '1', day, meal } }),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
         // TODO: додавання інгредієнта як страви прийому — контракт уточнюється.
         handleIngredientPress: () => ToastService.info(t('common:states.coming-soon')),

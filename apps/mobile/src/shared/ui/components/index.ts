@@ -16,6 +16,7 @@ export * from './pagination';
 export * from './pickers';
 export * from './placeholder';
 export * from './progress';
+export * from './rows';
 export * from './sheets';
 export * from './sliders';
 export * from './steppers';

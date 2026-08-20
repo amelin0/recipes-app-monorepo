@@ -11,6 +11,7 @@ import {
     Chip,
     CircleBackButton,
     CountDot,
+    PickRow,
     ScreenActions,
     SegmentedTabs,
 } from '@/shared/ui/components';
@@ -19,8 +20,6 @@ import { useAppTranslation } from '@/shared/utils/translations';
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
 import ShrugMascot from '../../../../assets/images/brand/mascot-shrug.svg';
-
-import { PickRow } from './components';
 
 import { useAddDishScreen } from './useAddDishScreen';
 
@@ -45,6 +44,7 @@ export const AddDishScreen = () => {
         isAdded,
         addedCount,
         handleToggleDish,
+        handleDishPress,
         handleCreateDish,
         handleSearchPress,
         handleFilterPress,
@@ -176,12 +176,12 @@ export const AddDishScreen = () => {
                             title={dish.title}
                             subtitle={t('recipes:list.kcal', { count: dish.kcal })}
                             emoji={dish.emoji}
-                            thumbBg={dish.thumbBg}
                             protein={dish.protein}
                             fats={dish.fats}
                             carbs={dish.carbs}
                             added={isAdded(dish.id)}
                             onAdd={() => handleToggleDish(dish)}
+                            onPress={() => handleDishPress(dish.id)}
                         />
                     ))
                 ) : (

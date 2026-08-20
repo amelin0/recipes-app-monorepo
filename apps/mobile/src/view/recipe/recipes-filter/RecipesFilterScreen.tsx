@@ -162,7 +162,8 @@ export const RecipesFilterScreen = () => {
 const styles = StyleSheet.create(theme => ({
     scroll: {
         paddingHorizontal: theme.spacing[4],
-        paddingBottom: theme.spacing[6],
+        // 40 під другою кнопкою (626:23348).
+        paddingBottom: theme.spacing[10],
         gap: theme.spacing[8],
     },
     section: {

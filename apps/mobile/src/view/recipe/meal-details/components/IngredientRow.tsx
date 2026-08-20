@@ -50,13 +50,11 @@ export const IngredientRow = ({ ingredient }: IngredientRowProps) => {
                     {macros.map(macro => (
                         <View key={macro.key} style={styles.macro}>
                             <View style={[styles.badge, { backgroundColor: macro.bg }]}>
-                                <AppText variant="bodySmallBold" style={{ color: macro.color }}>
+                                <AppText variant="bodySmallReg" style={{ color: macro.color }}>
                                     {macro.label}
                                 </AppText>
                             </View>
-                            <AppText variant="bodySmallReg" color="tertiary">
-                                {t('recipes:portions.grams-value', { value: macro.value })}
-                            </AppText>
+                            <AppText variant="bodySmallReg">{macro.value}</AppText>
                         </View>
                     ))}
                 </View>
@@ -94,10 +92,11 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         gap: theme.spacing[1],
     },
+    // 20×20 кругла піктограма макро (984:58871).
     badge: {
-        paddingHorizontal: theme.spacing[1],
-        paddingVertical: 2,
-        borderRadius: 4,
+        width: 20,
+        height: 20,
+        borderRadius: theme.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
     },

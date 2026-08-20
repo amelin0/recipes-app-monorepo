@@ -173,7 +173,7 @@ export const RAIL_CATEGORY_EMOJI: Record<string, string> = {
     'sweet-breakfast': '🍩',
     lunch: '🍲',
     dinner: '🍽️',
-    snacks: '🍿',
+    snacks: '🍌',
     salads: '🥗',
     pasta: '🍝',
     bowls: '🥣',
@@ -203,6 +203,8 @@ export interface MealStep {
 export interface MockMealDetail {
     id: string;
     title: string;
+    /** Пікерні шляхи додають страву в план з цією піктограмою. */
+    emoji: string;
     cuisine: string;
     minutes: number;
     kcal: number;
@@ -220,6 +222,7 @@ export interface MockMealDetail {
 export const MOCK_MEAL_DETAIL: MockMealDetail = {
     id: 'meal-1',
     title: 'Грецький салат',
+    emoji: '🥗',
     cuisine: 'Середземноморська кухня',
     minutes: 15,
     kcal: 1859,
@@ -364,8 +367,6 @@ export interface SearchDishResult {
     id: string;
     title: string;
     emoji: string;
-    /** Pastel thumb tint from the mock (594:43293) — the API will supply it per dish. */
-    thumbBg: string;
     kcal: number;
     protein: number;
     fats: number;
@@ -383,7 +384,6 @@ export const MOCK_SEARCH_DISHES: SearchDishResult[] = [
         id: 'dish-1',
         title: 'Банановий пиріг',
         emoji: '🍰',
-        thumbBg: '#FCE8E8',
         kcal: 400,
         protein: 150,
         fats: 0,
@@ -397,7 +397,6 @@ export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
         id: 'cat-1',
         title: 'Грецький салат',
         emoji: '🥗',
-        thumbBg: '#FCE8E8',
         kcal: 350,
         protein: 150,
         fats: 0,
@@ -407,7 +406,6 @@ export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
         id: 'cat-2',
         title: 'Смажений лосось',
         emoji: '🐟',
-        thumbBg: '#E8F1FC',
         kcal: 389,
         protein: 150,
         fats: 120,
@@ -417,7 +415,6 @@ export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
         id: 'cat-3',
         title: 'Рис з овочами та куркою',
         emoji: '🍛',
-        thumbBg: '#FCF3E8',
         kcal: 420,
         protein: 180,
         fats: 90,
@@ -427,7 +424,6 @@ export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
         id: 'cat-4',
         title: 'Стейк зі свинини',
         emoji: '🥩',
-        thumbBg: '#FCE8EE',
         kcal: 500,
         protein: 220,
         fats: 160,
@@ -437,7 +433,6 @@ export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
         id: 'cat-5',
         title: 'Гарбузовий суп-пюре',
         emoji: '🍲',
-        thumbBg: '#F0FCE8',
         kcal: 250,
         protein: 50,
         fats: 15,
@@ -447,10 +442,38 @@ export const MOCK_CATEGORY_DISHES: SearchDishResult[] = [
         id: 'cat-6',
         title: 'Паста з соусом песто',
         emoji: '🍝',
-        thumbBg: '#FCF3E8',
         kcal: 480,
         protein: 120,
         fats: 180,
         carbs: 60,
     },
 ];
+
+export interface MockCreatedDish {
+    id: string;
+    title: string;
+    cuisine: string;
+    emoji: string;
+    kcal: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+    /** «Вага: 634г» on the created-dish receipt (628:27032). */
+    weightGrams: number;
+    /** «15:00» in the timer tag. */
+    cookTime: string;
+}
+
+// TODO: replace with the POST /recipes response once the create-dish flow ships.
+export const MOCK_CREATED_DISH: MockCreatedDish = {
+    id: 'created-greek-salad',
+    title: 'Грецький салат',
+    cuisine: 'Грецька кухня',
+    emoji: '🥗',
+    kcal: 1859,
+    protein: 250,
+    fats: 267,
+    carbs: 180,
+    weightGrams: 634,
+    cookTime: '15:00',
+};

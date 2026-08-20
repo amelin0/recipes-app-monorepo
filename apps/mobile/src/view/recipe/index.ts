@@ -1,3 +1,4 @@
+export { DishCreatedScreen } from './dish-created';
 export { FilterIngredientsScreen } from './filter-ingredients';
 export { MealDetailsScreen } from './meal-details';
 export { MealPortionsScreen } from './meal-portions';

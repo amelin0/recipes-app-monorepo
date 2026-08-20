@@ -37,7 +37,7 @@
     "filter": {
         "title": "Фільтри",
         "ingredients-title": "Пошук за інгредієнтами",
-        "ingredients-all": "Всі",
+        "ingredients-all": "Переглянути всі",
         "catalog-title": "Всі інгредієнти",
         "catalog-placeholder": "Пошук інгредієнтів",
         "apply": "Застосувати",
@@ -97,7 +97,6 @@
             "method": "Спосіб приготування"
         },
         "kcal-label": "ккал",
-        "add-to-shopping-list": "Додати до списку продуктів",
         "add-to-ration": "Додати до раціону",
         "needed-ingredients": "Потрібні інгредієнти",
         "cook-time": "Час приготування",
@@ -181,5 +180,10 @@
         "spinach-zelenyi": "Листя шпинату сорту Зелений",
         "eggplant": "Баклажан",
         "eggplant-puree": "Пюре баклажана"
+    },
+    "dish-created": {
+        "title": "Страву створено та додано у власні",
+        "weight": "Вага: {{value}}г",
+        "go-home": "Повернутись на головну"
     }
 }

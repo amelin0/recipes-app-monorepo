@@ -25,7 +25,7 @@ export const MacroChipsRow = ({ protein, fats, carbs, kcal, size = 'sm' }: Macro
     const { t } = useAppTranslation(['recipes', 'tracking']);
 
     const valueVariant = size === 'md' ? 'bodySmallReg' : 'overline';
-    const badgeVariant = size === 'md' ? 'bodySmallBold' : 'overline';
+    const badgeVariant = size === 'md' ? 'bodySmallReg' : 'overline';
 
     const chips = [
         {
