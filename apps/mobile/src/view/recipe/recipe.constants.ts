@@ -477,3 +477,35 @@ export const MOCK_CREATED_DISH: MockCreatedDish = {
     weightGrams: 634,
     cookTime: '15:00',
 };
+
+/** Кухні шторки «Кухня» у порядку дизайну (626:24661). */
+export const CREATE_DISH_CUISINES = [
+    'cuisine-ukrainian',
+    'cuisine-greek',
+    'cuisine-italian',
+    'cuisine-mexican',
+    'cuisine-georgian',
+    'cuisine-asian',
+] as const;
+
+export interface CreateDishIngredient {
+    id: string;
+    emoji: string;
+    name: string;
+    protein: number;
+    fats: number;
+    carbs: number;
+    /** Editable weight, grams (594:31930). */
+    grams: number;
+}
+
+// TODO: replace with the add-ingredient flow output once it ships (594:31929).
+export const MOCK_CREATE_DISH_INGREDIENTS: CreateDishIngredient[] = [
+    { id: 'cucumbers', emoji: '🥒', name: 'Огірки', protein: 1, fats: 0, carbs: 4, grams: 200 },
+    { id: 'tomatoes', emoji: '🍅', name: 'Помідори', protein: 1, fats: 0, carbs: 4, grams: 200 },
+    { id: 'feta', emoji: '🧀', name: 'Сир Фета', protein: 1, fats: 0, carbs: 4, grams: 50 },
+    { id: 'olives', emoji: '🫒', name: 'Оливки', protein: 1, fats: 0, carbs: 4, grams: 30 },
+];
+
+/** Мок «зробленого» фото — до інтеграції камери/галереї (594:32413). */
+export const MOCK_CREATE_DISH_PHOTO = require('../../../assets/images/recipes/create-dish-photo.jpg');

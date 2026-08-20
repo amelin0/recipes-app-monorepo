@@ -125,6 +125,7 @@ export default function AppLayout() {
                     }}
                 />
                 <Stack.Screen name="add-dish" />
+                <Stack.Screen name="create-dish" />
                 <Stack.Screen name="dish-created" />
                 <Stack.Screen name="recipes-filter" />
                 <Stack.Screen

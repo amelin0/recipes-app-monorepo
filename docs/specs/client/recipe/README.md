@@ -22,7 +22,8 @@ UI всіх екранів уже реалізовано в мобільному
 | [Recipes list (Вкладка «Рецепти»)](./recipes-list/spec.md) | Draft | @amelin0 | 2026-08-20 |
 | [Recipe filters (Фільтри)](./recipe-filters/spec.md) | Draft | @amelin0 | 2026-08-20 |
 | [Recipe search (Пошук)](./recipe-search/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Draft | @amelin0 | 2026-07-18 |
+| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Create dish (Додати страву)](./create-dish/spec.md) | Draft | @amelin0 | 2026-08-20 |
 
 ## Related
 

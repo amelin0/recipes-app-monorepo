@@ -1,11 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
 
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 import { AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
+import { IngredientMacros } from '../../components';
 import type { MealIngredient } from '../../recipe.constants';
 
 export interface IngredientRowProps {
@@ -14,50 +15,14 @@ export interface IngredientRowProps {
 
 /** Ingredient list row: emoji + name + Б/Ж/В mini-badges + weight. */
 export const IngredientRow = ({ ingredient }: IngredientRowProps) => {
-    const { theme } = useUnistyles();
-    const { t } = useAppTranslation(['recipes', 'tracking']);
-
-    const macros = [
-        {
-            key: 'protein',
-            label: t('tracking:home.macros.protein'),
-            value: ingredient.protein,
-            color: theme.colors.semantic.negative,
-            bg: theme.colors.semantic.lightNegative,
-        },
-        {
-            key: 'fats',
-            label: t('tracking:home.macros.fats'),
-            value: ingredient.fats,
-            color: theme.colors.semantic.positive,
-            bg: theme.colors.semantic.lightPositive,
-        },
-        {
-            key: 'carbs',
-            label: t('tracking:home.macros.carbs'),
-            value: ingredient.carbs,
-            color: theme.colors.semantic.ocean,
-            bg: theme.colors.semantic.lightOcean,
-        },
-    ];
+    const { t } = useAppTranslation(['recipes']);
 
     return (
         <View style={styles.row}>
             <AppText style={styles.emoji}>{ingredient.emoji}</AppText>
             <View style={styles.info}>
                 <AppText variant="bodyMediumBold">{ingredient.name}</AppText>
-                <View style={styles.macros}>
-                    {macros.map(macro => (
-                        <View key={macro.key} style={styles.macro}>
-                            <View style={[styles.badge, { backgroundColor: macro.bg }]}>
-                                <AppText variant="bodySmallReg" style={{ color: macro.color }}>
-                                    {macro.label}
-                                </AppText>
-                            </View>
-                            <AppText variant="bodySmallReg">{macro.value}</AppText>
-                        </View>
-                    ))}
-                </View>
+                <IngredientMacros protein={ingredient.protein} fats={ingredient.fats} carbs={ingredient.carbs} />
             </View>
             <AppText variant="bodySmallBold">{t('recipes:portions.grams-value', { value: ingredient.grams })}</AppText>
         </View>
@@ -81,23 +46,5 @@ const styles = StyleSheet.create(theme => ({
     info: {
         flex: 1,
         gap: theme.spacing[1],
-    },
-    macros: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[2],
-    },
-    macro: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[1],
-    },
-    // 20×20 кругла піктограма макро (984:58871).
-    badge: {
-        width: 20,
-        height: 20,
-        borderRadius: theme.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 }));

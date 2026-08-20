@@ -93,11 +93,11 @@ export const useAddDishScreen = () => {
         if (appliedFilters.length > 0) setRailCategory(null);
     }, [appliedFilters.length]);
 
-    // TODO: створення власної страви — флоу ще не задизайнений (594:31406).
-    const handleCreateDish = () => ToastService.info(t('common:states.coming-soon'));
+    // Створення власної страви — форма з контекстом прийому (594:31930).
+    const handleCreateDish = () => router.push({ pathname: '/(app)/create-dish', params: { day, meal } });
 
     const handleTabChange = (key: string) => {
-        // «Створити» — власна страва, флоу ще не задизайнений.
+        // «Створити» відкриває форму власної страви замість зміни вкладки.
         if (key === 'create') {
             handleCreateDish();
             return;

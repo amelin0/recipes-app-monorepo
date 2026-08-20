@@ -138,7 +138,9 @@ const styles = StyleSheet.create(theme => ({
         borderWidth: 1,
         backgroundColor: state === 'disabled' ? theme.colors.semantic.lightGrey : theme.colors.background.screen,
         borderColor: {
-            default: theme.colors.forms.border,
+            // Screen-файл малює дефолтну рамку light border (594:31935) — він
+            // перемагає RFDS (див. memory: figma-two-files-token-conflict).
+            default: theme.colors.forms.lightBorder,
             focused: theme.colors.forms.darkBorder,
             invalid: theme.colors.forms.negativeBorder,
             disabled: theme.colors.semantic.lightGrey,

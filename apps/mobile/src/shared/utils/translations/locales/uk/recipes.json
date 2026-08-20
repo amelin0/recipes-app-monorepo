@@ -185,5 +185,31 @@
         "title": "Страву створено та додано у власні",
         "weight": "Вага: {{value}}г",
         "go-home": "Повернутись на головну"
+    },
+    "create-dish": {
+        "title": "Додати страву",
+        "add-photo": "Додати фото",
+        "name-label": "Назва страви*",
+        "name-placeholder": "Введіть назву",
+        "name-required": "Введіть назву страви",
+        "cuisine-label": "Кухня",
+        "ingredients": "Інгредієнти",
+        "add-ingredient": "+ Додати",
+        "grams-unit": "г",
+        "weight-a11y": "Вага, {{name}}",
+        "remove-a11y": "Прибрати {{name}}",
+        "next-steps": "Далі: спосіб приготування",
+        "save-title": "Зберегти страву?",
+        "save-subtitle": "Ви зберігаєте страву без способів приготування!",
+        "save-confirm": "Зберегти страву",
+        "add-steps": "Додати кроки",
+        "image-title": "Додати зображення",
+        "pick-photo": "Обрати фото",
+        "take-photo": "Зробити фото",
+        "take-photo-title": "Зробіть фото",
+        "cuisine-title": "Кухня",
+        "cuisine-subtitle": "Оберіть країну походження страви",
+        "apply": "Застосувати",
+        "photo-a11y": "Фото страви"
     }
 }
