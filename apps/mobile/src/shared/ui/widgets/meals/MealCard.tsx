@@ -8,7 +8,7 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import ArrowRightIcon from '../../../../../assets/icons/arrow-right.svg';
 
-import { DishRow, type DishAction, type DishMacro } from './DishRow';
+import { DishRow, type DishAction, type DishMacro, type DishSwipeAction } from './DishRow';
 
 export interface MealDish {
     id: string;
@@ -29,6 +29,11 @@ export interface MealCardProps {
     dishes?: MealDish[];
     /** Trailing action offered on every dish of this meal. @default 'none' */
     dishAction?: DishAction;
+    /** Per-dish override of `dishAction` (e.g. basket vs basket-added, 435:13191). */
+    resolveDishAction?: (dish: MealDish) => DishAction;
+    /** Swipe-left action for every dish (the plan's delete, 435:13566). */
+    dishSwipeAction?: DishSwipeAction;
+    onDishSwipe?: (dishId: string) => void;
     /** Outlines the card — the design marks the meal happening now (435:6558). */
     highlighted?: boolean;
     /** Show the chevron next to the title (opens meal details). */
@@ -42,6 +47,9 @@ export const MealCard = ({
     time,
     dishes,
     dishAction = 'none',
+    resolveDishAction,
+    dishSwipeAction,
+    onDishSwipe,
     highlighted = false,
     onPress,
     onAdd,
@@ -84,8 +92,10 @@ export const MealCard = ({
                         name={dish.name}
                         calories={t('tracking:home.kcal', { value: dish.calories })}
                         macros={dish.macros}
-                        action={dishAction}
+                        action={resolveDishAction ? resolveDishAction(dish) : dishAction}
                         onActionPress={onDishAction ? () => onDishAction(dish.id) : undefined}
+                        swipeAction={dishSwipeAction}
+                        onSwipePress={onDishSwipe ? () => onDishSwipe(dish.id) : undefined}
                     />
                 ))
             ) : (

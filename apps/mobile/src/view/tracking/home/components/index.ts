@@ -1,13 +1,9 @@
 export { DailyGoalCard } from './DailyGoalCard';
 export type { DailyGoalCardProps, MacroData } from './DailyGoalCard';
-export { DishRow } from './DishRow';
-export type { DishAction, DishMacro, DishRowProps } from './DishRow';
 export { HomeHeader } from './HomeHeader';
 export type { HomeHeaderProps } from './HomeHeader';
 export { MacroTile } from './MacroTile';
 export type { MacroTileProps } from './MacroTile';
-export { MealCard } from './MealCard';
-export type { MealCardProps, MealDish } from './MealCard';
 export { StepsCard } from './StepsCard';
 export type { StepsCardProps } from './StepsCard';
 export { TrackerCard } from './TrackerCard';

@@ -4,9 +4,10 @@ import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { AppScreen, SectionHeader } from '@/shared/ui/components';
+import { MealCard } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import { DailyGoalCard, HomeHeader, MealCard, StepsCard, WaterCard } from './components';
+import { DailyGoalCard, HomeHeader, StepsCard, WaterCard } from './components';
 import { useHomeScreen } from './useHomeScreen';
 
 export const HomeScreen = () => {

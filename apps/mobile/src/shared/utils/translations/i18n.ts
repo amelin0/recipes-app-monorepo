@@ -42,6 +42,7 @@ const NAMESPACES = [
     'progress',
     'tracking',
     'recipes',
+    'meal-plan',
     'shopping',
     'profile',
 ] as const;
@@ -87,6 +88,7 @@ i18n.use(initReactI18next).init({
             progress: uk.progress,
             tracking: uk.tracking,
             recipes: uk.recipes,
+            'meal-plan': uk.mealPlan,
             shopping: uk.shopping,
             profile: uk.profile,
         },

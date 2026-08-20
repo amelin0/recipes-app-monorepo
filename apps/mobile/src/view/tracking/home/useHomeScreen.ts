@@ -4,9 +4,10 @@ import { router } from 'expo-router';
 
 import { formatDayHeader } from '@/shared/helpers';
 import { ToastService } from '@/shared/services';
+import type { DishAction, MealDish } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import type { DishAction, MacroData, MealDish } from './components';
+import type { MacroData } from './components';
 
 export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 

@@ -8,8 +8,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppText, MacroBadge, macroPalette, type MacroKey } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
+import BasketAddIcon from '../../../../../assets/icons/basket-add.svg';
+import BasketCheckIcon from '../../../../../assets/icons/basket-check.svg';
 import CutleryIcon from '../../../../../assets/icons/cutlery.svg';
 import TickCircleOutlineIcon from '../../../../../assets/icons/tick-circle-outline.svg';
+import TrashIcon from '../../../../../assets/icons/trash.svg';
 
 /**
  * What the trailing button offers for this dish.
@@ -17,10 +20,20 @@ import TickCircleOutlineIcon from '../../../../../assets/icons/tick-circle-outli
  * - `eaten` — already logged; the row shows a green tick (950:54252).
  * - `eat` — the meal is happening now; the row offers the cutlery action
  *   (811:59006).
+ * - `basket` — the meal plan offers adding the dish to the shopping list
+ *   (435:13297).
+ * - `basket-added` — already on the list; a green basket-check state
+ *   (435:13269).
  * - `none` — a meal still ahead, which the design leaves without a button
  *   (435:6099).
  */
-export type DishAction = 'eaten' | 'eat' | 'none';
+export type DishAction = 'eaten' | 'eat' | 'basket' | 'basket-added' | 'none';
+
+/**
+ * What sliding the row aside uncovers. `eat` is the home-screen shortcut
+ * (435:6170); `delete` is the meal plan's red trash button (435:13566).
+ */
+export type DishSwipeAction = 'eat' | 'delete' | 'none';
 
 export interface DishMacro {
     key: MacroKey;
@@ -38,10 +51,23 @@ export interface DishRowProps {
     /** @default 'none' */
     action?: DishAction;
     onActionPress?: () => void;
+    /**
+     * Swipe-left action. Defaults to the home behavior: rows without an inline
+     * button offer `eat` when an action handler is provided.
+     */
+    swipeAction?: DishSwipeAction;
+    onSwipePress?: () => void;
 }
 
 /** How far the row slides to uncover the action: the 44 button plus its gap. */
 const ACTION_WIDTH = 52;
+
+const ACTION_LABEL_KEY: Record<Exclude<DishAction, 'none'>, string> = {
+    eaten: 'tracking:home.dish-eaten',
+    eat: 'tracking:home.dish-eat',
+    basket: 'tracking:home.dish-basket',
+    'basket-added': 'tracking:home.dish-basket-added',
+};
 
 /** Gradient tile width — the design keeps it fixed while the row grows (435:6026). */
 const TILE_WIDTH = 68;
@@ -55,16 +81,29 @@ const TILE_WIDTH = 68;
 const GRADIENT = { x1: '-0.056', y1: '0.055', x2: '1.056', y2: '0.945' };
 
 /** One planned dish inside a meal card (435:6025). */
-export const DishRow = ({ emoji, name, calories, macros, action = 'none', onActionPress }: DishRowProps) => {
+export const DishRow = ({
+    emoji,
+    name,
+    calories,
+    macros,
+    action = 'none',
+    onActionPress,
+    swipeAction,
+    onSwipePress,
+}: DishRowProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['tracking']);
     const palette = macroPalette(theme.colors);
 
     const swipeable = useRef<SwipeableMethods>(null);
 
+    // Home's swipe doubles as the inline action; the plan passes its own.
+    const resolvedSwipe: DishSwipeAction = swipeAction ?? (action === 'none' && onActionPress ? 'eat' : 'none');
+    const handleSwipe = resolvedSwipe === 'eat' && !onSwipePress ? onActionPress : onSwipePress;
+
     const handleSwipeAction = () => {
         swipeable.current?.close();
-        onActionPress?.();
+        handleSwipe?.();
     };
 
     const row = (
@@ -107,16 +146,18 @@ export const DishRow = ({ emoji, name, calories, macros, action = 'none', onActi
             {action === 'none' ? null : (
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityState={{ checked: action === 'eaten' }}
-                    accessibilityLabel={t(action === 'eaten' ? 'tracking:home.dish-eaten' : 'tracking:home.dish-eat', {
-                        name,
-                    })}
+                    accessibilityState={{ checked: action === 'eaten' || action === 'basket-added' }}
+                    accessibilityLabel={t(ACTION_LABEL_KEY[action], { name })}
                     disabled={!onActionPress}
                     onPress={onActionPress}
                     style={styles.action(action)}
                 >
                     {action === 'eaten' ? (
                         <TickCircleOutlineIcon width={20} height={20} color={theme.colors.semantic.positive} />
+                    ) : action === 'basket-added' ? (
+                        <BasketCheckIcon width={20} height={20} color={theme.colors.semantic.positive} />
+                    ) : action === 'basket' ? (
+                        <BasketAddIcon width={20} height={20} color={theme.colors.elements.primary} />
                     ) : (
                         <CutleryIcon width={20} height={20} color={theme.colors.elements.primary} />
                     )}
@@ -125,10 +166,7 @@ export const DishRow = ({ emoji, name, calories, macros, action = 'none', onActi
         </View>
     );
 
-    // A meal still ahead carries no inline button, so the same action is only
-    // reachable by swiping the row aside (435:6170). A meal happening now has
-    // the button already, and one already eaten has nothing left to do.
-    if (action !== 'none' || !onActionPress) return row;
+    if (resolvedSwipe === 'none' || !handleSwipe) return row;
 
     return (
         <ReanimatedSwipeable
@@ -140,19 +178,32 @@ export const DishRow = ({ emoji, name, calories, macros, action = 'none', onActi
             friction={2}
             rightThreshold={ACTION_WIDTH / 2}
             overshootRight={false}
-            renderRightActions={() => (
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('tracking:home.dish-eat', { name })}
-                    onPress={handleSwipeAction}
-                    style={styles.swipeAction}
-                >
-                    <View style={styles.swipeButton}>
-                        <CutleryIcon width={20} height={20} color={theme.colors.elements.primary} />
-                    </View>
-                    <AppText variant="buttonTab">{t('tracking:home.eat')}</AppText>
-                </Pressable>
-            )}
+            renderRightActions={() =>
+                resolvedSwipe === 'delete' ? (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('tracking:home.dish-delete', { name })}
+                        onPress={handleSwipeAction}
+                        style={styles.swipeAction}
+                    >
+                        <View style={styles.deleteButton}>
+                            <TrashIcon width={20} height={20} color={theme.colors.semantic.white} />
+                        </View>
+                    </Pressable>
+                ) : (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('tracking:home.dish-eat', { name })}
+                        onPress={handleSwipeAction}
+                        style={styles.swipeAction}
+                    >
+                        <View style={styles.swipeButton}>
+                            <CutleryIcon width={20} height={20} color={theme.colors.elements.primary} />
+                        </View>
+                        <AppText variant="buttonTab">{t('tracking:home.eat')}</AppText>
+                    </Pressable>
+                )
+            }
         >
             {row}
         </ReanimatedSwipeable>
@@ -227,9 +278,17 @@ const styles = StyleSheet.create(theme => ({
         justifyContent: 'center',
         borderRadius: theme.radius.full,
         backgroundColor: theme.colors.semantic.lightGrey,
-        // Only the cutlery button is outlined — the tick reads as a state, not
-        // as something to press again (950:54252 vs 811:59006).
-        borderWidth: action === 'eat' ? 1 : 0,
+        // Pressable buttons are outlined — the tick/basket-check read as a
+        // state, not as something to press again (950:54252, 435:13269).
+        borderWidth: action === 'eat' || action === 'basket' ? 1 : 0,
         borderColor: theme.colors.forms.lightBorder,
     }),
+    deleteButton: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.semantic.negative,
+    },
 }));

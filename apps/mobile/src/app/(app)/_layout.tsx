@@ -126,6 +126,16 @@ export default function AppLayout() {
                 />
                 <Stack.Screen name="recipes-filter" />
                 <Stack.Screen
+                    name="copy-plan"
+                    options={{
+                        // Шторка вибору днів копіювання (435:14472) — та сама
+                        // ручна шторка, що й filter-ingredients.
+                        presentation: 'transparentModal',
+                        animation: 'slide_from_bottom',
+                        contentStyle: { backgroundColor: 'transparent' },
+                    }}
+                />
+                <Stack.Screen
                     name="filter-ingredients"
                     options={{
                         // Каталог інгредієнтів — шторка поверх фільтрів
