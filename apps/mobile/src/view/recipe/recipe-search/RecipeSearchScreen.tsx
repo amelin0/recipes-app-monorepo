@@ -19,6 +19,7 @@ export const RecipeSearchScreen = () => {
     const { t } = useAppTranslation(['recipes']);
     const {
         categoryKey,
+        categoryLabelKey,
         query,
         setQuery,
         ingredientResults,
@@ -39,7 +40,7 @@ export const RecipeSearchScreen = () => {
                 <CircleBackButton />
                 <View style={styles.headerCenter}>
                     <AppText variant="bodyLargeBold">
-                        {categoryKey ? t(`recipes:categories.${categoryKey}`) : t('recipes:search.title')}
+                        {categoryLabelKey ? t(categoryLabelKey) : t('recipes:search.title')}
                     </AppText>
                     {categoryKey ? (
                         <AppText variant="bodySmallReg" color="tertiary">

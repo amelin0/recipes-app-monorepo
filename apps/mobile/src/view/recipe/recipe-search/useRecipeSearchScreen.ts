@@ -108,7 +108,7 @@ const MOCK_CATEGORY_DISHES: DishResult[] = [
 
 export const useRecipeSearchScreen = () => {
     const { t } = useAppTranslation();
-    const { category } = useLocalSearchParams<{ category?: string }>();
+    const { category, rail } = useLocalSearchParams<{ category?: string; rail?: string }>();
     const [query, setQuery] = useState('');
 
     const normalized = query.trim().toLowerCase();
@@ -137,6 +137,12 @@ export const useRecipeSearchScreen = () => {
 
     return {
         categoryKey: category,
+        /** The dish-type rail and the search grid run different taxonomies for now. */
+        categoryLabelKey: category
+            ? rail
+                ? `recipes:rail-categories.${category}`
+                : `recipes:categories.${category}`
+            : undefined,
         query,
         setQuery,
         ingredientResults,

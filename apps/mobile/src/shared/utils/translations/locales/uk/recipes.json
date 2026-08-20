@@ -18,7 +18,21 @@
         "grid-a11y": "Вигляд сіткою",
         "list-a11y": "Вигляд списком",
         "favorite-a11y": "Додати в улюблені",
+        "add-recipe-a11y": "Додати власний рецепт",
         "empty": "Нічого не знайдено"
+    },
+    "rail-categories": {
+        "savory-breakfast": "Солоні сніданки",
+        "sweet-breakfast": "Солодкі сніданки",
+        "lunch": "Обіди",
+        "dinner": "Вечері",
+        "snacks": "Перекуси",
+        "salads": "Салати",
+        "pasta": "Пасти",
+        "bowls": "Боули",
+        "smoothies": "Смузі",
+        "desserts": "Десерти",
+        "baking": "Випічка"
     },
     "categories": {
         "breakfast": "Сніданок",

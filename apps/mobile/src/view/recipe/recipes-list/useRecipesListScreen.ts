@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
+import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/recipe';
@@ -81,10 +82,13 @@ export const useRecipesListScreen = () => {
         filtersCount: countRecipeFilters(recipeFilters),
         handleSearchPress: () => router.push('/(app)/recipe-search'),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
+        // `rail` tells the search screen to resolve the label from the rail taxonomy.
         handleCategoryPress: (category: string) =>
-            router.push({ pathname: '/(app)/recipe-search', params: { category } }),
+            router.push({ pathname: '/(app)/recipe-search', params: { category, rail: '1' } }),
         handleRecipePress,
         handleToggleFavorite,
         handleRemoveFilter: (chip: AppliedFilterChip) => toggleRecipeFilter(chip.group, chip.value),
+        // TODO: route to the create-recipe flow once it is designed (спец: create-recipe).
+        handleAddRecipePress: () => ToastService.info(t('common:states.coming-soon')),
     };
 };

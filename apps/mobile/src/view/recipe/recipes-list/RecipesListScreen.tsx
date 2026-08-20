@@ -11,7 +11,9 @@ import ListViewIcon from '../../../../assets/icons/list-view.svg';
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
 import { CategoryTile, RecipeCard } from '../components';
-import { RECIPE_CATEGORIES } from '../recipe.constants';
+import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
+
+import { AddRecipeTile } from './components';
 
 import { useRecipesListScreen } from './useRecipesListScreen';
 
@@ -33,6 +35,7 @@ export const RecipesListScreen = () => {
         handleRecipePress,
         handleToggleFavorite,
         handleRemoveFilter,
+        handleAddRecipePress,
     } = useRecipesListScreen();
 
     return (
@@ -93,11 +96,11 @@ export const RecipesListScreen = () => {
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.categoriesRail}
                         >
-                            {RECIPE_CATEGORIES.map(category => (
+                            {RECIPE_RAIL_CATEGORIES.map(category => (
                                 <CategoryTile
                                     key={category.key}
                                     image={category.image}
-                                    label={t(`recipes:categories.${category.key}`)}
+                                    label={t(`recipes:rail-categories.${category.key}`)}
                                     onPress={() => handleCategoryPress(category.key)}
                                 />
                             ))}
@@ -130,7 +133,7 @@ export const RecipesListScreen = () => {
                         </View>
                     </View>
 
-                    {recipes.length > 0 ? (
+                    {recipes.length > 0 || activeTab === 'own' ? (
                         <View style={styles.grid}>
                             {recipes.map(recipe => (
                                 <RecipeCard
@@ -141,6 +144,9 @@ export const RecipesListScreen = () => {
                                     onToggleFavorite={() => handleToggleFavorite(recipe.id)}
                                 />
                             ))}
+                            {activeTab === 'own' ? (
+                                <AddRecipeTile fullWidth={viewMode === 'list'} onPress={handleAddRecipePress} />
+                            ) : null}
                         </View>
                     ) : (
                         <AppText variant="bodyMediumReg" color="tertiary">
@@ -200,6 +206,8 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '100%',
+        // The recipes section runs a 12pt header gap; the rail keeps the section's 8.
+        marginBottom: theme.spacing[1],
     },
     sectionHeaderTitle: {
         flex: 1,

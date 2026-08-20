@@ -21,6 +21,26 @@ export const RECIPE_CATEGORIES: RecipeCategory[] = [
     { key: 'quick', image: require('../../../assets/images/categories/quick.png') },
 ];
 
+/**
+ * Dish-type rail on the recipes tab (642:39792) — labels live in
+ * `recipes:rail-categories.*`. The filter and search screens still run the
+ * older diet-type taxonomy above; the two sets converge once the API defines
+ * the canonical category list.
+ */
+export const RECIPE_RAIL_CATEGORIES: RecipeCategory[] = [
+    { key: 'savory-breakfast', image: require('../../../assets/images/categories/rail-savory-breakfast.png') },
+    { key: 'sweet-breakfast', image: require('../../../assets/images/categories/rail-sweet-breakfast.png') },
+    { key: 'lunch', image: require('../../../assets/images/categories/rail-lunch.png') },
+    { key: 'dinner', image: require('../../../assets/images/categories/rail-dinner.png') },
+    { key: 'snacks', image: require('../../../assets/images/categories/rail-snacks.png') },
+    { key: 'salads', image: require('../../../assets/images/categories/rail-salads.png') },
+    { key: 'pasta', image: require('../../../assets/images/categories/rail-pasta.png') },
+    { key: 'bowls', image: require('../../../assets/images/categories/rail-bowls.png') },
+    { key: 'smoothies', image: require('../../../assets/images/categories/rail-smoothies.png') },
+    { key: 'desserts', image: require('../../../assets/images/categories/rail-desserts.png') },
+    { key: 'baking', image: require('../../../assets/images/categories/rail-baking.png') },
+];
+
 /** Filter option keys — labels live in `recipes:options.*`. */
 export const MEAL_OPTIONS = [
     'meal-breakfast',

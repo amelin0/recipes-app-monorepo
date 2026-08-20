@@ -91,7 +91,7 @@ const styles = StyleSheet.create(theme => ({
         ...theme.shadow.block,
     }),
     image: (isList: boolean) => ({
-        height: isList ? 148 : 100,
+        height: isList ? 132 : 100,
         width: '100%',
         padding: theme.spacing[2],
         backgroundColor: theme.colors.semantic.darkGrey,
