@@ -14,12 +14,14 @@ export interface SegmentedTabsProps {
     items: SegmentedTabItem[];
     activeKey: string;
     onChange: (key: string) => void;
+    /** Sizes each tab by its label instead of splitting the row evenly. */
+    contentSized?: boolean;
     /** Extra styles merged onto the row. */
     style?: StyleProp<ViewStyle>;
 }
 
 /** Row of pill tabs — RFDS `tab` (active = Branding/primary fill, white label). */
-export const SegmentedTabs = ({ items, activeKey, onChange, style }: SegmentedTabsProps) => {
+export const SegmentedTabs = ({ items, activeKey, onChange, contentSized = false, style }: SegmentedTabsProps) => {
     return (
         <View style={[styles.row, style]}>
             {items.map(item => {
@@ -30,7 +32,7 @@ export const SegmentedTabs = ({ items, activeKey, onChange, style }: SegmentedTa
                         accessibilityRole="tab"
                         accessibilityState={{ selected: active }}
                         onPress={() => onChange(item.key)}
-                        style={styles.tab(active)}
+                        style={styles.tab(active, contentSized)}
                     >
                         <AppText variant="buttonSmall" numberOfLines={1} style={styles.label(active)}>
                             {item.label}
@@ -49,8 +51,8 @@ const styles = StyleSheet.create(theme => ({
         gap: theme.spacing[2],
         width: '100%',
     },
-    tab: (active: boolean) => ({
-        flex: 1,
+    tab: (active: boolean, contentSized: boolean) => ({
+        flex: contentSized ? undefined : 1,
         height: 36,
         alignItems: 'center',
         justifyContent: 'center',

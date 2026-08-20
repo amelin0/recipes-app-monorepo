@@ -10,12 +10,16 @@ Users with the **USER** role.
 |---|---|
 | [`onboarding/`](./onboarding) | First launch: splash, intro slides |
 | [`auth/`](./auth) | Registration, login, sessions |
-| [`user/`](./user) | Profile, settings, weight tracking |
+| [`user/`](./user) | Profile, settings, feedback, account deletion |
 | [`nutrition/`](./nutrition) | Nutrition goals, daily macro tracking |
 | [`recipe/`](./recipe) | Recipe browsing, filters, tags, i18n |
 | [`product/`](./product) | USDA + custom products, search by language |
 | [`shopping-list/`](./shopping-list) | Shopping list, ingredient aggregation |
 | [`meal-plan/`](./meal-plan) | Weekly meal planning |
+| [`progress/`](./progress) | Body metrics, charts, weigh-in reminders |
+| [`subscription/`](./subscription) | Paywall, plans, referral codes |
+| [`notifications/`](./notifications) | In-app notification inbox |
+| [`system/`](./system) | App-level states that belong to no domain |
 
 Each domain folder has a `README.md` index and one folder per feature
 (`<feature>/spec.md` + `<feature>/plan.md`).

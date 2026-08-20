@@ -146,7 +146,7 @@ export const useHomeScreen = () => {
         water: { current: waterCurrent, target: WATER_TARGET_ML },
         steps: { current: stepsCurrent, target: STEPS_TARGET },
         handleAvatarPress: () => router.push('/(app)/profile'),
-        handleNotificationsPress: comingSoon,
+        handleNotificationsPress: () => router.push('/(app)/notifications'),
         handleGoalPress: () => router.push('/(app)/goal-setup'),
         handleMealPress: (_meal: MealKey) => comingSoon(),
         handleAddMeal: (_meal: MealKey) => comingSoon(),

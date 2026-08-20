@@ -36,6 +36,7 @@ export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 const NAMESPACES = [
     'common',
     'auth',
+    'notifications',
     'onboarding',
     'subscription',
     'progress',
@@ -80,6 +81,7 @@ i18n.use(initReactI18next).init({
         uk: {
             common: uk.common,
             auth: uk.auth,
+            notifications: uk.notifications,
             onboarding: uk.onboarding,
             subscription: uk.subscription,
             progress: uk.progress,

@@ -83,6 +83,9 @@ export default function AppLayout() {
                 <Stack.Screen name="account-recovery" />
                 <Stack.Screen name="account-restored" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="account-restore-failed" />
+                <Stack.Screen name="notifications" />
+                <Stack.Screen name="notification-detail" />
+                <Stack.Screen name="problem" />
                 <Stack.Screen name="add-product" />
                 <Stack.Screen
                     name="product-amount"
