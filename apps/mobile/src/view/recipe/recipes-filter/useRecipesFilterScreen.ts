@@ -2,8 +2,6 @@ import { useCallback } from 'react';
 
 import { router } from 'expo-router';
 
-import { ToastService } from '@/shared/services';
-import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/recipe';
 
@@ -11,7 +9,6 @@ import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/reci
 const MOCK_RESULTS_COUNT = 129;
 
 export const useRecipesFilterScreen = () => {
-    const { t } = useAppTranslation(['common']);
     const filters = useStore(state => state.recipeFilters);
     const toggleRecipeFilter = useStore(state => state.toggleRecipeFilter);
     const setRecipeKcalRange = useStore(state => state.setRecipeKcalRange);
@@ -29,7 +26,6 @@ export const useRecipesFilterScreen = () => {
         handleKcalChange: (low: number, high: number) => setRecipeKcalRange([low, high]),
         handleReset: resetRecipeFilters,
         handleShow: handleClose,
-        // TODO: route to the full ingredient catalog once it is designed.
-        handleAllIngredients: () => ToastService.info(t('common:states.coming-soon')),
+        handleAllIngredients: () => router.push('/(app)/filter-ingredients'),
     };
 };

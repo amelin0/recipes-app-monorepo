@@ -112,6 +112,58 @@ export const FILTER_INGREDIENTS = [
 ];
 
 /**
+ * Full ingredient catalog behind «Всі ›» (626:22930) — labels in
+ * `recipes:ingredients.*`; 'parsley' is shared with the quick picks above.
+ * The mock's «Кресс-салат» duplicate and two spelling slips are corrected in
+ * the labels (recorded in the spec).
+ */
+// TODO: replace with GET /ingredients?q= once the API ships.
+export const INGREDIENT_CATALOG = [
+    'kale',
+    'arugula',
+    'watercress',
+    'romaine',
+    'parsley',
+    'cilantro',
+    'basil',
+    'mint',
+    'thyme',
+    'rosemary',
+    'tarragon',
+    'chard-leaves',
+    'sorrel-leaves',
+    'dandelion-leaves',
+    'curly-parsley',
+    'coriander',
+    'marjoram',
+    'estragon',
+    'ramson-garlic',
+    'mint-leaves',
+    'beet-tops',
+    'iceberg',
+    'lettuce',
+    'wild-arugula',
+    'batavia',
+    'leaf-cabbage',
+    'carrot-leaves',
+    'fennel-leaves',
+    'chicory-leaves',
+    'beet-leaves',
+    'carrot-tops',
+    'amaranth-leaves',
+    'mizuna',
+    'corn-salad',
+    'napa-cabbage',
+    'spinach-matador',
+    'spinach-flora',
+    'spinach-oktava',
+    'spinach-malakhit',
+    'spinach-zelenyi',
+    'eggplant',
+    'eggplant-puree',
+];
+
+/**
  * Emoji companions for the category chips on the filter screen (594:43425).
  * «Перекуси» has no emoji in the mock — an obvious slip among 10 emoji chips,
  * so the app gives it one (recorded in the spec).

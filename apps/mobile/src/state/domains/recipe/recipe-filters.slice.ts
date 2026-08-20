@@ -28,6 +28,8 @@ const INITIAL_FILTERS: RecipeFiltersState = {
 export interface RecipeFiltersSlice {
     recipeFilters: RecipeFiltersState;
     toggleRecipeFilter: (group: RecipeFilterGroup, value: string) => void;
+    /** Replaces a whole group at once — the ingredient catalog commits its draft this way. */
+    setRecipeFilterGroup: (group: RecipeFilterGroup, values: string[]) => void;
     setRecipeKcalRange: (range: [number, number]) => void;
     resetRecipeFilters: () => void;
 }
@@ -49,6 +51,9 @@ export const createRecipeFiltersSlice: StateCreator<RecipeFiltersSlice, [], [], 
             const next = current.includes(value) ? current.filter(item => item !== value) : [...current, value];
             return { recipeFilters: { ...state.recipeFilters, [group]: next } };
         }),
+
+    setRecipeFilterGroup: (group, values) =>
+        set(state => ({ recipeFilters: { ...state.recipeFilters, [group]: values } })),
 
     setRecipeKcalRange: kcalRange => set(state => ({ recipeFilters: { ...state.recipeFilters, kcalRange } })),
 

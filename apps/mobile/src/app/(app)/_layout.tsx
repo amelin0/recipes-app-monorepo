@@ -125,6 +125,18 @@ export default function AppLayout() {
                     }}
                 />
                 <Stack.Screen name="recipes-filter" />
+                <Stack.Screen
+                    name="filter-ingredients"
+                    options={{
+                        // Каталог інгредієнтів — шторка поверх фільтрів
+                        // (626:22930). Звичайний formSheet тут малює контент
+                        // зі зсувом (баг native-screens із ScrollView усередині),
+                        // тому шторка зібрана вручну поверх прозорої модалки.
+                        presentation: 'transparentModal',
+                        animation: 'slide_from_bottom',
+                        contentStyle: { backgroundColor: 'transparent' },
+                    }}
+                />
             </Stack.Protected>
         </Stack>
     );
