@@ -13,6 +13,8 @@ import MascotWaist from '../../../../assets/images/brand/mascot-waist.svg';
 import MascotWater from '../../../../assets/images/brand/mascot-water.svg';
 import MascotWeight from '../../../../assets/images/brand/mascot-weight.svg';
 
+import type { MacroGoalMetricKey } from '../progress.constants';
+
 import { useMetricUpdatedScreen } from './useMetricUpdatedScreen';
 
 const MASCOT_SIZE = 200;
@@ -45,14 +47,15 @@ export const MetricUpdatedScreen = () => {
     const { metric, isGoal, value, date, recommendedGoal, showsWaistNote, handleDone, handleConfirmGoal } =
         useMetricUpdatedScreen();
 
+    // Macro goals close their sheet without a receipt, so they never reach here.
     const Mascot = {
         weight: MascotWeight,
         waist: MascotWaist,
         height: MascotHeight,
         steps: MascotSteps,
         water: MascotWater,
-    }[metric];
-    const unit = t(UNIT_KEY[isGoal ? 'goal' : 'reading'][metric]);
+    }[metric as Exclude<typeof metric, MacroGoalMetricKey>];
+    const unit = t(UNIT_KEY[isGoal ? 'goal' : 'reading'][metric as Exclude<typeof metric, MacroGoalMetricKey>]);
     // Only a new weight reading opens the calorie-goal question (673:43135).
     const offersGoalChange = !isGoal && metric === 'weight';
 

@@ -69,14 +69,15 @@ export const useGoalSetupScreen = () => {
 
     const selectedGoal = useMemo(() => GOALS.find(goal => goal.calories === calories)?.key, [calories]);
 
-    const handleChangeParam = useCallback(
-        (key: string) => {
-            // TODO: open the matching profile parameter once its flow is designed.
-            void key;
-            ToastService.info(t('common:states.coming-soon'));
-        },
-        [t],
-    );
+    const handleChangeParam = useCallback((key: string) => {
+        // Weight and height reuse the reading sheets (811:37541, 811:39327);
+        // activity has its own (984:58347).
+        if (key === 'activity') {
+            router.push('/(app)/activity-edit');
+            return;
+        }
+        router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'reading' } });
+    }, []);
 
     const params = useMemo(() => {
         const build = (key: string, label: string, value: string): GoalParam => ({
@@ -127,9 +128,12 @@ export const useGoalSetupScreen = () => {
 
     const handleChangeNutrient = useCallback(
         (key: NutrientKey) => {
-            // TODO: open the per-nutrient editor once it is designed.
-            void key;
-            ToastService.info(t('common:states.coming-soon'));
+            // Fibre is the one row the design never drew a sheet for.
+            if (key === 'fiber') {
+                ToastService.info(t('common:states.coming-soon'));
+                return;
+            }
+            router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'goal' } });
         },
         [t],
     );

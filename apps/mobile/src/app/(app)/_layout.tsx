@@ -41,6 +41,19 @@ export default function AppLayout() {
                 <Stack.Screen name="paywall" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="subscription-success" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="goal-setup" />
+                <Stack.Screen
+                    name="activity-edit"
+                    options={{
+                        // The eight-row legend makes this sheet taller than the
+                        // number ones, and by different amounts per device —
+                        // so it sizes itself rather than taking a fraction
+                        // (984:58596).
+                        presentation: 'formSheet',
+                        sheetAllowedDetents: 'fitToContents',
+                        sheetCornerRadius: 24,
+                        sheetGrabberVisible: false,
+                    }}
+                />
                 <Stack.Screen name="metric-detail" />
                 {/* Logging a reading: a sheet, then its receipt (673:41245,
                     673:43135). The receipt is a flow endpoint. */}

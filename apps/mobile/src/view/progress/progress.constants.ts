@@ -251,12 +251,28 @@ export const READING_METRIC_CONFIG: Record<ReadingMetricKey, ReadingMetricConfig
  */
 export const RECOMMENDED_CALORIE_GOAL = 2000;
 
+/** Macro goals are edited from the goal screen, not the progress screens. */
+export const MACRO_GOAL_METRICS = ['protein', 'fats', 'carbs'] as const;
+export type MacroGoalMetricKey = (typeof MACRO_GOAL_METRICS)[number];
+
+/** TODO: the recommendation comes from the computed goal (nutrition domain). */
+export const MACRO_GOAL_DEFAULTS: Record<MacroGoalMetricKey, number> = {
+    protein: 100,
+    fats: 100,
+    carbs: 100,
+};
+
 /** Metrics whose goal the user can edit from a sheet. Calories get their own screen. */
-export type GoalMetricKey = 'weight' | 'steps' | 'water';
+export type GoalMetricKey = 'weight' | 'steps' | 'water' | 'protein' | 'fats' | 'carbs';
 
 export const GOAL_METRIC_CONFIG: Record<GoalMetricKey, ReadingMetricConfig> = {
     weight: { step: 0.1, min: 20, max: 300, precision: 1 },
     // Same steps the questionnaire nudges these goals by.
     steps: { step: 500, min: 1000, max: 50000, precision: 0 },
     water: { step: 100, min: 500, max: 6000, precision: 0 },
+    // Macro ranges come from the goal-setup spec (811:40272, 811:40718,
+    // 811:41164).
+    protein: { step: 5, min: 40, max: 350, precision: 0 },
+    fats: { step: 2, min: 20, max: 200, precision: 0 },
+    carbs: { step: 5, min: 30, max: 500, precision: 0 },
 };

@@ -3,15 +3,15 @@ import { View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import { AppText } from '../texts';
 
-export interface ActivityLegendProps {
-    /** Labels for levels 1..8, in order. */
+export interface NumberedLegendProps {
+    /** Labels for levels 1..N, in order. */
     labels: string[];
 }
 
-/** Legend under the stepper — one numbered badge per level (984:58077). */
-export const ActivityLegend = ({ labels }: ActivityLegendProps) => {
+/** Legend under a level stepper — one numbered badge per level (984:58077). */
+export const NumberedLegend = ({ labels }: NumberedLegendProps) => {
     return (
         <View style={styles.list}>
             {labels.map((label, index) => (

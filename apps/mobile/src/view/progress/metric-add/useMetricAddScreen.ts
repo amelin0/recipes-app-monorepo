@@ -12,7 +12,10 @@ import {
     MOCK_WATER_DETAIL,
     MOCK_WEIGHT_DETAIL,
     READING_METRIC_CONFIG,
+    MACRO_GOAL_DEFAULTS,
+    MACRO_GOAL_METRICS,
     type GoalMetricKey,
+    type MacroGoalMetricKey,
     type ReadingMetricKey,
 } from '../progress.constants';
 
@@ -35,14 +38,18 @@ export const useMetricAddScreen = () => {
     }>();
 
     const isGoal = mode === 'goal';
+    const isMacroGoal = isGoal && (MACRO_GOAL_METRICS as readonly string[]).includes(metric);
     const config = isGoal
         ? GOAL_METRIC_CONFIG[metric as GoalMetricKey]
         : READING_METRIC_CONFIG[metric as ReadingMetricKey];
 
     const current = isGoal
-        ? { weight: MOCK_WEIGHT_DETAIL.goalKg, steps: MOCK_STEPS_DETAIL.goalSteps, water: MOCK_WATER_DETAIL.goalMl }[
-              metric as GoalMetricKey
-          ]
+        ? {
+              weight: MOCK_WEIGHT_DETAIL.goalKg,
+              steps: MOCK_STEPS_DETAIL.goalSteps,
+              water: MOCK_WATER_DETAIL.goalMl,
+              ...MACRO_GOAL_DEFAULTS,
+          }[metric as GoalMetricKey]
         : {
               weight: MOCK_WEIGHT_DETAIL.currentKg,
               waist: MOCK_WAIST_DETAIL.currentCm,
@@ -75,15 +82,25 @@ export const useMetricAddScreen = () => {
         if (!isValid) return;
         // TODO: POST the reading (or PATCH the goal); the confirmation should
         // read the saved entry back rather than carry it through the route.
+        if (isMacroGoal) {
+            // A macro goal belongs to the goal screen that opened this sheet —
+            // it has no receipt of its own (811:40272).
+            router.back();
+            return;
+        }
         router.replace({ pathname: '/(app)/metric-updated', params: { metric, value, mode } });
-    }, [isValid, metric, mode, value]);
+    }, [isValid, isMacroGoal, metric, mode, value]);
 
     return {
         metric,
         mode,
         isGoal,
-        /** Only the water goal's copy interpolates anything (805:18701). */
-        subtitleParams: { value: formatThousands(MOCK_WATER_DETAIL.goalMl) },
+        /** The water and macro goals quote the recommendation in their copy. */
+        subtitleParams: {
+            value: isMacroGoal
+                ? formatThousands(MACRO_GOAL_DEFAULTS[metric as MacroGoalMetricKey])
+                : formatThousands(MOCK_WATER_DETAIL.goalMl),
+        },
         value,
         setValue,
         isValid,

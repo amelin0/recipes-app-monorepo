@@ -3,13 +3,12 @@ import { ScrollView } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppScreen } from '@/shared/ui/components';
+import { AppScreen, LevelStepper, NumberedLegend } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { SetupFooter, SetupHeader, SetupProgress } from '../components';
 import { ACTIVITY_LEVEL_MAX } from '../onboarding.constants';
 
-import { ActivityLegend, LevelStepper } from './components';
 import { useSetupActivityScreen } from './useSetupActivityScreen';
 
 /** Step 11 — weekly activity level, 1–8 (RF-mobile-app 984:58062). */
@@ -38,7 +37,7 @@ export const SetupActivityScreen = () => {
                     incrementLabel={t('onboarding:setup.activity.increment')}
                 />
 
-                <ActivityLegend labels={labels} />
+                <NumberedLegend labels={labels} />
             </ScrollView>
 
             <SetupFooter canProceed={canProceed} onNext={handleNext} />

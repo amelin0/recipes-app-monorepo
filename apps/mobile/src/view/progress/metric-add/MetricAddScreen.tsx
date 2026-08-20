@@ -17,6 +17,9 @@ const UNIT_KEY = {
     height: 'progress:units.cm',
     steps: 'progress:units.steps-short',
     water: 'progress:units.ml',
+    protein: 'progress:units.g',
+    fats: 'progress:units.g',
+    carbs: 'progress:units.g',
 } as const;
 
 /**

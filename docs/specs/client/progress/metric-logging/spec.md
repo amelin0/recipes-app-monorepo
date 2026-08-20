@@ -5,7 +5,7 @@ domain: progress
 status: Draft
 owner: '@amelin0'
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-08-20
 plan: null
 related-adrs: []
 supersedes: null

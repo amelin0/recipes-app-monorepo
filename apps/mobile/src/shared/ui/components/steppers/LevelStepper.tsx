@@ -3,10 +3,9 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
-
 import AddIcon from '../../../../../assets/icons/add.svg';
 import MinusIcon from '../../../../../assets/icons/minus.svg';
+import { AppText } from '../texts';
 
 export interface LevelStepperProps {
     value: number;
