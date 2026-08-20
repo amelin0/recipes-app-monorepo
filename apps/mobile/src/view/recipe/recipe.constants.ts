@@ -507,5 +507,15 @@ export const MOCK_CREATE_DISH_INGREDIENTS: CreateDishIngredient[] = [
     { id: 'olives', emoji: '🫒', name: 'Оливки', protein: 1, fats: 0, carbs: 4, grams: 30 },
 ];
 
+export interface DishStep {
+    id: string;
+    title: string;
+    description: string;
+    /** id-шники інгредієнтів форми, потрібні на цьому кроці (594:32250). */
+    ingredientIds: string[];
+    /** Хвилини кроку, від 1 (594:32174). */
+    minutes: number;
+}
+
 /** Мок «зробленого» фото — до інтеграції камери/галереї (594:32413). */
 export const MOCK_CREATE_DISH_PHOTO = require('../../../assets/images/recipes/create-dish-photo.jpg');

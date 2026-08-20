@@ -76,6 +76,7 @@ export const ValueStepper = ({
 const styles = StyleSheet.create(theme => ({
     row: {
         width: '100%',
+        minHeight: 64,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

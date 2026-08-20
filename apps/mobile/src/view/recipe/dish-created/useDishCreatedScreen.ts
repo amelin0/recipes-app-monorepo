@@ -14,8 +14,14 @@ export const useDishCreatedScreen = () => {
     const addPlanDishes = useStore(state => state.addPlanDishes);
     const { day, meal } = resolvePlanTarget(planWeek, params.day, params.meal);
 
+    // Створення без план-контексту веде до страви, а не до раціону (628:25123).
+    const hasPlanContext = typeof params.day === 'string' && params.day.length > 0;
+
     return {
         dish,
+        hasPlanContext,
+        // Той самий шлях, що й «Відмітити прийом їжі» в деталях страви.
+        handleLogMeal: () => router.push('/(app)/meal-portions'),
         handleAddToRation: () => {
             addPlanDishes(day, meal, [
                 buildPlanDish({

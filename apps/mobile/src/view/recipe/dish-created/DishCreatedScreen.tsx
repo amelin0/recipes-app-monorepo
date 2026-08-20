@@ -6,6 +6,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppButton, AppCard, AppScreen, AppText, NutritionSummaryRow, ScreenActions } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
+import CutleryIcon from '../../../../assets/icons/cutlery.svg';
 import TimerIcon from '../../../../assets/icons/timer.svg';
 import MascotRecipeBook from '../../../../assets/images/brand/mascot-recipe-book.svg';
 
@@ -17,7 +18,7 @@ const MASCOT_SIZE = 200;
 export const DishCreatedScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes']);
-    const { dish, handleAddToRation, handleGoHome } = useDishCreatedScreen();
+    const { dish, hasPlanContext, handleAddToRation, handleLogMeal, handleGoHome } = useDishCreatedScreen();
 
     return (
         <AppScreen>
@@ -62,7 +63,16 @@ export const DishCreatedScreen = () => {
             </ScrollView>
 
             <ScreenActions>
-                <AppButton fullWidth label={t('recipes:details.add-to-ration')} onPress={handleAddToRation} />
+                {hasPlanContext ? (
+                    <AppButton fullWidth label={t('recipes:details.add-to-ration')} onPress={handleAddToRation} />
+                ) : (
+                    <AppButton
+                        fullWidth
+                        label={t('recipes:details.log-meal')}
+                        onPress={handleLogMeal}
+                        leftSlot={<CutleryIcon width={24} height={24} color={theme.colors.semantic.white} />}
+                    />
+                )}
                 <AppButton
                     fullWidth
                     variant="secondary"

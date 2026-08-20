@@ -210,6 +210,17 @@
         "cuisine-title": "Кухня",
         "cuisine-subtitle": "Оберіть країну походження страви",
         "apply": "Застосувати",
-        "photo-a11y": "Фото страви"
+        "photo-a11y": "Фото страви",
+        "steps-title": "Приготування",
+        "step-name-label": "Назва кроку",
+        "step-name-placeholder": "Введіть назву",
+        "step-description-placeholder": "Введіть опис...",
+        "step-ingredients": "ПОТРІБНІ ІНГРЕДІЄНТИ",
+        "step-time": "Час приготування",
+        "minutes-value": "{{count}} хв",
+        "add-step": "Додати крок",
+        "step-time-decrease": "Зменшити час",
+        "step-time-increase": "Збільшити час",
+        "step-page-a11y": "Крок {{number}}"
     }
 }

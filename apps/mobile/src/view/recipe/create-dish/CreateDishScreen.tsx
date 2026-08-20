@@ -10,7 +10,7 @@ import ArrowDownIcon from '../../../../assets/icons/arrow-down-large.svg';
 import CameraLargeIcon from '../../../../assets/icons/camera-large.svg';
 import { OPTION_EMOJI } from '../recipe.constants';
 
-import { AddImageSheet, CuisineSheet, IngredientEditRow, TakePhotoModal } from './components';
+import { AddImageSheet, CuisineSheet, IngredientEditRow, StepsEditorModal, TakePhotoModal } from './components';
 
 import { useCreateDishScreen } from './useCreateDishScreen';
 
@@ -24,6 +24,8 @@ export const CreateDishScreen = () => {
         cuisine,
         photo,
         ingredients,
+        steps,
+        stepsEditorVisible,
         imageSheetVisible,
         photoModalVisible,
         cuisineSheetVisible,
@@ -43,6 +45,10 @@ export const CreateDishScreen = () => {
         handleAddIngredient,
         handleNextSteps,
         handleAddSteps,
+        handleStepChange,
+        handleAddStep,
+        handleStepsEditorClose,
+        handleStepsSave,
         handleSavePress,
         handleConfirmSave,
         handleSaveSheetClose,
@@ -149,6 +155,15 @@ export const CreateDishScreen = () => {
                 onClose={handleImageSheetClose}
             />
             <TakePhotoModal visible={photoModalVisible} onSave={handlePhotoSave} onClose={handlePhotoClose} />
+            <StepsEditorModal
+                visible={stepsEditorVisible}
+                steps={steps}
+                ingredients={ingredients}
+                onStepChange={handleStepChange}
+                onAddStep={handleAddStep}
+                onSave={handleStepsSave}
+                onClose={handleStepsEditorClose}
+            />
             <CuisineSheet
                 visible={cuisineSheetVisible}
                 selected={cuisine}
