@@ -94,6 +94,9 @@ export default function AppLayout() {
                 <Stack.Screen name="feedback-sent" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="account-deleted" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="account-recovery" />
+                <Stack.Screen name="account-delete" />
+                <Stack.Screen name="account-delete-confirm" />
+                <Stack.Screen name="referral" />
                 <Stack.Screen name="account-restored" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="account-restore-failed" />
                 <Stack.Screen name="notifications" />

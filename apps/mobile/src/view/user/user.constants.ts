@@ -28,3 +28,10 @@ export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
 export const FEEDBACK_DESCRIPTION_MIN = 10;
 export const FEEDBACK_DESCRIPTION_MAX = 1000;
 export const FEEDBACK_MAX_PHOTOS = 3;
+
+/** TODO: replace with the referral endpoint (804:24649). */
+export const MOCK_REFERRAL = {
+    code: 'ALEX1994',
+    joined: 2,
+    earnedMonths: 2,
+};

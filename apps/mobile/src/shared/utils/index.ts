@@ -1,3 +1,4 @@
+export * from './clipboard';
 export * from './device';
 export * from './format-count';
 export * from './haptics';

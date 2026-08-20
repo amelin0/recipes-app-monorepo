@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppText } from '../texts';
 
-export type AppButtonVariant = 'primary' | 'secondary' | 'ghost' | 'liquid';
+export type AppButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost' | 'liquid';
 export type AppButtonSize = 'lg' | 'md';
 
 type ThemeColors = ReturnType<typeof useUnistyles>['theme']['colors'];
@@ -17,7 +17,7 @@ type ThemeColors = ReturnType<typeof useUnistyles>['theme']['colors'];
  */
 const contentColor = (colors: ThemeColors, variant: AppButtonVariant, pressed: boolean, disabled: boolean): string => {
     if (disabled) return colors.semantic.disabled;
-    if (variant === 'primary') return colors.semantic.white;
+    if (variant === 'primary' || variant === 'destructive') return colors.semantic.white;
     if (variant === 'secondary' && pressed) return colors.semantic.white;
     return colors.elements.primary;
 };
@@ -32,6 +32,7 @@ export interface AppButtonProps extends Omit<PressableProps, 'children' | 'style
      *
      * - `primary` — solid Branding/accent, white label; pressed = Active/primary.
      * - `secondary` — solid Semantic/light grey; pressed = Active/secondary (label turns white).
+     * - `destructive` — solid Semantic/negative, white label; pressed = Active/negative (804:24945).
      * - `ghost` — transparent; pressed = Active/tertiary.
      * - `liquid` — Semantic/white 30% over imagery; pressed = Active/grey 30%.
      *   (Figma adds a glass blur — add expo-blur behind the button if a screen needs it.)
@@ -132,6 +133,7 @@ const styles = StyleSheet.create(theme => ({
             ? {
                   primary: theme.colors.semantic.lightGrey,
                   secondary: theme.colors.semantic.lightGrey,
+                  destructive: theme.colors.semantic.lightGrey,
                   ghost: 'transparent',
                   liquid: theme.colors.semantic.white30,
               }[variant]
@@ -139,12 +141,14 @@ const styles = StyleSheet.create(theme => ({
               ? {
                     primary: theme.colors.active.primary,
                     secondary: theme.colors.active.secondary,
+                    destructive: theme.colors.active.negative,
                     ghost: theme.colors.active.tertiary,
                     liquid: theme.colors.active.grey30,
                 }[variant]
               : {
                     primary: theme.colors.branding.accent,
                     secondary: theme.colors.semantic.lightGrey,
+                    destructive: theme.colors.semantic.negative,
                     ghost: 'transparent',
                     liquid: theme.colors.semantic.white30,
                 }[variant],

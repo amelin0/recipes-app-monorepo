@@ -39,7 +39,7 @@ export const useProfileScreen = () => {
         handleEdit: () => router.push('/(app)/profile-edit'),
         handleSubscription: comingSoon,
         handleRateUs: () => void requestRateApp(),
-        handleReferral: comingSoon,
+        handleReferral: () => router.push('/(app)/referral'),
         handleChangePassword: comingSoon,
         handleReminders: () => router.push('/(app)/settings-reminders'),
         handleLanguage: () => router.push('/(app)/settings-language'),
@@ -50,8 +50,7 @@ export const useProfileScreen = () => {
         handleSupportChat: comingSoon,
         handlePrivacy: comingSoon,
         handleTerms: comingSoon,
-        // TODO: confirm dialog + DELETE /me once the API ships.
-        handleDeleteAccount: comingSoon,
+        handleDeleteAccount: () => router.push('/(app)/account-delete'),
         // Повний reset стору: auth + фільтри рецептів + список продуктів.
         handleLogout: reset,
     };

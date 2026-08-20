@@ -1,3 +1,5 @@
+export { AccountDeleteConfirmScreen } from './account-delete-confirm';
+export { AccountDeleteScreen } from './account-delete';
 export { AccountRestoreFailedScreen } from './account-restore-failed';
 export { AccountRestoredScreen } from './account-restored';
 export { AccountDeletedScreen } from './account-deleted';
@@ -7,6 +9,7 @@ export { FeedbackSentScreen } from './feedback-sent';
 export { FaqScreen } from './faq';
 export { ProfileEditScreen } from './profile-edit';
 export { ProfileScreen } from './profile';
+export { ReferralScreen } from './referral';
 export { SettingsLanguageScreen } from './settings-language';
 export { SettingsRemindersScreen } from './settings-reminders';
 export { SettingsThemeScreen } from './settings-theme';
