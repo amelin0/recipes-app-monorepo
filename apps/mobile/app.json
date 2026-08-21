@@ -11,12 +11,14 @@
         "ios": {
             "supportsTablet": false,
             "bundleIdentifier": "com.rationfit.application",
+            "buildNumber": "1",
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false
             }
         },
         "android": {
             "package": "com.rationfit.application",
+            "versionCode": 1,
             "predictiveBackGestureEnabled": false,
             "adaptiveIcon": {
                 "foregroundImage": "./assets/images/app/android-icon-foreground.png",
