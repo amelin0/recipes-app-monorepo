@@ -26,19 +26,14 @@ export class AppStorage {
         return null;
     }
 
+    // Прапорець онбордингу живе лише в памʼяті сесії — кожен холодний старт
+    // знову починається зі слайдів (як і вхід, що теж не персиститься).
+    // TODO: повернути запис у MMKV разом із реальним auth-флоу.
     static saveOnboardingCompleted() {
         AppStorage._onboardingCompleted = true;
-        writeLocalData('onboardingCompleted', { onboardingCompleted: true });
     }
 
     static getOnboardingCompleted(): boolean {
-        if (AppStorage._onboardingCompleted) return true;
-
-        const data = readLocalData<{ onboardingCompleted: boolean }>('onboardingCompleted');
-        if (data?.onboardingCompleted) {
-            AppStorage._onboardingCompleted = true;
-            return true;
-        }
-        return false;
+        return AppStorage._onboardingCompleted === true;
     }
 }

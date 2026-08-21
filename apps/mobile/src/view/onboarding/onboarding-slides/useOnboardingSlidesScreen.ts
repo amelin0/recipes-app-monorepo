@@ -20,8 +20,8 @@ export const useOnboardingSlidesScreen = () => {
         [width],
     );
 
-    // Either CTA ends onboarding for good — the user has seen the pitch and is
-    // moving into the auth funnel, so it must not reappear on the next launch.
+    // Either CTA ends onboarding for this session — the user has seen the
+    // pitch and is moving into the auth funnel (the flag is not persisted yet).
     const leaveOnboarding = useCallback((href: '/(app)/(auth)/sign-up' | '/(app)/(auth)/sign-in') => {
         AppStorage.saveOnboardingCompleted();
         router.replace(href);
