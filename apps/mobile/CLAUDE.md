@@ -73,7 +73,7 @@ src/
   never render `<Toast>` manually. Host `<RNToast config={toastConfig}>` is
   mounted in the root layout.
 - Auth guard: `Stack.Protected` in `(app)/_layout.tsx` driven by
-  `useStore(state => state.isAuthenticated)` (mocked `true` until auth ships);
+  `useStore(state => state.isAuthenticated)` (defaults to `false`, session-only: «Увійти» / email code flip it, nothing persists it until auth ships);
   sign-out everywhere via `switchAuthenticatedAction(false)` — the HTTP layer
   calls it automatically on unrecoverable 401.
 - Data flow: screens → RQ hooks in `state/domains/<domain>/hooks/` → `DomainApi`
