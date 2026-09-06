@@ -16,13 +16,21 @@ export class CurrentUserView {
     @ApiProperty({ description: 'Null until the email is confirmed.', nullable: true })
     readonly emailVerifiedAt: string | null;
 
-    private constructor(user: UserEntity) {
+    @ApiProperty({
+        nullable: true,
+        description:
+            'When the account is scheduled for deletion, or null. Non-null means the app must open the recovery screen instead of the app (account-deletion FR-003).',
+    })
+    readonly deletionScheduledFor: string | null;
+
+    private constructor(user: UserEntity, deletionScheduledFor: Date | null) {
         this.id = user.id;
         this.email = user.email;
         this.emailVerifiedAt = user.emailVerifiedAt?.toISOString() ?? null;
+        this.deletionScheduledFor = deletionScheduledFor?.toISOString() ?? null;
     }
 
-    static from(user: UserEntity): CurrentUserView {
-        return new CurrentUserView(user);
+    static from(user: UserEntity, deletionScheduledFor: Date | null = null): CurrentUserView {
+        return new CurrentUserView(user, deletionScheduledFor);
     }
 }

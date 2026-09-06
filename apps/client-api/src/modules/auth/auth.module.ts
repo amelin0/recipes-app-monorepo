@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import {
+    AccountDeletionRequestRepositoryModule,
     OAuthIdentityRepositoryModule,
     OtpCodeRepositoryModule,
     PasswordResetPermitRepositoryModule,
@@ -34,6 +35,7 @@ import { TokenService } from './token.service';
         OtpCodeRepositoryModule,
         PasswordResetPermitRepositoryModule,
         OAuthIdentityRepositoryModule,
+        AccountDeletionRequestRepositoryModule,
     ],
     controllers: [AuthController],
     providers: [

@@ -11,7 +11,7 @@ import {
 } from '@nestjs/swagger';
 
 import { SetThrottleKey } from '@dns/api-common';
-import { UserEntity } from '@dns/database';
+import { AccountDeletionRequestRepository, UserEntity } from '@dns/database';
 
 import { ThrottleKey } from '../../common/config';
 
@@ -45,6 +45,7 @@ export class AuthController {
         private readonly tokenService: TokenService,
         private readonly passwordResetService: PasswordResetService,
         private readonly oauthSignInService: OAuthSignInService,
+        private readonly deletionRequestRepository: AccountDeletionRequestRepository,
     ) {}
 
     @Public()
@@ -93,8 +94,12 @@ export class AuthController {
     @ApiBearerAuth()
     @ApiOkResponse({ type: CurrentUserView })
     @ApiUnauthorizedResponse({ description: 'Missing, expired or revoked access token.' })
-    me(@CurrentUser() user: UserEntity): CurrentUserView {
-        return CurrentUserView.from(user);
+    async me(@CurrentUser() user: UserEntity): Promise<CurrentUserView> {
+        // Read here rather than in the strategy: this is the one route that
+        // has to report it, and every other authenticated request would pay
+        // for a lookup it never uses.
+        const pendingDeletion = await this.deletionRequestRepository.findActive(user.id);
+        return CurrentUserView.from(user, pendingDeletion?.scheduledFor ?? null);
     }
 
     @Public()
