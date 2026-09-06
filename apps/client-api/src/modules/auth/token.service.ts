@@ -123,7 +123,7 @@ export class TokenService {
     }
 
     private signAccessToken(user: UserEntity): Promise<string> {
-        const payload: AccessTokenPayload = { sub: user.id, email: user.email };
+        const payload: AccessTokenPayload = { sub: user.id, email: user.email, type: 'access' };
 
         return this.jwtService.signAsync(payload, {
             secret: this.configService.getOrThrow('auth.access.secret', { infer: true }),

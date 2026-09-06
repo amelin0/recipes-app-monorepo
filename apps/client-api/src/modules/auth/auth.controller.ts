@@ -21,12 +21,17 @@ import {
     AuthTokensView,
     CurrentUserView,
     LoginInboundDto,
+    PasswordResetPermitView,
     RefreshTokenInboundDto,
     RegisterInboundDto,
+    RequestPasswordResetInboundDto,
     ResendEmailCodeInboundDto,
+    SetNewPasswordInboundDto,
     VerifyEmailInboundDto,
+    VerifyPasswordResetCodeInboundDto,
 } from './dto';
 import { JwtGuard } from './guards';
+import { PasswordResetService } from './password-reset.service';
 import { TokenService } from './token.service';
 
 @ApiTags('auth')
@@ -36,6 +41,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly tokenService: TokenService,
+        private readonly passwordResetService: PasswordResetService,
     ) {}
 
     @Public()
@@ -112,5 +118,35 @@ export class AuthController {
     @ApiNoContentResponse({ description: 'Ends every session of the account.' })
     async logoutAll(@CurrentUser() user: UserEntity): Promise<void> {
         await this.tokenService.revokeAllForUser(user.id);
+    }
+
+    @Public()
+    @Post('password-reset/request')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @SetThrottleKey(ThrottleKey.PasswordReset)
+    @ApiNoContentResponse({ description: 'Always 204 — the response never reveals whether the account exists.' })
+    async requestPasswordReset(@Body() body: RequestPasswordResetInboundDto): Promise<void> {
+        await this.passwordResetService.request(body);
+    }
+
+    @Public()
+    @Post('password-reset/verify')
+    @HttpCode(HttpStatus.OK)
+    @SetThrottleKey(ThrottleKey.VerifyOtp)
+    @ApiOkResponse({ type: PasswordResetPermitView })
+    async verifyPasswordResetCode(@Body() body: VerifyPasswordResetCodeInboundDto): Promise<PasswordResetPermitView> {
+        return PasswordResetPermitView.from(await this.passwordResetService.verifyCode(body));
+    }
+
+    @Public()
+    @Post('password-reset/complete')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @SetThrottleKey(ThrottleKey.PasswordReset)
+    @ApiNoContentResponse({
+        description: 'Password changed. Every session is revoked and no new one is issued (FR-005, FR-009).',
+    })
+    @ApiUnauthorizedResponse({ description: 'Permit is unknown, expired or already spent.' })
+    async setNewPassword(@Body() body: SetNewPasswordInboundDto): Promise<void> {
+        await this.passwordResetService.setNewPassword(body);
     }
 }

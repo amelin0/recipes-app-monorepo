@@ -28,6 +28,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
      * verification was somehow revoked — would keep working until it expired.
      */
     async validate(payload: AccessTokenPayload): Promise<UserEntity> {
+        // The type check comes first: a refresh token or a reset permit is
+        // also a signed JWT with a `sub`, and without this any of them would
+        // open a session.
+        if (payload.type !== 'access') {
+            throw new UnauthorizedException();
+        }
+
         const user = await this.userRepository.findById(payload.sub);
 
         if (!user || !user.isEmailVerified()) {

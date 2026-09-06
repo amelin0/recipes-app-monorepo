@@ -1,5 +1,8 @@
 export { LoginInboundDto } from './login.inbound.dto';
 export { RefreshTokenInboundDto } from './refresh-token.inbound.dto';
 export { RegisterInboundDto } from './register.inbound.dto';
+export { RequestPasswordResetInboundDto } from './request-password-reset.inbound.dto';
 export { ResendEmailCodeInboundDto } from './resend-email-code.inbound.dto';
+export { SetNewPasswordInboundDto } from './set-new-password.inbound.dto';
 export { VerifyEmailInboundDto } from './verify-email.inbound.dto';
+export { VerifyPasswordResetCodeInboundDto } from './verify-password-reset-code.inbound.dto';
