@@ -4,7 +4,7 @@
 > Гілка: `feat/backend-foundation` (від `development`).
 > План: `C:\Users\olehc\.claude\plans\cozy-wishing-karp.md`
 
-**Останнє оновлення:** 2026-09-06 — зрізи 4 (сховище) і 5 (nutrition) закрито, перевірено
+**Останнє оновлення:** 2026-09-06 — зріз 6 (onboarding) закрито, перевірено
 на живій базі.
 
 ---
@@ -355,11 +355,11 @@ pnpm dev:admin-api             # :3001, Swagger /docs
 
 | Команда                                      | Що                                                                           |
 | -------------------------------------------- | ---------------------------------------------------------------------------- |
-| `pnpm --filter @dns/constants test`          | 3 — формула Atwater                                                          |
+| `pnpm --filter @dns/constants test`          | 16 — Atwater, Mifflin-St Jeor, добові норми і БЖВ                            |
 | `pnpm --filter @dns/validation test`         | 25 — пароль, email, код, налаштування, нагадування, цілі й записи харчування |
 | `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                                         |
 | `pnpm --filter @dns/api-infrastructure test` | 11 — коди та перевірка власності файлів                                      |
-| `pnpm --filter @dns/client-api test:db`      | 48 — auth, user, звернення і nutrition на живій базі (потрібен docker)       |
+| `pnpm --filter @dns/client-api test:db`      | 60 — auth, user, звернення, nutrition і анкета на живій базі (треба docker)  |
 
 Наскрізний прогін auth (перевірено вручну, `OTP_DEV_CODE=000000`):
 
