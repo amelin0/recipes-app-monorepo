@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { SUPPORTED_LANGUAGES } from '@dns/constants';
-import { MetricSystem, ReminderType, Theme } from '@dns/shared-types';
+import { MetricSystem, ReminderType, StorageScope, Theme } from '@dns/shared-types';
 
 /**
  * The save button stays disabled while the field is empty (profile-edit
@@ -14,15 +14,20 @@ export const displayNameSchema = z
     .min(1, 'Name is required')
     .max(100, 'Name must be at most 100 characters');
 
+/**
+ * `photoUrl` must be a URL this user obtained from `POST /uploads` — the
+ * service checks that before storing it. Validating only the shape here would
+ * let any address be written into a profile that every viewer then fetches.
+ * `null` clears the photo.
+ */
 export const updateProfileSchema = z
     .object({
         name: displayNameSchema.optional(),
+        photoUrl: z.string().url('Must be a valid URL').nullable().optional(),
     })
     .refine(value => Object.keys(value).length > 0, 'Provide at least one field to update');
 
-const languageSchema = z
-    .string()
-    .refine(value => SUPPORTED_LANGUAGES.includes(value as never), 'Unsupported language');
+const languageSchema = z.string().refine(value => SUPPORTED_LANGUAGES.includes(value as never), 'Unsupported language');
 
 const unitSchema = z.nativeEnum(MetricSystem);
 
@@ -79,3 +84,22 @@ export const updateRemindersSchema = z.object({
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type UpdateRemindersInput = z.infer<typeof updateRemindersSchema>;
+
+/**
+ * Asking for permission to upload one file. The server signs the type and
+ * size into the grant, so both must be declared up front — after the URL is
+ * handed out there is nothing left to check.
+ */
+export const presignUploadSchema = z.object({
+    scope: z.nativeEnum(StorageScope),
+    fileName: z.string().trim().min(1, 'File name is required').max(255, 'File name is too long'),
+    contentType: z.string().trim().min(1, 'Content type is required'),
+    /**
+     * The exact byte length. It is signed into the grant, so an upload of any
+     * other size is rejected by the object store with an opaque 403 — the
+     * client cannot estimate here.
+     */
+    size: z.number().int().positive('Size must be a positive number of bytes'),
+});
+
+export type PresignUploadInput = z.infer<typeof presignUploadSchema>;

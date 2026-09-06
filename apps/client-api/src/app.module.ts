@@ -8,6 +8,7 @@ import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, Respon
 import { EmailModule } from '@dns/api-infrastructure/email';
 import { OAuthModule } from '@dns/api-infrastructure/oauth';
 import { OtpModule } from '@dns/api-infrastructure/otp';
+import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DatabaseConnectionModule } from '@dns/database';
 
 import {
@@ -19,10 +20,12 @@ import {
     emailConfig,
     oauthConfig,
     otpConfig,
+    storageConfig,
     throttlerConfig,
 } from './common/config';
 import { AuthModule } from './modules/auth';
 import { HealthModule } from './modules/health';
+import { UploadsModule } from './modules/uploads';
 import { UserModule } from './modules/user';
 
 @Module({
@@ -32,7 +35,7 @@ import { UserModule } from './modules/user';
             // App-local .env first, then the monorepo root one that
             // docker-compose and the clients also read.
             envFilePath: ['.env', '../../.env'],
-            load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, throttlerConfig],
+            load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, storageConfig, throttlerConfig],
         }),
         LoggerModule.forRootAsync({
             inject: [ConfigService],
@@ -79,9 +82,17 @@ import { UserModule } from './modules/user';
             inject: [ConfigService],
             useFactory: (configService: ConfigService<AllConfig>) => configService.getOrThrow('otp', { infer: true }),
         }),
+        StorageModule.forRootAsync({
+            isGlobal: true,
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<AllConfig>) =>
+                configService.getOrThrow('storage', { infer: true }),
+        }),
         AuthModule,
         HealthModule,
         UserModule,
+        UploadsModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },

@@ -4,5 +4,6 @@ export { default as databaseConfig } from './database.config';
 export { default as emailConfig } from './email.config';
 export { default as oauthConfig } from './oauth.config';
 export { default as otpConfig } from './otp.config';
+export { default as storageConfig } from './storage.config';
 export { default as throttlerConfig } from './throttler.config';
 export * from './config.type';
