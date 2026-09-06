@@ -1,0 +1,27 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        "outDir": "./dist",
+        "baseUrl": ".",
+        "target": "ES2022",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "declaration": false,
+        "declarationMap": false,
+        "sourceMap": true,
+        // Off here, on in the packages: NestJS constructor-injected providers
+        // and positional interceptor/filter arguments are legitimately unread.
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "paths": {
+            "@dns/api-common": ["../../packages/api-common/src"],
+            "@dns/constants": ["../../packages/constants/src"],
+            "@dns/database": ["../../packages/database/src"],
+            "@dns/shared-types": ["../../packages/shared-types/src"]
+        }
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
+}
