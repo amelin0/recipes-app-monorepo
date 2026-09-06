@@ -21,6 +21,7 @@
 | Окремі `users` і `admins`, ланцюжки сесій на пристрій, deny-by-default     | [ADR-0003](docs/adr/0003-auth-model-tokens-and-admin-permissions.md) |
 | Шляхи клієнтського API за REST-конвенціями, `/profile` замість `/users/me` | [ADR-0004](docs/adr/0004-client-api-url-conventions.md)              |
 | Чого торкається видалення акаунту — **Proposed**, чекає на рішення         | [ADR-0005](docs/adr/0005-what-account-deletion-erases.md)            |
+| Продукти поглинають інгредієнти; фільтри комбінуються по-різному в групах  | [ADR-0006](docs/adr/0006-products-absorb-ingredients.md)             |
 
 Додатково, поза ADR:
 
@@ -143,18 +144,72 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 ---
 
+### Зріз 4 — сховище файлів ✅
+
+| Коміт | Що |
+| --- | --- |
+| `feat(api-infrastructure): s3 storage with presigned uploads and ownership checks` | `StorageModule`, `validateOwnership`, 8 тестів |
+| `feat(client-api): presigned uploads and profile photo` | `POST /uploads`, `photoUrl` у `PATCH /profile` |
+| `feat(client-api): support tickets with attachments` | `POST /profile/feedback`, таблиця `feedback` |
+| `fix(client-api): ownership checks must reject, not throw synchronously` | метод типізовано як `Promise`, а кидав синхронно — тест це знайшов |
+| `docs: deletion must clear support reply addresses explicitly` | знайдена й закрита прогалина приватності |
+
+Байти йдуть **повз API** — клієнт бере підписаний дозвіл і вивантажує напряму
+в сховище. Перевірено наскрізно на MinIO: presign → PUT → GET, байти
+ідентичні.
+
+Дві речі, які виявилися лише під час перевірки:
+
+- **Розмір вшивається в підпис.** Оголосив 1024, вивантажив 160 — MinIO віддає
+  непрозорий 403. Клієнт мусить називати точний розмір; зафіксовано в
+  `apps/client-api/CLAUDE.md`.
+- **`ON DELETE SET NULL` не чистить email.** Тікет переживає видалення автора
+  (як і задумано ADR-0005), але `reply_email` лишався з особистою адресою.
+  Відтворено, виправлено кроком у runbook, покрито тестом.
+
+### Зріз 5 — client nutrition ✅
+
+| Коміт | Що |
+| --- | --- |
+| `docs(adr): products absorb ingredients, filter combination semantics` | ADR-0006 |
+| `feat(database): nutrition goals, meal, water and step logs` | 4 таблиці + міграція `0003_dry_lady_ursula.sql` |
+| `feat(validation): nutrition goal, meal, water and step schemas` | 11 тестів |
+| `feat(client-api): nutrition goal, daily slice, meal, water and step logging` | 8 ендпоінтів |
+| `test(client-api): nutrition domain specs` | 14 db-тестів |
+| `docs: plans for client nutrition and status sync` | 3 × `plan.md` |
+
+Три рішення, які варто знати:
+
+- **Денний підсумок не зберігається, а рахується запитом.** V1 тримав
+  матеріалізовану `daily_nutrition_summary`, яку мав наповнювати тригер —
+  тригер так і не написали, і таблиця назавжди показувала нулі.
+- **Записаний прийом їжі — зліпок, а не посилання.** Рецепт можна
+  відредагувати, а чек має лишатися чеком. Це ж рішення дозволило зробити
+  домен **до** появи каталогу рецептів: `recipe_id` nullable і поки без FK.
+- **Вода — журнал, кроки — одне значення.** Дзеркально і навмисно: склянку
+  треба вміти забрати, а кроки приходять уже підсумованими, і додавання
+  подвоїло б їх на другій синхронізації за день.
+
+---
+
 ## Далі
 
 ### Поза цим планом
 
 Наступні кандидати:
 
-- **`@dns/api-infrastructure/storage`** — розблокує фото профілю, зображення у
-  зверненнях і фото рецептів одразу. Усі `S3_*` у `.env.example` готові.
 - **`client/onboarding`** — 16-крокова анкета; допише в `profiles` стать, дату
-  народження, зріст, активність і цілі, плюс серверні BMR/TDEE.
-- **`client/nutrition`** → **`client/recipe`** → admin-зрізи (їм спершу
-  потрібні специфікації: у `docs/specs/admin/` зараз лише README).
+  народження, зріст, активність і цілі, плюс серверні BMR/TDEE. Розблокує
+  рекомендовані значення на екрані цілі (goal-setup FR-003a).
+- **`client/recipe` + `product`** — найбільший домен, і рішення для нього вже
+  ухвалені (ADR-0006). Розблокує логування їжі з каталогу, фільтри, пошук і
+  власні страви. Але тримає **11 відкритих питань** зі специфікацій — див.
+  розділ нижче.
+- **`client/meal-plan`** — розблокує слоти раціону на головному екрані
+  (daily-tracking FR-006).
+- Далі: `progress`, `shopping-list`, `subscription`, `notifications`, потім
+  admin-зрізи (їм спершу потрібні специфікації: у `docs/specs/admin/` зараз
+  лише README).
 
 Підключення мобілки до живого API — окремий трек.
 
@@ -164,9 +219,16 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 - **`@dns/utils` не створено.** У плані був, але жодного спільного хелпера
   ще не знадобилось — створимо разом із першим, а не наперед.
-- **`storage/` в `@dns/api-infrastructure` не створено.** З'явиться з першою
-  фічею завантаження зображень; `S3_*` у `.env.example` уже готові.
-  (`oauth/` створено у зрізі 2.)
+- **Домен рецептів має 11 відкритих питань, які треба закрити до коду.**
+  Найважчі: чи має рецепт одну кухню чи кілька; де рахується КБЖВ власної
+  страви (сервер, за ADR-0006 — але формула й округлення не задані); чи
+  застосовуються фільтри до вкладок «Улюблені» і «Власні»; чи потрібна
+  модерація фото користувацьких страв; чи можна редагувати каталожні рецепти.
+  Повний перелік — у специфікаціях `docs/specs/client/recipe/*`, позначені
+  `[NEEDS CLARIFICATION]`.
+- **Адмінка ще не знає про ADR-0006.** `GET /admin/recipes/ingredients/all` має
+  стати запитом до продуктів, а редактор складу — вибором продукту. Правка в
+  `apps/web`, не лише в API; робиться разом з admin-зрізом.
 - **OAuth-верифікацію не перевірено проти живих Apple/Google.** Токен провайдера
   неможливо видобути в тесті, тож у db-специфікаціях підмінено рівно цей крок
   (`FakeOAuthVerifier`), а вся логіка create-or-link виконується по-справжньому.
