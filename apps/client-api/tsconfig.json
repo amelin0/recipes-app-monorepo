@@ -25,6 +25,6 @@
             "@dns/validation": ["../../packages/validation/src"]
         }
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "test/**/*", "jest.db.config.ts"],
     "exclude": ["node_modules", "dist"]
 }
