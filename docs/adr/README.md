@@ -35,3 +35,4 @@ Skip an ADR for routine choices that follow from existing skills / conventions.
 - [ADR-0002](./0002-split-client-and-admin-api.md) — Два окремі сервіси: client-api і admin-api замість одного застосунку з бакетами — **Accepted**
 - [ADR-0003](./0003-auth-model-tokens-and-admin-permissions.md) — Модель автентифікації: окремі users і admins, ланцюжки сесій на пристрій, deny-by-default для стафу — **Accepted**
 - [ADR-0004](./0004-client-api-url-conventions.md) — Шляхи клієнтського API будуються за REST-конвенціями, а не успадковуються з V1 — **Accepted**
+- [ADR-0005](./0005-what-account-deletion-erases.md) — Чого саме торкається видалення акаунту після пільгового періоду — **Proposed**

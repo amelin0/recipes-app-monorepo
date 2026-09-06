@@ -9,6 +9,7 @@ and meal planning system. Structure mirrors the 11am-app reference monorepo.
 recipes-app-monorepo/
 ├── apps/
 │   ├── client-api/   # @dns/client-api — NestJS API for the mobile app (port 3000)
+│   │                 #   conventions + local verification: apps/client-api/CLAUDE.md
 │   ├── admin-api/    # @dns/admin-api — NestJS API for the admin panel (port 3001)
 │   ├── mobile/       # @dns/mobile — RationFit: Expo app (Unistyles), screens ship domain by domain
 │   └── web/          # @dns/web — Next.js admin panel (working)
