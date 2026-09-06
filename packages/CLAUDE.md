@@ -2,13 +2,13 @@
 
 ## Overview
 
-All packages are internal workspaces consumed by `apps/api` and `apps/mobile`
-(web consumes API over HTTP only). Each package exports through `src/index.ts`.
+All packages are internal workspaces consumed by `apps/client-api`,
+`apps/admin-api` and `apps/mobile` (web consumes the API over HTTP only).
+Each package exports through `src/index.ts`.
 
-> Currently empty — packages are created by the backend developer as the
-> API takes shape. The intended split mirrors the 11am-app reference:
+The split mirrors the 11am-app reference.
 
-## Planned packages
+## Packages
 
 ### @dns/shared-types
 
@@ -37,9 +37,18 @@ All packages are internal workspaces consumed by `apps/api` and `apps/mobile`
 - Owns `db:generate`, `db:migrate`, `db:studio`, `db:seed` scripts
   referenced from the root `package.json`
 
-### @dns/api-common / @dns/api-infrastructure
+### @dns/api-common
 
-- Backend-only shared modules (guards, interceptors, infra adapters)
+- Backend-only cross-cutting NestJS building blocks shared by both APIs:
+  `GlobalExceptionFilter`, `ResponseInterceptor` (`{ data: T }` envelope),
+  `CustomThrottlerGuard` + `@SetThrottleKey`, pino logger config
+
+### @dns/api-infrastructure
+
+- Dynamic modules for external infrastructure, subpath-exported:
+  `email/` (Resend, stub client when `RESEND_API_KEY` is absent), `otp/`,
+  `oauth/` (Apple, Google), `storage/` (S3 / MinIO presigned URLs)
+- Each follows the `forRootAsync` pattern
 
 ## Rules
 

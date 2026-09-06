@@ -28,5 +28,5 @@ UI всіх екранів уже реалізовано в мобільному
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/recipe/`
-- Код (майбутній API): `apps/api/src/client/recipe/`
+- Код (майбутній API): `apps/client-api/src/recipe/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/recipe/`](../../../../.claude/knowledge/recipe)

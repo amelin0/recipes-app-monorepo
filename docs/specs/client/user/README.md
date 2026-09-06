@@ -31,5 +31,5 @@ UI екрана вже реалізовано в мобільному засто
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/user/`
-- Код (майбутній API): `apps/api/src/client/users/`
+- Код (майбутній API): `apps/client-api/src/users/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/user/`](../../../../.claude/knowledge/user)

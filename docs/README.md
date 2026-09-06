@@ -21,9 +21,9 @@ see the root [`CLAUDE.md`](../CLAUDE.md).
 Specs are split by **user persona**, not by app:
 
 - **[`specs/client/`](./specs/client)** — consumer-facing surfaces: the
-  Expo mobile app + the client API (`apps/api/src/client/`).
+  Expo mobile app + the client API (`apps/client-api/src/`).
 - **[`specs/admin/`](./specs/admin)** — internal staff surfaces: the
-  Next.js admin panel + the admin API (`apps/api/src/admin/`).
+  Next.js admin panel + the admin API (`apps/admin-api/src/`).
   Separate auth model (ADMIN / SUPER_ADMIN roles).
 
 Each feature lives in its own folder

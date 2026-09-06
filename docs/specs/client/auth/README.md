@@ -25,5 +25,5 @@ UI всіх екранів уже реалізовано в мобільному
 
 - Код (UI, мок-хендлери): `apps/mobile/src/view/auth/`,
   `apps/mobile/src/shared/services/http.service.ts`
-- Код (майбутній API): `apps/api/src/client/auth/`
+- Код (майбутній API): `apps/client-api/src/auth/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/auth/`](../../../../.claude/knowledge/auth)

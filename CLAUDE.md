@@ -8,11 +8,13 @@ and meal planning system. Structure mirrors the 11am-app reference monorepo.
 ```
 recipes-app-monorepo/
 ├── apps/
-│   ├── api/          # @dns/api — EMPTY: backend will be written by the backend developer
+│   ├── client-api/   # @dns/client-api — NestJS API for the mobile app (port 3000)
+│   ├── admin-api/    # @dns/admin-api — NestJS API for the admin panel (port 3001)
 │   ├── mobile/       # @dns/mobile — RationFit: Expo app (Unistyles), screens ship domain by domain
 │   └── web/          # @dns/web — Next.js admin panel (working)
-├── packages/         # Shared workspaces (planned: shared-types, validation,
-│                     #   constants, utils, database) — see packages/CLAUDE.md
+├── packages/         # Shared workspaces: shared-types, validation, constants,
+│                     #   utils, database, api-common, api-infrastructure
+│                     #   — see packages/CLAUDE.md
 ├── docs/             # Specs (spec.md + plan.md per feature), ADRs, runbooks
 ├── scripts/          # minio-init.sh for docker-compose
 └── .claude/
@@ -28,11 +30,17 @@ recipes-app-monorepo/
 
 | App | Stack |
 |-----|-------|
-| `@dns/api` | TBD by backend developer (reference: NestJS + PostgreSQL + Redis + MinIO, as in 11am-app) |
+| `@dns/client-api` | NestJS 11 + Drizzle + nestjs-zod + passport-jwt (PostgreSQL, Redis, MinIO) |
+| `@dns/admin-api` | Same stack as client-api, separate service and JWT secrets |
 | `@dns/web` | Next.js 16, React 19, Tailwind CSS v4, TypeScript |
 | `@dns/mobile` | Expo SDK 55 + React Native 0.83 + expo-router + **react-native-unistyles 3** (NOT Uniwind) |
 
 Local infrastructure: `docker-compose.yml` — postgres:16, redis:7, MinIO (S3).
+
+The two APIs are **separate services over one shared database**
+(`@dns/database`). The admin service carries no `/admin` path prefix — the
+port distinguishes them. See [ADR-0002](docs/adr/0002-split-client-and-admin-api.md)
+and [ADR-0003](docs/adr/0003-auth-model-tokens-and-admin-permissions.md).
 
 ## Package Manager
 
@@ -88,14 +96,16 @@ clients. Mobile and web call the API via HTTP only.
 ```bash
 pnpm dev:web          # Start Next.js dev server
 pnpm dev:mobile       # Start mobile dev (see apps/mobile/CLAUDE.md — Metro port caveat)
-pnpm dev:api          # Start API dev (once @dns/api exists)
+pnpm dev:client-api   # Start client API dev (:3000, Swagger on /docs)
+pnpm dev:admin-api    # Start admin API dev (:3001, Swagger on /docs)
 pnpm build:web        # Build Next.js
 pnpm deploy:web       # Deploy web to Vercel (production)
 pnpm lint             # Lint all workspaces
 pnpm typecheck        # Typecheck all workspaces
 pnpm format           # Prettier write
-pnpm db:generate      # Drizzle/ORM codegen (once @dns/database exists)
-pnpm db:migrate       # Run DB migrations (once @dns/database exists)
+pnpm db:generate      # drizzle-kit: generate migration from schema changes
+pnpm db:migrate       # Run DB migrations
+pnpm db:studio        # drizzle-kit studio
 docker compose up -d  # Local postgres + redis + MinIO
 ```
 

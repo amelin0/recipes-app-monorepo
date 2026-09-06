@@ -14,5 +14,5 @@ Each feature lives in its own folder containing `spec.md` + `plan.md`
 ## Related
 
 - Code (UI, мок): `apps/mobile/src/view/meal-plan/`
-- Code (майбутній API): `apps/api/src/client/`
+- Code (майбутній API): `apps/client-api/src/`
 - Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)

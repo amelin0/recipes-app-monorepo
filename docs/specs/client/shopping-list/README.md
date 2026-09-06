@@ -23,5 +23,5 @@ UI екранів уже реалізовано в мобільному заст
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/shopping-list/`
-- Код (майбутній API): `apps/api/src/client/`
+- Код (майбутній API): `apps/client-api/src/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/shopping-list/`](../../../../.claude/knowledge/shopping-list)

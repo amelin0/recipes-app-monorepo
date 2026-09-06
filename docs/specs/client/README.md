@@ -1,7 +1,7 @@
 # Client bucket
 
 Consumer-facing surfaces: the Expo mobile app ([`apps/mobile/`](../../../apps/mobile))
-and the client API ([`apps/api/src/client/`](../../../apps/api/src/client)).
+and the client API ([`apps/client-api/src/`](../../../apps/client-api/src)).
 Users with the **USER** role.
 
 ## Domains

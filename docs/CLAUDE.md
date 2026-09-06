@@ -15,8 +15,14 @@ conventions live in the **root** `CLAUDE.md` — not here.
 
 ## Spec buckets
 
-- **`specs/client/`** — consumer-facing: Expo mobile app + client API (`apps/api/src/client/`)
-- **`specs/admin/`** — internal staff: Next.js admin panel + admin API (`apps/api/src/admin/`)
+- **`specs/client/`** — consumer-facing: Expo mobile app + client API
+  (`apps/client-api/`, port 3000)
+- **`specs/admin/`** — internal staff: Next.js admin panel + admin API
+  (`apps/admin-api/`, port 3001)
+
+The two APIs are separate services over one shared database — see
+[ADR-0002](./adr/0002-split-client-and-admin-api.md). The admin service
+carries **no** `/admin` path prefix.
 
 ## Slash commands (zonal — defined in `.claude/commands/`)
 

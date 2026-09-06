@@ -24,5 +24,5 @@ UI обох екранів уже реалізовано в мобільному
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/tracking/`
-- Код (майбутній API): `apps/api/src/client/`
+- Код (майбутній API): `apps/client-api/src/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/nutrition/`](../../../../.claude/knowledge/nutrition)
