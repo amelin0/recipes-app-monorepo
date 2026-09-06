@@ -24,6 +24,7 @@ import {
     throttlerConfig,
 } from './common/config';
 import { AuthModule } from './modules/auth';
+import { CatalogModule } from './modules/catalog';
 import { HealthModule } from './modules/health';
 import { NutritionModule } from './modules/nutrition';
 import { ProgressModule } from './modules/progress';
@@ -106,6 +107,7 @@ import { UserModule } from './modules/user';
         UploadsModule,
         NutritionModule,
         ProgressModule,
+        CatalogModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
