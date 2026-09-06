@@ -4,7 +4,8 @@
 > Гілка: `feat/backend-foundation` (від `development`).
 > План: `C:\Users\olehc\.claude\plans\cozy-wishing-karp.md`
 
-**Останнє оновлення:** 2026-09-06 — фундамент зібрано і перевірено вживу.
+**Останнє оновлення:** 2026-09-06 — зріз 2 (client auth) закрито, перевірено
+на живій базі.
 
 ---
 
@@ -68,19 +69,41 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 ---
 
+### Зріз 2 — client auth ✅
+
+| Коміт                                                                   | Що                                                                                      |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `feat(database): users, refresh tokens, otp codes and oauth identities` | 5 таблиць + міграція `0000_thin_iceman.sql`, сутності, репозиторії                      |
+| `feat(validation): auth schemas`                                        | `@dns/validation` з нуля; `AUTH_POLICY` у `@dns/constants`; 7 тестів                    |
+| `fix(validation): otp pattern matched any six characters`               | регулярка приймала `dddddd` — бекслеш загубився при написанні файлу                     |
+| `feat(client-api): sign-up with email verification code`                | register / verify-email / resend-code, `TokenService`, JWT-стратегія і guard            |
+| `feat(client-api): sign-in with generic auth errors`                    | login, `GET /auth/me`                                                                   |
+| `feat(client-api): refresh rotation, logout and logout everywhere`      | ротація ланцюжків, виявлення повтору                                                    |
+| `feat(client-api): password reset with single-use permit`               | request → verify → complete                                                             |
+| `feat(client-api): apple and google sign-in with create-or-link`        | `oauth/` в `api-infrastructure`, `OAuthSignInService`                                   |
+| `fix(database): close the postgres pool on shutdown`                    | пул не закривався: тести не виходили, контейнер ігнорував SIGTERM                       |
+| `test(client-api): auth flow specs against a real database`             | ts-jest + 3 db-специфікації, 17 тестів                                                  |
+| `docs: plans for client auth and status sync`                           | 4 × `plan.md`, специфікації → `Implemented`, `.claude/knowledge/auth/client-auth-v2.md` |
+
+**11 ендпоінтів** під `/api/v1/auth`: `register`, `verify-email`,
+`resend-code`, `login`, `oauth`, `refresh`, `logout`, `logout-all`, `me`,
+`password-reset/{request,verify,complete}`.
+
+Дві речі, знайдені під час роботи і виправлені окремими комітами:
+
+- **Permit-токен проходив би як access-токен.** `JwtStrategy` завантажувала
+  користувача за `sub` і не дивилась на призначення токена, тож той, хто знає
+  код відновлення, отримував би сесію — рівно те, що password-reset FR-009
+  забороняє. Тепер у кожного токена явний claim `type`, який перевіряє кожен
+  споживач, а permit підписано іншим ключем.
+- **Ротація в 11am видаляє всі токени користувача**, тобто подовження на
+  телефоні розлогінює планшет. Це суперечить session FR-006, тож у нас
+  ротація торкається лише свого ланцюжка, а повтор спожитого токена вбиває
+  один пристрій.
+
+---
+
 ## Далі
-
-### Зріз 2 — client auth
-
-- [ ] схема БД: `users`, `refresh_tokens`, `otp_codes`, `oauth_identities` + перша міграція
-- [ ] `@dns/validation` — auth-схеми (переюзає мобілка у формах)
-- [ ] `@dns/constants` — auth-політика (TTL коду, ліміт спроб, довжина
-      пароля, cost bcrypt) — на це вже посилається коментар у `.env.example`
-- [ ] реєстрація з кодом на email, вхід, ротація refresh, logout / logout-all
-- [ ] скидання пароля, OAuth Apple/Google (+ `oauth/` у `api-infrastructure`)
-- [ ] db-тести auth-флоу
-- [ ] 4 × `plan.md`, статуси специфікацій → `Implemented`, оновлення
-      `.claude/knowledge/auth/`
 
 ### Поза цим планом
 
@@ -94,9 +117,14 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 - **`@dns/utils` не створено.** У плані був, але жодного спільного хелпера
   ще не знадобилось — створимо разом із першим, а не наперед.
-- **`oauth/` і `storage/` в `@dns/api-infrastructure` не створено.** OAuth
-  з'явиться разом із кроком «Apple/Google sign-in» у зрізі 2, storage — із
-  першою фічею завантаження зображень. `S3_*` у `.env.example` уже готові.
+- **`storage/` в `@dns/api-infrastructure` не створено.** З'явиться з першою
+  фічею завантаження зображень; `S3_*` у `.env.example` уже готові.
+  (`oauth/` створено у зрізі 2.)
+- **OAuth-верифікацію не перевірено проти живих Apple/Google.** Токен провайдера
+  неможливо видобути в тесті, тож у db-специфікаціях підмінено рівно цей крок
+  (`FakeOAuthVerifier`), а вся логіка create-or-link виконується по-справжньому.
+  Перед релізом потрібен ручний прогін із реальним пристроєм і заповненими
+  `GOOGLE_CLIENT_ID` / `APPLE_CLIENT_ID`.
 - **`ADMIN_PERMISSION_MATRIX` ще немає.** ADR-0003 його визначає, але
   споживач з'явиться в admin-зрізі; додамо тоді ж.
 - **OTP зберігається в БД, а не в Redis.** У 11am код лежить у Redis-кеші й
@@ -114,6 +142,10 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 ## Відомі борги
 
+- **Прострочені рядки ніхто не прибирає.** `refresh_tokens` зберігає й спожиті
+  токени (це і робить крадіжку помітною), `otp_codes` і
+  `password_reset_permits` лишаються після закінчення строку. Потрібне
+  періодичне прибирання — cron або runbook.
 - **Redis піднятий, але не використовується.** Сховище throttler'а — у
   пам'яті процесу: ліміти скидаються при рестарті й не діють між репліками.
   Для одного інстансу прийнятно; перед горизонтальним масштабуванням
@@ -149,26 +181,37 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 ## Як перевірити локально
 
 ```bash
+docker compose up -d           # postgres:16, redis:7, minio + бакет
 cp .env.example .env
 pnpm install
-pnpm typecheck                 # 9 воркспейсів — зелено
-pnpm dev:client-api            # :3000
-pnpm dev:admin-api             # :3001
+pnpm db:migrate
+pnpm typecheck                 # 10 воркспейсів — зелено
+pnpm dev:client-api            # :3000, Swagger /docs
+pnpm dev:admin-api             # :3001, Swagger /docs
 ```
 
-Перевірено вручну, обидва сервіси піднімалися одночасно:
+Тести:
 
-| Перевірка                          | Результат                                                                   |
-| ---------------------------------- | --------------------------------------------------------------------------- |
-| `GET :3000/api/v1/health`          | `{"data":{"status":"ok","time":"…"}}` — конверт `{data}` працює             |
-| `GET :3001/api/v1/health`          | те саме, порти не конфліктують                                              |
-| `GET :3000/docs`, `GET :3001/docs` | 200, два окремі Swagger-документи                                           |
-| Неіснуючий маршрут                 | `{"statusCode":404,"message":"Cannot GET /api/v1/nope"}` — форма `ApiError` |
-| 65 запитів поспіль                 | 429 `ThrottlerException`, заголовки `X-RateLimit-*` присутні                |
+| Команда                                      | Що                                                   |
+| -------------------------------------------- | ---------------------------------------------------- |
+| `pnpm --filter @dns/constants test`          | 3 — формула Atwater                                  |
+| `pnpm --filter @dns/validation test`         | 7 — політика пароля, нормалізація email, патерн коду |
+| `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                 |
+| `pnpm --filter @dns/api-infrastructure test` | 3 — генерація і хешування коду                       |
+| `pnpm --filter @dns/client-api test:db`      | 17 — auth-флоу на живій базі (потрібен docker)       |
 
-`docker compose up -d` не запускався — Docker Desktop на машині вимкнений.
-Для фундаменту це не блокер: `postgres-js` відкриває з'єднання ліниво, тож
-обидва сервіси стартують без бази. БД знадобиться на зрізі 2 (міграції).
+Наскрізний прогін auth (перевірено вручну, `OTP_DEV_CODE=000000`):
 
-Наскрізна перевірка auth з'явиться після зрізу 2 — сценарій описано в
-плані, розділ Verification.
+| Крок                                   | Результат                                                        |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `POST /auth/register`                  | 201, код у логах stub-клієнта                                    |
+| `POST /auth/verify-email`              | 200, пара токенів                                                |
+| `GET /auth/me` з Bearer                | 200 з id/email/emailVerifiedAt                                   |
+| `GET /auth/me` без токена              | 401                                                              |
+| `POST /auth/refresh`                   | 200, нова пара                                                   |
+| повтор старого refresh                 | 401 — і виданий між ними токен теж мертвий (ланцюжок відкликано) |
+| невалідне тіло                         | 422 з `errors[{path,message}]`                                   |
+| permit на `/auth/me` і `/auth/refresh` | 401 в обох випадках                                              |
+
+`docker compose` цього разу піднімався: міграція застосована, 5 таблиць у
+базі, db-тести проходять.
