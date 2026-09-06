@@ -115,3 +115,20 @@ export function ageFromBirthDate(birthDate: Date, on: Date = new Date()): number
 
     return age;
 }
+
+/**
+ * What the questionnaire's wheels can produce, mirrored from
+ * `apps/mobile/src/view/onboarding/onboarding.constants.ts` so the server
+ * rejects exactly what the client cannot offer.
+ *
+ * The age bounds follow from the birth-year range the design draws
+ * (1940–2012). Whether that is the intended minimum age is an open question
+ * in the spec — this is the one line to change when it is answered.
+ */
+export const ONBOARDING_LIMITS = Object.freeze({
+    weightKg: { min: 30, max: 250 },
+    heightCm: { min: 130, max: 220 },
+    age: { min: 13, max: 100 },
+    /** Steps in the questionnaire, question screens and benefit screens together. */
+    stepCount: 16,
+});

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import {
     AccountDeletionRequestRepositoryModule,
     FeedbackRepositoryModule,
+    NutritionRepositoryModule,
     ProfileRepositoryModule,
     UserReminderRepositoryModule,
     UserSettingsRepositoryModule,
@@ -14,6 +15,8 @@ import { AccountDeletionController } from './account-deletion.controller';
 import { AccountDeletionService } from './account-deletion.service';
 import { FeedbackController } from './feedback.controller';
 import { FeedbackService } from './feedback.service';
+import { OnboardingController } from './onboarding.controller';
+import { OnboardingService } from './onboarding.service';
 import { ProfileController } from './profile.controller';
 import { ProfileService } from './profile.service';
 import { RemindersController } from './reminders.controller';
@@ -27,8 +30,15 @@ import { RemindersService } from './reminders.service';
         UserReminderRepositoryModule,
         AccountDeletionRequestRepositoryModule,
         FeedbackRepositoryModule,
+        NutritionRepositoryModule,
     ],
-    controllers: [ProfileController, RemindersController, AccountDeletionController, FeedbackController],
-    providers: [ProfileService, RemindersService, AccountDeletionService, FeedbackService],
+    controllers: [
+        ProfileController,
+        OnboardingController,
+        RemindersController,
+        AccountDeletionController,
+        FeedbackController,
+    ],
+    providers: [ProfileService, OnboardingService, RemindersService, AccountDeletionService, FeedbackService],
 })
 export class UserModule {}

@@ -7,6 +7,7 @@
 export const UserErrorCode = {
     DeletionAlreadyRequested: 'user.deletion-already-requested',
     NoDeletionRequest: 'user.no-deletion-request',
+    OnboardingIncomplete: 'user.onboarding-incomplete',
 } as const;
 
 export type UserErrorCode = (typeof UserErrorCode)[keyof typeof UserErrorCode];
