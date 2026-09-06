@@ -2,12 +2,12 @@
 title: Meal logging (Відмітити прийом їжі)
 bucket: client
 domain: nutrition
-status: Draft
+status: Implemented
 owner: '@amelin0'
 created: 2026-08-19
-updated: 2026-08-19
-plan: null
-related-adrs: []
+updated: 2026-09-06
+plan: ./plan.md
+related-adrs: [ADR-0004]
 supersedes: null
 ---
 
