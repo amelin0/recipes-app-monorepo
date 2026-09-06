@@ -3,6 +3,7 @@ export * from './auth';
 export * from './feedback';
 export * from './i18n';
 export * from './nutrition';
+export * from './onboarding';
 export * from './nutrition-tracking';
 export * from './storage';
 export * from './user';

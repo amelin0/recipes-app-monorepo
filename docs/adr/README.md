@@ -37,3 +37,4 @@ Skip an ADR for routine choices that follow from existing skills / conventions.
 - [ADR-0004](./0004-client-api-url-conventions.md) — Шляхи клієнтського API будуються за REST-конвенціями, а не успадковуються з V1 — **Accepted**
 - [ADR-0005](./0005-what-account-deletion-erases.md) — Чого саме торкається видалення акаунту після пільгового періоду — **Proposed**
 - [ADR-0006](./0006-products-absorb-ingredients.md) — Продукти поглинають інгредієнти; фільтри рецептів комбінуються по-різному в різних групах — **Accepted**
+- [ADR-0007](./0007-daily-norm-formulas.md) — Добові норми за Mifflin-St Jeor; вода й кроки — евристики, що потребують підпису — **Proposed**
