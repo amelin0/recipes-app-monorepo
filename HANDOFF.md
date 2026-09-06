@@ -221,6 +221,39 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 дефолти: норма, порахована з вигаданої ваги, виглядає так само авторитетно,
 як справжня.
 
+### Зріз 7 — client progress ✅
+
+| Коміт                                                                         | Що                                                        |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `feat(database): body measurements for weight, waist and height`              | таблиця + репозиторій, міграція `0005_ambiguous_blob.sql` |
+| `feat(validation): progress window and measurement schemas`                   | вікно `?days=`, показник у шляху, вимір                   |
+| `feat(client-api): progress metrics overview, detail and measurement logging` | 4 ендпоінти під `/progress`                               |
+| `feat(client-api): patch a single nutrition target instead of the whole goal` | `PATCH /nutrition/goal`                                   |
+| `feat(client-api): target weight is editable from the profile`                | `targetWeightKg` у `PATCH /profile`                       |
+| `test(client-api): progress db specs and partial goal edits`                  | 19 + 2 db-тести                                           |
+| `docs: plans for client progress and status sync`                             | 3 × `plan.md`, статуси, карта шляхів                      |
+
+Три речі варті уваги:
+
+- **Половина домену не має власного сховища.** З шести показників екрана
+  калорії, вода і кроки вже належать `nutrition` — прогрес їх читає. Своя
+  таблиця на всі шість дала б одному числу два джерела, і перший же розбіг
+  між денним екраном і графіком нікому не вдалося б пояснити. Нових таблиць
+  тут одна: `body_measurements` на вагу, талію і зріст.
+- **Читати можна девʼять показників, писати — три.** Калорії, воду і кроки
+  пишуть через `/nutrition`, де день є частиною шляху. Другий шлях запису в
+  те саме число дозволив би логу і графіку розійтися, і сказати, який із них
+  правий, було б нічим.
+- **Цілі лишились у доменів, які ними володіють.** Карта шляхів передбачала
+  `PUT /progress/metrics/{metric}/goal` — я його не побудував: щоденні цілі
+  міняє `PATCH /nutrition/goal`, цільову вагу — `PATCH /profile`. Фасад під
+  `/progress` дав би одній колонці двох власників. `PATCH` до цілі свідомо
+  не створює її: народити ціль із одного поля означало б вигадати шість
+  інших.
+
+Запис ваги і зросту додатково оновлює профіль — інакше «оновлена норма» після
+зважування рахувалася б із ваги, яку людина замінила тижні тому.
+
 ---
 
 ## Далі
@@ -229,16 +262,13 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 Наступні кандидати:
 
-- **`client/progress`** — вимірювання ваги й обхватів; профіль уже несе вагу,
-  а рекомендація вже вміє за нею перераховуватися, тож домен лягає поруч
-  майже без нових рішень.
 - **`client/recipe` + `product`** — найбільший домен, і рішення для нього вже
   ухвалені (ADR-0006). Розблокує логування їжі з каталогу, фільтри, пошук і
   власні страви. Але тримає **11 відкритих питань** зі специфікацій — див.
   розділ нижче.
 - **`client/meal-plan`** — розблокує слоти раціону на головному екрані
   (daily-tracking FR-006).
-- Далі: `progress`, `shopping-list`, `subscription`, `notifications`, потім
+- Далі: `shopping-list`, `subscription`, `notifications`, потім
   admin-зрізи (їм спершу потрібні специфікації: у `docs/specs/admin/` зараз
   лише README).
 
@@ -353,13 +383,13 @@ pnpm dev:admin-api             # :3001, Swagger /docs
 
 Тести:
 
-| Команда                                      | Що                                                                           |
-| -------------------------------------------- | ---------------------------------------------------------------------------- |
-| `pnpm --filter @dns/constants test`          | 16 — Atwater, Mifflin-St Jeor, добові норми і БЖВ                            |
-| `pnpm --filter @dns/validation test`         | 25 — пароль, email, код, налаштування, нагадування, цілі й записи харчування |
-| `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                                         |
-| `pnpm --filter @dns/api-infrastructure test` | 11 — коди та перевірка власності файлів                                      |
-| `pnpm --filter @dns/client-api test:db`      | 60 — auth, user, звернення, nutrition і анкета на живій базі (треба docker)  |
+| Команда                                      | Що                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `pnpm --filter @dns/constants test`          | 16 — Atwater, Mifflin-St Jeor, добові норми і БЖВ                                    |
+| `pnpm --filter @dns/validation test`         | 25 — пароль, email, код, налаштування, нагадування, цілі й записи харчування         |
+| `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                                                 |
+| `pnpm --filter @dns/api-infrastructure test` | 11 — коди та перевірка власності файлів                                              |
+| `pnpm --filter @dns/client-api test:db`      | 81 — auth, user, звернення, nutrition, анкета і прогрес на живій базі (треба docker) |
 
 Наскрізний прогін auth (перевірено вручну, `OTP_DEV_CODE=000000`):
 
