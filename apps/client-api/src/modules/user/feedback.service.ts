@@ -12,7 +12,10 @@ export class FeedbackService {
         private readonly storageService: StorageService,
     ) {}
 
-    create(userId: string, input: CreateFeedbackInput): Promise<FeedbackEntity> {
+    // `async` so a rejected ownership check arrives as a rejected promise
+    // rather than a synchronous throw from a method typed `Promise<T>` —
+    // Nest catches both, but every other caller has to handle one shape.
+    async create(userId: string, input: CreateFeedbackInput): Promise<FeedbackEntity> {
         // Every attachment must be a file this user uploaded for this purpose.
         // Without the check a ticket could carry any URL, and staff opening it
         // would fetch whatever the reporter pointed them at.

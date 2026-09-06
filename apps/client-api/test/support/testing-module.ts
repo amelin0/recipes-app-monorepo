@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EmailModule } from '@dns/api-infrastructure/email';
 import { OAuthModule, OAuthService, OAuthUserPayload } from '@dns/api-infrastructure/oauth';
 import { OtpModule } from '@dns/api-infrastructure/otp';
+import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DATABASE_CONNECTION, DatabaseConnectionModule, DrizzleDB } from '@dns/database';
 import { OAuthProvider } from '@dns/shared-types';
 
@@ -15,6 +16,7 @@ import {
     emailConfig,
     oauthConfig,
     otpConfig,
+    storageConfig,
     throttlerConfig,
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
@@ -53,7 +55,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: ['.env', '../../.env'],
-                load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, throttlerConfig],
+                load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, storageConfig, throttlerConfig],
             }),
             DatabaseConnectionModule.forRootAsync({
                 imports: [ConfigModule],
@@ -86,6 +88,15 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
                 inject: [ConfigService],
                 useFactory: (configService: ConfigService<AllConfig>) =>
                     configService.getOrThrow('otp', { infer: true }),
+            }),
+            // Registered here because AppModule registers it globally, and
+            // ProfileService and FeedbackService both take StorageService.
+            StorageModule.forRootAsync({
+                isGlobal: true,
+                imports: [ConfigModule],
+                inject: [ConfigService],
+                useFactory: (configService: ConfigService<AllConfig>) =>
+                    configService.getOrThrow('storage', { infer: true }),
             }),
             AuthModule,
             UserModule,

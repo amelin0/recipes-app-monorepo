@@ -40,7 +40,9 @@ export class ProfileService {
         return { profile, settings };
     }
 
-    updateProfile(user: UserEntity, input: UpdateProfileInput): Promise<ProfileEntity> {
+    // `async` for the same reason as FeedbackService.create: a failed
+    // ownership check must reject, not throw synchronously.
+    async updateProfile(user: UserEntity, input: UpdateProfileInput): Promise<ProfileEntity> {
         // A photo URL is only accepted if this user uploaded it, for this
         // purpose. Skipping the check would turn `photoUrl` into a way to
         // point every viewer of the profile at any address on the internet.
