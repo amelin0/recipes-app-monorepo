@@ -18,6 +18,7 @@ import {
     throttlerConfig,
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
+import { UserModule } from '../../src/modules/user';
 
 /**
  * Stands in for Apple and Google. Their tokens cannot be minted in a test, so
@@ -87,6 +88,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
                     configService.getOrThrow('otp', { infer: true }),
             }),
             AuthModule,
+            UserModule,
         ],
     })
         .overrideProvider(OAuthService)
