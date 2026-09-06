@@ -4,7 +4,7 @@
 > Гілка: `feat/backend-foundation` (від `development`).
 > План: `C:\Users\olehc\.claude\plans\cozy-wishing-karp.md`
 
-**Останнє оновлення:** 2026-09-06 — зріз 3 (client user) закрито, перевірено
+**Останнє оновлення:** 2026-09-06 — зрізи 4 (сховище) і 5 (nutrition) закрито, перевірено
 на живій базі.
 
 ---
@@ -146,13 +146,13 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 ### Зріз 4 — сховище файлів ✅
 
-| Коміт | Що |
-| --- | --- |
-| `feat(api-infrastructure): s3 storage with presigned uploads and ownership checks` | `StorageModule`, `validateOwnership`, 8 тестів |
-| `feat(client-api): presigned uploads and profile photo` | `POST /uploads`, `photoUrl` у `PATCH /profile` |
-| `feat(client-api): support tickets with attachments` | `POST /profile/feedback`, таблиця `feedback` |
-| `fix(client-api): ownership checks must reject, not throw synchronously` | метод типізовано як `Promise`, а кидав синхронно — тест це знайшов |
-| `docs: deletion must clear support reply addresses explicitly` | знайдена й закрита прогалина приватності |
+| Коміт                                                                              | Що                                                                 |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `feat(api-infrastructure): s3 storage with presigned uploads and ownership checks` | `StorageModule`, `validateOwnership`, 8 тестів                     |
+| `feat(client-api): presigned uploads and profile photo`                            | `POST /uploads`, `photoUrl` у `PATCH /profile`                     |
+| `feat(client-api): support tickets with attachments`                               | `POST /profile/feedback`, таблиця `feedback`                       |
+| `fix(client-api): ownership checks must reject, not throw synchronously`           | метод типізовано як `Promise`, а кидав синхронно — тест це знайшов |
+| `docs: deletion must clear support reply addresses explicitly`                     | знайдена й закрита прогалина приватності                           |
 
 Байти йдуть **повз API** — клієнт бере підписаний дозвіл і вивантажує напряму
 в сховище. Перевірено наскрізно на MinIO: presign → PUT → GET, байти
@@ -169,14 +169,14 @@ rate-limit. Самі специфікації ще не оновлені — ц�
 
 ### Зріз 5 — client nutrition ✅
 
-| Коміт | Що |
-| --- | --- |
-| `docs(adr): products absorb ingredients, filter combination semantics` | ADR-0006 |
-| `feat(database): nutrition goals, meal, water and step logs` | 4 таблиці + міграція `0003_dry_lady_ursula.sql` |
-| `feat(validation): nutrition goal, meal, water and step schemas` | 11 тестів |
-| `feat(client-api): nutrition goal, daily slice, meal, water and step logging` | 8 ендпоінтів |
-| `test(client-api): nutrition domain specs` | 14 db-тестів |
-| `docs: plans for client nutrition and status sync` | 3 × `plan.md` |
+| Коміт                                                                         | Що                                              |
+| ----------------------------------------------------------------------------- | ----------------------------------------------- |
+| `docs(adr): products absorb ingredients, filter combination semantics`        | ADR-0006                                        |
+| `feat(database): nutrition goals, meal, water and step logs`                  | 4 таблиці + міграція `0003_dry_lady_ursula.sql` |
+| `feat(validation): nutrition goal, meal, water and step schemas`              | 11 тестів                                       |
+| `feat(client-api): nutrition goal, daily slice, meal, water and step logging` | 8 ендпоінтів                                    |
+| `test(client-api): nutrition domain specs`                                    | 14 db-тестів                                    |
+| `docs: plans for client nutrition and status sync`                            | 3 × `plan.md`                                   |
 
 Три рішення, які варто знати:
 
@@ -322,13 +322,13 @@ pnpm dev:admin-api             # :3001, Swagger /docs
 
 Тести:
 
-| Команда                                      | Що                                                                                |
-| -------------------------------------------- | --------------------------------------------------------------------------------- |
-| `pnpm --filter @dns/constants test`          | 3 — формула Atwater                                                               |
-| `pnpm --filter @dns/validation test`         | 14 — політика пароля, нормалізація email, патерн коду, налаштування і нагадування |
-| `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                                              |
-| `pnpm --filter @dns/api-infrastructure test` | 3 — генерація і хешування коду                                                    |
-| `pnpm --filter @dns/client-api test:db`      | 30 — auth і user на живій базі (потрібен docker)                                  |
+| Команда                                      | Що                                                                           |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| `pnpm --filter @dns/constants test`          | 3 — формула Atwater                                                          |
+| `pnpm --filter @dns/validation test`         | 25 — пароль, email, код, налаштування, нагадування, цілі й записи харчування |
+| `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                                         |
+| `pnpm --filter @dns/api-infrastructure test` | 11 — коди та перевірка власності файлів                                      |
+| `pnpm --filter @dns/client-api test:db`      | 48 — auth, user, звернення і nutrition на живій базі (потрібен docker)       |
 
 Наскрізний прогін auth (перевірено вручну, `OTP_DEV_CODE=000000`):
 
