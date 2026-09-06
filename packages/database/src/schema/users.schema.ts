@@ -1,9 +1,13 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
+import { accountDeletionRequests } from './account-deletion-requests.schema';
 import { oauthIdentities } from './oauth-identities.schema';
 import { otpCodes } from './otp-codes.schema';
+import { profiles } from './profiles.schema';
 import { refreshTokens } from './refresh-tokens.schema';
+import { userReminders } from './user-reminders.schema';
+import { userSettings } from './user-settings.schema';
 
 export const users = pgTable(
     'users',
@@ -33,8 +37,12 @@ export const users = pgTable(
     table => [uniqueIndex('users_email_unique').on(table.email)],
 );
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
     refreshTokens: many(refreshTokens),
     otpCodes: many(otpCodes),
     oauthIdentities: many(oauthIdentities),
+    reminders: many(userReminders),
+    deletionRequests: many(accountDeletionRequests),
+    profile: one(profiles, { fields: [users.id], references: [profiles.userId] }),
+    settings: one(userSettings, { fields: [users.id], references: [userSettings.userId] }),
 }));

@@ -3,3 +3,7 @@ export { RefreshTokenEntity } from './refresh-token.entity';
 export { OtpCodeEntity } from './otp-code.entity';
 export { PasswordResetPermitEntity } from './password-reset-permit.entity';
 export { OAuthIdentityEntity } from './oauth-identity.entity';
+export { ProfileEntity } from './profile.entity';
+export { UserSettingsEntity } from './user-settings.entity';
+export { UserReminderEntity } from './user-reminder.entity';
+export { AccountDeletionRequestEntity } from './account-deletion-request.entity';

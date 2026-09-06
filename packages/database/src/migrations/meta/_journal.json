@@ -8,6 +8,13 @@
       "when": 1788702442946,
       "tag": "0000_thin_iceman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788705980454,
+      "tag": "0001_mighty_corsair",
+      "breakpoints": true
     }
   ]
 }

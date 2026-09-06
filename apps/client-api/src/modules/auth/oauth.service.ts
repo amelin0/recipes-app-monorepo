@@ -5,6 +5,7 @@ import { OAuthIdentityRepository, UserEntity, UserRepository } from '@dns/databa
 import { AuthTokens } from '@dns/shared-types';
 import { OAuthSignInInput } from '@dns/validation';
 
+import { newAccountInput } from './account.factory';
 import { TokenService } from './token.service';
 
 /**
@@ -61,11 +62,7 @@ export class OAuthSignInService {
         // 3. Nobody yet. The account starts verified and without a password
         //    (sign-up FR-012); a password can be added later through the reset
         //    flow (FR-013).
-        const created = await this.userRepository.create({
-            email,
-            passwordHash: null,
-            emailVerifiedAt: new Date(),
-        });
+        const created = await this.userRepository.createAccount(newAccountInput({ email, emailVerified: true }));
 
         await this.oauthIdentityRepository.create({ userId: created.id, provider, providerUserId });
 

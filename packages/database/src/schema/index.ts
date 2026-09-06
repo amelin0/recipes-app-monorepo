@@ -5,3 +5,7 @@ export * from './refresh-tokens.schema';
 export * from './otp-codes.schema';
 export * from './password-reset-permits.schema';
 export * from './oauth-identities.schema';
+export * from './profiles.schema';
+export * from './user-settings.schema';
+export * from './user-reminders.schema';
+export * from './account-deletion-requests.schema';

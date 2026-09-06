@@ -6,6 +6,7 @@ import { UserEntity, UserRepository } from '@dns/database';
 import { AuthTokens, OtpPurpose } from '@dns/shared-types';
 import { LoginInput, RegisterInput, ResendEmailCodeInput, VerifyEmailInput } from '@dns/validation';
 
+import { newAccountInput } from './account.factory';
 import { AuthErrorCode, invalidCodeException } from './auth.errors';
 import { OtpMailer } from './otp.mailer';
 import { AuthOtpService } from './otp.service';
@@ -53,10 +54,9 @@ export class AuthService {
         // goes to the mailbox, so this hands an attacker nothing.
         const user = existing
             ? await this.replaceUnverifiedRegistration(existing, password)
-            : await this.userRepository.create({
-                  email,
-                  passwordHash: await hash(password, AUTH_POLICY.bcryptRounds),
-              });
+            : await this.userRepository.createAccount(
+                  newAccountInput({ email, passwordHash: await hash(password, AUTH_POLICY.bcryptRounds) }),
+              );
 
         await this.sendEmailVerificationCode(user);
     }

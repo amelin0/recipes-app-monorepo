@@ -21,7 +21,17 @@ async function main(): Promise<void> {
     }
 
     // max: 1 — migrations must run sequentially on a single connection.
-    const client = postgres(url, { max: 1 });
+    const client = postgres(url, {
+        max: 1,
+        // The migrator issues CREATE SCHEMA / CREATE TABLE IF NOT EXISTS for
+        // its own ledger, and Postgres answers with an "already exists,
+        // skipping" NOTICE on every run but the first. Printing those buries
+        // the real output of a runner whose whole purpose is a readable log.
+        onnotice: notice => {
+            if (notice.code === '42P06' || notice.code === '42P07') return;
+            console.log(notice);
+        },
+    });
     const db = drizzle(client);
 
     try {

@@ -5,3 +5,7 @@ export * from './refresh-token';
 export * from './otp-code';
 export * from './password-reset-permit';
 export * from './oauth-identity';
+export * from './profile';
+export * from './user-settings';
+export * from './user-reminder';
+export * from './account-deletion-request';
