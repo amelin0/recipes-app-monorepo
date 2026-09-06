@@ -13,6 +13,10 @@ async function bootstrap(): Promise<void> {
     const app = await NestFactory.create(AppModule, { bufferLogs: true });
     app.useLogger(app.get(Logger));
 
+    // Lets SIGTERM run onModuleDestroy — without it the database pool is
+    // never closed and the container has to be killed rather than stopped.
+    app.enableShutdownHooks();
+
     app.setGlobalPrefix('api/v1');
     app.enableCors();
     app.useGlobalPipes(new ZodValidationPipe());
