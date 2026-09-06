@@ -40,6 +40,24 @@ export class NutritionRepository extends BaseRepository {
         return NutritionGoalEntity.from(row);
     }
 
+    /**
+     * Moves individual targets, leaving the rest alone.
+     *
+     * Separate from `upsertGoal` on purpose: the goal screen saves all seven
+     * fields at once, while a progress card edits exactly one, and folding the
+     * two into a single call would make the narrow edit overwrite the other six
+     * with whatever the screen last read. Null when there is no goal to patch.
+     */
+    async updateGoal(userId: string, data: Partial<UpsertGoal>): Promise<NutritionGoalEntity | null> {
+        const [row] = await this.db
+            .update(nutritionGoals)
+            .set({ ...data, updatedAt: new Date() })
+            .where(eq(nutritionGoals.userId, userId))
+            .returning();
+
+        return row ? NutritionGoalEntity.from(row) : null;
+    }
+
     async createMealLogEntry(data: InsertMealLogEntry): Promise<MealLogEntryEntity> {
         const [row] = await this.db.insert(mealLogEntries).values(data).returning();
         if (!row) throw new Error('Failed to insert meal log entry');

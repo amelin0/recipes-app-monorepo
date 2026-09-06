@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Patch,
+    Post,
+    Put,
+    UseGuards,
+} from '@nestjs/common';
 import {
     ApiBearerAuth,
     ApiCreatedResponse,
@@ -21,6 +33,7 @@ import {
     LogWaterInboundDto,
     MealLogEntryView,
     NutritionGoalView,
+    PatchNutritionGoalInboundDto,
     SetStepsInboundDto,
     UpsertNutritionGoalInboundDto,
 } from './dto';
@@ -50,6 +63,21 @@ export class NutritionController {
         @Body() body: UpsertNutritionGoalInboundDto,
     ): Promise<NutritionGoalView> {
         return NutritionGoalView.from(await this.nutritionService.upsertGoal(user.id, body));
+    }
+
+    /**
+     * `PATCH` for the narrow edit: a progress card changes one target, and
+     * sending the whole goal to move one number would overwrite the other six
+     * with whatever that screen last read (ADR-0004, rule 4).
+     */
+    @Patch('goal')
+    @ApiOkResponse({ type: NutritionGoalView })
+    @ApiNotFoundResponse({ description: 'No goal has been set for this account yet.' })
+    async patchGoal(
+        @CurrentUser() user: UserEntity,
+        @Body() body: PatchNutritionGoalInboundDto,
+    ): Promise<NutritionGoalView> {
+        return NutritionGoalView.from(await this.nutritionService.patchGoal(user.id, body));
     }
 
     /**

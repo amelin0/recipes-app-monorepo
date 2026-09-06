@@ -4,6 +4,7 @@
  * client, and both should read as "nothing to undo" rather than an error.
  */
 export const NutritionErrorCode = {
+    GoalNotFound: 'nutrition.goal-not-found',
     MealEntryNotFound: 'nutrition.meal-entry-not-found',
     WaterEntryNotFound: 'nutrition.water-entry-not-found',
 } as const;

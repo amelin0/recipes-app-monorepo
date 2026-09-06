@@ -9,7 +9,13 @@ import {
     NutritionRepository,
     WaterLogEntryEntity,
 } from '@dns/database';
-import { LogMealInput, LogWaterInput, SetStepsInput, UpsertNutritionGoalInput } from '@dns/validation';
+import {
+    LogMealInput,
+    LogWaterInput,
+    PatchNutritionGoalInput,
+    SetStepsInput,
+    UpsertNutritionGoalInput,
+} from '@dns/validation';
 
 import { NutritionErrorCode } from './nutrition.errors';
 
@@ -39,6 +45,23 @@ export class NutritionService {
             // keeps whatever is there — or takes the default the first time.
             dailyStepsTarget: input.dailyStepsTarget ?? DAILY_STEPS_TARGET_DEFAULT,
         });
+    }
+
+    /**
+     * Moves one target without disturbing the others — what a progress card's
+     * «change goal» sheet does (metric-detail FR-005).
+     */
+    async patchGoal(userId: string, input: PatchNutritionGoalInput): Promise<NutritionGoalEntity> {
+        const goal = await this.nutritionRepository.updateGoal(userId, input);
+
+        if (!goal) {
+            throw new NotFoundException({
+                message: 'No goal has been set for this account yet',
+                code: NutritionErrorCode.GoalNotFound,
+            });
+        }
+
+        return goal;
     }
 
     /**

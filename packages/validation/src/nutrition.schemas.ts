@@ -49,6 +49,18 @@ export const upsertNutritionGoalSchema = z.object({
 });
 
 /**
+ * One line of the goal at a time.
+ *
+ * The progress screens let a target be changed from the card it belongs to —
+ * the water card edits water, the steps card edits steps (metric-detail
+ * FR-005) — and sending the whole goal to move one number would make every
+ * such edit overwrite the other five with whatever the screen last read.
+ */
+export const patchNutritionGoalSchema = upsertNutritionGoalSchema
+    .partial()
+    .refine(value => Object.keys(value).length > 0, 'Provide at least one target to change');
+
+/**
  * A logged meal carries the dish's own numbers, not a reference to look up.
  *
  * `recipeId` is optional because the recipe catalogue does not exist yet, and
@@ -87,6 +99,7 @@ export const setStepsSchema = z.object({
 
 export type LogDateInput = z.infer<typeof logDateSchema>;
 export type UpsertNutritionGoalInput = z.infer<typeof upsertNutritionGoalSchema>;
+export type PatchNutritionGoalInput = z.infer<typeof patchNutritionGoalSchema>;
 export type LogMealInput = z.infer<typeof logMealSchema>;
 export type LogWaterInput = z.infer<typeof logWaterSchema>;
 export type SetStepsInput = z.infer<typeof setStepsSchema>;
