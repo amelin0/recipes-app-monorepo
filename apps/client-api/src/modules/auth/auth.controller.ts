@@ -1,13 +1,30 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
-import { ApiConflictResponse, ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+    ApiBearerAuth,
+    ApiConflictResponse,
+    ApiCreatedResponse,
+    ApiForbiddenResponse,
+    ApiNoContentResponse,
+    ApiOkResponse,
+    ApiTags,
+    ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
 import { SetThrottleKey } from '@dns/api-common';
+import { UserEntity } from '@dns/database';
 
 import { ThrottleKey } from '../../common/config';
 
 import { AuthService } from './auth.service';
-import { Public } from './decorators';
-import { AuthTokensView, RegisterInboundDto, ResendEmailCodeInboundDto, VerifyEmailInboundDto } from './dto';
+import { CurrentUser, Public } from './decorators';
+import {
+    AuthTokensView,
+    CurrentUserView,
+    LoginInboundDto,
+    RegisterInboundDto,
+    ResendEmailCodeInboundDto,
+    VerifyEmailInboundDto,
+} from './dto';
 import { JwtGuard } from './guards';
 
 @ApiTags('auth')
@@ -45,5 +62,24 @@ export class AuthController {
     @ApiNoContentResponse({ description: 'Always 204 — the response never reveals whether the account exists.' })
     async resendEmailCode(@Body() body: ResendEmailCodeInboundDto): Promise<void> {
         await this.authService.resendEmailCode(body);
+    }
+
+    @Public()
+    @Post('login')
+    @HttpCode(HttpStatus.OK)
+    @SetThrottleKey(ThrottleKey.Login)
+    @ApiOkResponse({ type: AuthTokensView })
+    @ApiUnauthorizedResponse({ description: 'One answer for every failure — see sign-in FR-002.' })
+    @ApiForbiddenResponse({ description: 'Email not verified; a fresh code was sent.' })
+    async login(@Body() body: LoginInboundDto): Promise<AuthTokensView> {
+        return AuthTokensView.from(await this.authService.login(body));
+    }
+
+    @Get('me')
+    @ApiBearerAuth()
+    @ApiOkResponse({ type: CurrentUserView })
+    @ApiUnauthorizedResponse({ description: 'Missing, expired or revoked access token.' })
+    me(@CurrentUser() user: UserEntity): CurrentUserView {
+        return CurrentUserView.from(user);
     }
 }
