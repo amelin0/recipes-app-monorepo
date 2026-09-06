@@ -29,6 +29,15 @@ export const nutritionGoals = pgTable('nutrition_goals', {
     // the moment a screen appears — no migration needed for that.
     dailyStepsTarget: integer('daily_steps_target').notNull(),
 
+    // What the formulas suggested when this goal was saved (ADR-0007).
+    // A snapshot, not a live value: it exists so «how far did the user move
+    // from the recommendation» has a fixed thing to compare against, and a
+    // fresh recommendation shifts with every weight change. Null for a goal
+    // saved before the profile held enough to compute one.
+    recommendedCalories: integer('recommended_calories'),
+    recommendedWaterMl: integer('recommended_water_ml'),
+    recommendedSteps: integer('recommended_steps'),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

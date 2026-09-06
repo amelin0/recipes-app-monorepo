@@ -5,7 +5,25 @@ import { ProfileEntity } from '../../entities';
 import { profiles } from '../../schema';
 import { BaseRepository } from '../base.repository';
 
-type UpdateProfile = Partial<Pick<typeof profiles.$inferInsert, 'name' | 'photoUrl'>>;
+type ProfileColumns = typeof profiles.$inferInsert;
+
+/** Everything the edit screen and the questionnaire may write. */
+type UpdateProfile = Partial<
+    Pick<
+        ProfileColumns,
+        | 'name'
+        | 'photoUrl'
+        | 'gender'
+        | 'birthDate'
+        | 'weightKg'
+        | 'heightCm'
+        | 'activityLevel'
+        | 'goal'
+        | 'targetWeightKg'
+        | 'onboardingStep'
+        | 'onboardingCompletedAt'
+    >
+>;
 
 @Injectable()
 export class ProfileRepository extends BaseRepository {
