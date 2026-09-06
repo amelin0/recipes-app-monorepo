@@ -132,3 +132,40 @@ export const ONBOARDING_LIMITS = Object.freeze({
     /** Steps in the questionnaire, question screens and benefit screens together. */
     stepCount: 16,
 });
+
+/**
+ * Ranges the measurement sheet allows. Wider than the questionnaire's wheels
+ * on purpose — that screen is a first guess with a scroll wheel, this one
+ * records a reading, and a person may legitimately weigh less than the
+ * questionnaire's floor.
+ */
+export const MEASUREMENT_LIMITS = Object.freeze({
+    weight: { min: 20, max: 300, step: 0.1 },
+    waist: { min: 30, max: 200, step: 0.1 },
+    height: { min: 50, max: 250, step: 0.1 },
+});
+
+/**
+ * Waist circumference above which the WHO reports increased metabolic risk:
+ * 94 cm for men, 80 cm for women.
+ *
+ * An upper bound rather than a range, because there is no published lower
+ * bound to quote — inventing one so the UI could say «60–94» would be making
+ * up a health claim to fill a field.
+ */
+export const WAIST_RECOMMENDED_MAX_CM = Object.freeze({ male: 94, female: 80 });
+
+/**
+ * How far a day may fall from its target and still count as hitting it
+ * (progress overview FR-006, detail FR-004).
+ *
+ * The specs describe the three states but never quantify the middle one. Ten
+ * per cent is chosen, not sourced: it makes 1850 kcal forgiving between about
+ * 1665 and 2035, which reads as «about right» to a person and is narrow enough
+ * that the state still means something.
+ */
+export const DAILY_TARGET_TOLERANCE = 0.1;
+
+/** How much history the progress screens show when the client does not say. */
+export const PROGRESS_DEFAULT_DAYS = 30;
+export const PROGRESS_MAX_DAYS = 365;

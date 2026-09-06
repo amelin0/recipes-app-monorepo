@@ -11,3 +11,4 @@ export * from './user-reminder';
 export * from './account-deletion-request';
 export * from './feedback';
 export * from './nutrition';
+export * from './body-measurement';

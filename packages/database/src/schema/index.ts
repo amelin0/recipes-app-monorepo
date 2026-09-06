@@ -14,3 +14,4 @@ export * from './nutrition-goals.schema';
 export * from './meal-log-entries.schema';
 export * from './water-log-entries.schema';
 export * from './daily-steps.schema';
+export * from './body-measurements.schema';
