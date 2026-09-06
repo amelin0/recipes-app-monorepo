@@ -25,6 +25,7 @@ import {
 } from './common/config';
 import { AuthModule } from './modules/auth';
 import { HealthModule } from './modules/health';
+import { NutritionModule } from './modules/nutrition';
 import { UploadsModule } from './modules/uploads';
 import { UserModule } from './modules/user';
 
@@ -35,7 +36,16 @@ import { UserModule } from './modules/user';
             // App-local .env first, then the monorepo root one that
             // docker-compose and the clients also read.
             envFilePath: ['.env', '../../.env'],
-            load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, storageConfig, throttlerConfig],
+            load: [
+                appConfig,
+                authConfig,
+                databaseConfig,
+                emailConfig,
+                oauthConfig,
+                otpConfig,
+                storageConfig,
+                throttlerConfig,
+            ],
         }),
         LoggerModule.forRootAsync({
             inject: [ConfigService],
@@ -93,6 +103,7 @@ import { UserModule } from './modules/user';
         HealthModule,
         UserModule,
         UploadsModule,
+        NutritionModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
