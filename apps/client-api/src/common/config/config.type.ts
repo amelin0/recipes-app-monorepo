@@ -1,9 +1,10 @@
 import type { ThrottleRuleConfig } from '@dns/api-common';
 import type { EmailConfig } from '@dns/api-infrastructure/email';
+import type { OAuthConfig } from '@dns/api-infrastructure/oauth';
 import type { OtpConfig } from '@dns/api-infrastructure/otp';
 import type { DatabaseConfig } from '@dns/database';
 
-export type { DatabaseConfig, EmailConfig, OtpConfig, ThrottleRuleConfig };
+export type { DatabaseConfig, EmailConfig, OAuthConfig, OtpConfig, ThrottleRuleConfig };
 
 export enum AppEnv {
     Dev = 'development',
@@ -54,6 +55,7 @@ export interface AllConfig {
     auth: AuthConfig;
     database: DatabaseConfig;
     email: EmailConfig;
+    oauth: OAuthConfig;
     otp: OtpConfig;
     throttler: ThrottlerConfig;
 }

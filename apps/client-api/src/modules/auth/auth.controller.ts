@@ -21,6 +21,7 @@ import {
     AuthTokensView,
     CurrentUserView,
     LoginInboundDto,
+    OAuthSignInInboundDto,
     PasswordResetPermitView,
     RefreshTokenInboundDto,
     RegisterInboundDto,
@@ -31,6 +32,7 @@ import {
     VerifyPasswordResetCodeInboundDto,
 } from './dto';
 import { JwtGuard } from './guards';
+import { OAuthSignInService } from './oauth.service';
 import { PasswordResetService } from './password-reset.service';
 import { TokenService } from './token.service';
 
@@ -42,6 +44,7 @@ export class AuthController {
         private readonly authService: AuthService,
         private readonly tokenService: TokenService,
         private readonly passwordResetService: PasswordResetService,
+        private readonly oauthSignInService: OAuthSignInService,
     ) {}
 
     @Public()
@@ -148,5 +151,15 @@ export class AuthController {
     @ApiUnauthorizedResponse({ description: 'Permit is unknown, expired or already spent.' })
     async setNewPassword(@Body() body: SetNewPasswordInboundDto): Promise<void> {
         await this.passwordResetService.setNewPassword(body);
+    }
+
+    @Public()
+    @Post('oauth')
+    @HttpCode(HttpStatus.OK)
+    @SetThrottleKey(ThrottleKey.OauthGoogle)
+    @ApiOkResponse({ type: AuthTokensView, description: 'Signs in, links, or creates — one endpoint for all three.' })
+    @ApiUnauthorizedResponse({ description: 'The provider token did not verify.' })
+    async oauthSignIn(@Body() body: OAuthSignInInboundDto): Promise<AuthTokensView> {
+        return AuthTokensView.from(await this.oauthSignInService.signIn(body));
     }
 }

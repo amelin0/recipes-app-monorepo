@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import {
+    OAuthIdentityRepositoryModule,
     OtpCodeRepositoryModule,
     PasswordResetPermitRepositoryModule,
     RefreshTokenRepositoryModule,
@@ -13,6 +14,7 @@ import {
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtGuard } from './guards';
+import { OAuthSignInService } from './oauth.service';
 import { OtpMailer } from './otp.mailer';
 import { AuthOtpService } from './otp.service';
 import { PasswordResetService } from './password-reset.service';
@@ -31,9 +33,19 @@ import { TokenService } from './token.service';
         RefreshTokenRepositoryModule,
         OtpCodeRepositoryModule,
         PasswordResetPermitRepositoryModule,
+        OAuthIdentityRepositoryModule,
     ],
     controllers: [AuthController],
-    providers: [AuthService, AuthOtpService, PasswordResetService, OtpMailer, TokenService, JwtStrategy, JwtGuard],
+    providers: [
+        AuthService,
+        AuthOtpService,
+        PasswordResetService,
+        OAuthSignInService,
+        OtpMailer,
+        TokenService,
+        JwtStrategy,
+        JwtGuard,
+    ],
     exports: [JwtGuard, TokenService],
 })
 export class AuthModule {}

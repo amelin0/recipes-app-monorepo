@@ -7,7 +7,8 @@
     "exports": {
         ".": "./src/index.ts",
         "./email": "./src/email/index.ts",
-        "./otp": "./src/otp/index.ts"
+        "./otp": "./src/otp/index.ts",
+        "./oauth": "./src/oauth/index.ts"
     },
     "scripts": {
         "typecheck": "tsc --noEmit",
@@ -16,7 +17,9 @@
     },
     "dependencies": {
         "@dns/shared-types": "workspace:*",
+        "apple-signin-auth": "^2.0.0",
         "bcryptjs": "^3.0.3",
+        "google-auth-library": "^10.6.2",
         "resend": "^6.26.0"
     },
     "peerDependencies": {

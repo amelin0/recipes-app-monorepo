@@ -1,4 +1,5 @@
 export { LoginInboundDto } from './login.inbound.dto';
+export { OAuthSignInInboundDto } from './oauth-sign-in.inbound.dto';
 export { RefreshTokenInboundDto } from './refresh-token.inbound.dto';
 export { RegisterInboundDto } from './register.inbound.dto';
 export { RequestPasswordResetInboundDto } from './request-password-reset.inbound.dto';

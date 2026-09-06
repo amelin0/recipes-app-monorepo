@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, ResponseInterceptor } from '@dns/api-common';
 import { EmailModule } from '@dns/api-infrastructure/email';
+import { OAuthModule } from '@dns/api-infrastructure/oauth';
 import { OtpModule } from '@dns/api-infrastructure/otp';
 import { DatabaseConnectionModule } from '@dns/database';
 
@@ -16,6 +17,7 @@ import {
     authConfig,
     databaseConfig,
     emailConfig,
+    oauthConfig,
     otpConfig,
     throttlerConfig,
 } from './common/config';
@@ -29,7 +31,7 @@ import { HealthModule } from './modules/health';
             // App-local .env first, then the monorepo root one that
             // docker-compose and the clients also read.
             envFilePath: ['.env', '../../.env'],
-            load: [appConfig, authConfig, databaseConfig, emailConfig, otpConfig, throttlerConfig],
+            load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, throttlerConfig],
         }),
         LoggerModule.forRootAsync({
             inject: [ConfigService],
@@ -63,6 +65,12 @@ import { HealthModule } from './modules/health';
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: (configService: ConfigService<AllConfig>) => configService.getOrThrow('email', { infer: true }),
+        }),
+        OAuthModule.forRootAsync({
+            isGlobal: true,
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<AllConfig>) => configService.getOrThrow('oauth', { infer: true }),
         }),
         OtpModule.forRootAsync({
             isGlobal: true,
