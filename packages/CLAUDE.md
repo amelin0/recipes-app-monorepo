@@ -24,8 +24,11 @@ The split mirrors the 11am-app reference.
 
 ### @dns/constants
 
-- Static data: enums, config values, magic numbers
-- Must be pure values — no side effects, no imports from other packages
+- Static data tables and the formulas that read them (language list,
+  measurement units, Atwater factors)
+- No side effects at import time
+- May import `@dns/shared-types` for the enums it indexes — that package is
+  types-only, so the dependency adds nothing at runtime. Nothing else.
 
 ### @dns/utils
 
@@ -53,5 +56,7 @@ The split mirrors the 11am-app reference.
 ## Rules
 
 1. Packages never import from `apps/*`.
-2. `shared-types` and `constants` stay runtime-free.
+2. `shared-types` carries no runtime code at all — types, interfaces and
+   enums only. `constants` carries values and pure functions, but no
+   side effects at import time.
 3. Every package exports only through `src/index.ts`.
