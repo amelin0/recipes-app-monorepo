@@ -32,7 +32,7 @@
 | Method | Path                           | Статус | Що                                                               |
 | ------ | ------------------------------ | ------ | ---------------------------------------------------------------- |
 | GET    | `/profile`                     | ✅     | агрегат: id, email, імʼя, фото, ініціали + вкладені налаштування |
-| PATCH  | `/profile`                     | ✅     | імʼя (фото — після появи сховища)                                |
+| PATCH  | `/profile`                     | ✅     | імʼя, фото, цільова вага                                         |
 | PATCH  | `/profile/settings`            | ✅     | мова, тема, 4 системи одиниць; часткове тіло                     |
 | GET    | `/profile/reminders`           | ✅     | пʼять карток у порядку показу                                    |
 | PUT    | `/profile/reminders`           | ✅     | збереження розкладу як цілого                                    |
@@ -66,16 +66,17 @@ ADR-0004: запит або існує, або ні.
 
 ## nutrition ✅
 
-| Method | Path                                | Статус | Що                                        |
-| ------ | ----------------------------------- | ------ | ----------------------------------------- |
-| GET    | `/nutrition/goal`                   | ✅     | активна ціль або `null`                   |
-| PUT    | `/nutrition/goal`                   | ✅     | апсерт цілі цілком                        |
-| GET    | `/nutrition/days/{date}`            | ✅     | денний зріз: ціль, спожите, записи, кроки |
-| POST   | `/nutrition/days/{date}/meals`      | ✅     | запис прийому їжі (зліпок страви)         |
-| DELETE | `/nutrition/days/{date}/meals/{id}` | ✅     | відкотити запис                           |
-| POST   | `/nutrition/days/{date}/water`      | ✅     | одна склянка — запис, а не інкремент      |
-| DELETE | `/nutrition/days/{date}/water/{id}` | ✅     | прибрати склянку                          |
-| PUT    | `/nutrition/days/{date}/steps`      | ✅     | підсумок за день — заміна, не додавання   |
+| Method | Path                                | Статус | Що                                             |
+| ------ | ----------------------------------- | ------ | ---------------------------------------------- |
+| GET    | `/nutrition/goal`                   | ✅     | активна ціль або `null`                        |
+| PUT    | `/nutrition/goal`                   | ✅     | апсерт цілі цілком (екран цілі)                |
+| PATCH  | `/nutrition/goal`                   | ✅     | одне поле цілі (картка прогресу); 404 без цілі |
+| GET    | `/nutrition/days/{date}`            | ✅     | денний зріз: ціль, спожите, записи, кроки      |
+| POST   | `/nutrition/days/{date}/meals`      | ✅     | запис прийому їжі (зліпок страви)              |
+| DELETE | `/nutrition/days/{date}/meals/{id}` | ✅     | відкотити запис                                |
+| POST   | `/nutrition/days/{date}/water`      | ✅     | одна склянка — запис, а не інкремент           |
+| DELETE | `/nutrition/days/{date}/water/{id}` | ✅     | прибрати склянку                               |
+| PUT    | `/nutrition/days/{date}/steps`      | ✅     | підсумок за день — заміна, не додавання        |
 
 Дата — календарний день користувача, який називає клієнт: їжа о 01:00
 належить попередньому вечору, і сервер не знає часового поясу пристрою.
@@ -128,15 +129,23 @@ ADR-0004: запит або існує, або ні.
 посиланням на джерело, а не `POST /meal-plan/days/{day}/to-shopping-list`:
 ресурс, що змінюється, — список покупок.
 
-## progress ○
+## progress ✅
 
-| Method | Path                                           | Що                                |
-| ------ | ---------------------------------------------- | --------------------------------- |
-| GET    | `/progress/metrics`                            | зведення по всіх шести метриках   |
-| GET    | `/progress/metrics/{metric}`                   | деталь: записи, min/avg/max, ціль |
-| POST   | `/progress/metrics/{metric}/measurements`      | новий вимір                       |
-| DELETE | `/progress/metrics/{metric}/measurements/{id}` | прибрати вимір                    |
-| PUT    | `/progress/metrics/{metric}/goal`              | ціль по метриці                   |
+| Method | Path                                           | Статус | Що                                                       |
+| ------ | ---------------------------------------------- | ------ | -------------------------------------------------------- |
+| GET    | `/progress/metrics`                            | ✅     | усі шість карток одним запитом; `?days=` 1..365, деф. 30 |
+| GET    | `/progress/metrics/{metric}`                   | ✅     | картка + зведення за період + різниця до цілі            |
+| POST   | `/progress/metrics/{metric}/measurements`      | ✅     | лише `weight`, `waist`, `height`                         |
+| DELETE | `/progress/metrics/{metric}/measurements/{id}` | ✅     | прибрати вимір                                           |
+
+**`PUT /progress/metrics/{metric}/goal` навмисно не побудований.** Ціль
+кожного показника лишається в домені, який нею володіє: щоденні —
+`PATCH /nutrition/goal`, цільова вага — `PATCH /profile`. Фасад під
+`/progress` дав би одній колонці два шляхи запису.
+
+Показники в шляху: `weight`, `waist`, `height` (разові, лежать у
+`body_measurements`) і `water`, `steps`, `calories`, `protein`, `fats`,
+`carbs` (щоденні, читаються з логу харчування — прогрес їх не зберігає).
 
 ## notifications ○
 
@@ -165,8 +174,10 @@ ADR-0004: запит або існує, або ні.
 ## Що лишилось невизначеним
 
 - Форма пагінації в списках, де специфікації ставлять це відкритим питанням
-  (`notifications/inbox`, `progress/metric-detail`). Конверт `PaginatedResponse`
-  уже є в `@dns/shared-types`; лишилось вирішити offset чи cursor.
+  (`notifications/inbox`). Конверт `PaginatedResponse` уже є в
+  `@dns/shared-types`; лишилось вирішити offset чи cursor.
+  `progress/metric-detail` поки віддає весь період без пагінації: вікно
+  обмежене 365 днями, і сторінки на такому обсязі були б рішенням без задачі.
 - Чи потрібен `/recipes/count` окремим маршрутом, чи лічильник їде в `meta`
   звичайного `GET /recipes` з `limit=0`.
 - Одиниці, у яких клієнт шле воду і вагу: конвертація на сервері чи на клієнті

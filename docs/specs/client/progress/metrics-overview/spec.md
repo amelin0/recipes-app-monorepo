@@ -2,12 +2,12 @@
 title: Metrics overview (Екран прогресу)
 bucket: client
 domain: progress
-status: Draft
+status: Implemented
 owner: '@amelin0'
 created: 2026-08-19
-updated: 2026-08-19
-plan: null
-related-adrs: []
+updated: 2026-09-06
+plan: ./plan.md
+related-adrs: [ADR-0004, ADR-0007]
 supersedes: null
 ---
 
@@ -19,7 +19,7 @@ supersedes: null
 > Дизайн: RF-mobile-app — заповнений стан (Figma 670:26709) і стан без
 > даних (642:39952).
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 — Побачити динаміку своїх показників (Priority: P1)
 
@@ -98,7 +98,7 @@ supersedes: null
   «заплановано» лишається.
 - Зріст у дорослого не змінюється — графік буде рівною лінією.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -134,7 +134,7 @@ supersedes: null
 - **Денний підсумок харчування**: заплановані і спожиті калорії, білки,
   жири, вуглеводи за день.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 - **SC-001**: Користувач бачить динаміку кожного показника без переходів
   — усе на одному екрані.

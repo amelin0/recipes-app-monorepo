@@ -2,12 +2,12 @@
 title: Metric detail (Детальний екран показника)
 bucket: client
 domain: progress
-status: Draft
+status: Implemented
 owner: '@amelin0'
 created: 2026-08-19
-updated: 2026-08-19
-plan: null
-related-adrs: []
+updated: 2026-09-06
+plan: ./plan.md
+related-adrs: [ADR-0004, ADR-0007]
 supersedes: null
 ---
 
@@ -20,7 +20,7 @@ supersedes: null
 > вода (673:51349), кроки (673:38831), обʼєм талії (673:39829),
 > зріст (673:40857).
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 — Розібратися з одним показником (Priority: P1)
 
@@ -80,7 +80,7 @@ supersedes: null
 - Значення дорівнює цілі рівно — вважається виконаним.
 - Вага зросла, а ціль — схуднення: «до цілі» стає відʼємним.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -126,7 +126,7 @@ supersedes: null
   норми і розподіл днів.
 - **Норма КБЖВ**: нижня і верхня межа денного споживання.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 - **SC-001**: Від екрана прогресу до детального — 1 тап.
 - **SC-002**: Значення в записах збігаються з графіком — 0 розбіжностей.
