@@ -10,3 +10,7 @@ export * from './user-settings.schema';
 export * from './user-reminders.schema';
 export * from './account-deletion-requests.schema';
 export * from './feedback.schema';
+export * from './nutrition-goals.schema';
+export * from './meal-log-entries.schema';
+export * from './water-log-entries.schema';
+export * from './daily-steps.schema';

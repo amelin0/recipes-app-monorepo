@@ -1,4 +1,5 @@
 export * from './auth-policy';
 export * from './language';
 export * from './nutrition';
+export * from './nutrition-policy';
 export * from './user-defaults';
