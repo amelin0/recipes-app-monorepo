@@ -23,6 +23,7 @@ import {
 } from './common/config';
 import { AuthModule } from './modules/auth';
 import { HealthModule } from './modules/health';
+import { UserModule } from './modules/user';
 
 @Module({
     imports: [
@@ -80,6 +81,7 @@ import { HealthModule } from './modules/health';
         }),
         AuthModule,
         HealthModule,
+        UserModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
