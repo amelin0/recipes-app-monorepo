@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 import { SUPPORTED_LANGUAGES } from '@dns/constants';
-import { MetricSystem, ReminderType, StorageScope, Theme } from '@dns/shared-types';
+import { FeedbackType, MetricSystem, ReminderType, StorageScope, Theme } from '@dns/shared-types';
+
+import { emailSchema } from './auth.schemas';
 
 /**
  * The save button stays disabled while the field is empty (profile-edit
@@ -103,3 +105,28 @@ export const presignUploadSchema = z.object({
 });
 
 export type PresignUploadInput = z.infer<typeof presignUploadSchema>;
+
+/**
+ * A support ticket. Validation runs on submit, not while typing (feedback
+ * FR-004), so the messages name what to fix rather than nudging mid-entry.
+ */
+export const createFeedbackSchema = z.object({
+    type: z.nativeEnum(FeedbackType),
+    description: z
+        .string()
+        .trim()
+        .min(10, 'Description must be at least 10 characters')
+        .max(1000, 'Description must be at most 1000 characters'),
+    /** Public URLs from `POST /uploads` with the `feedback` scope; ownership is checked server-side. */
+    imageUrls: z.array(z.string().url('Must be a valid URL')).max(3, 'At most 3 images').optional(),
+    replyEmail: emailSchema.optional(),
+    /**
+     * App version, platform, OS build — whatever the client can say about
+     * itself (FR-008). Deliberately open: the spec leaves the exact set
+     * undecided, and a fixed shape would reject a client that learns to
+     * report one more thing.
+     */
+    context: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+});
+
+export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;

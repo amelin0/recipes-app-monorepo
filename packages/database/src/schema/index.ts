@@ -9,3 +9,4 @@ export * from './profiles.schema';
 export * from './user-settings.schema';
 export * from './user-reminders.schema';
 export * from './account-deletion-requests.schema';
+export * from './feedback.schema';

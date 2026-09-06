@@ -15,6 +15,13 @@
       "when": 1788705980454,
       "tag": "0001_mighty_corsair",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788717413025,
+      "tag": "0002_unknown_amphibian",
+      "breakpoints": true
     }
   ]
 }

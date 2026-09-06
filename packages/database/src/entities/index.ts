@@ -7,3 +7,4 @@ export { ProfileEntity } from './profile.entity';
 export { UserSettingsEntity } from './user-settings.entity';
 export { UserReminderEntity } from './user-reminder.entity';
 export { AccountDeletionRequestEntity } from './account-deletion-request.entity';
+export { FeedbackEntity } from './feedback.entity';
