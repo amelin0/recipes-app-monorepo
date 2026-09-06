@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { SUPPORTED_LANGUAGES } from '@dns/constants';
+import { ONBOARDING_LIMITS, SUPPORTED_LANGUAGES } from '@dns/constants';
 import { FeedbackType, MetricSystem, ReminderType, StorageScope, Theme } from '@dns/shared-types';
 
 import { emailSchema } from './auth.schemas';
@@ -17,6 +17,19 @@ export const displayNameSchema = z
     .max(100, 'Name must be at most 100 characters');
 
 /**
+ * The weight the user is working towards.
+ *
+ * Editable outside the questionnaire because the progress screen's weight card
+ * shows the goal and offers to change it (progress metric-detail FR-005), and
+ * the alternative — a `/progress` route writing the same column — would give
+ * one number two owners. `null` drops the goal.
+ */
+export const targetWeightKgSchema = z
+    .number()
+    .min(ONBOARDING_LIMITS.weightKg.min, `Target weight must be at least ${ONBOARDING_LIMITS.weightKg.min}`)
+    .max(ONBOARDING_LIMITS.weightKg.max, `Target weight must be at most ${ONBOARDING_LIMITS.weightKg.max}`);
+
+/**
  * `photoUrl` must be a URL this user obtained from `POST /uploads` — the
  * service checks that before storing it. Validating only the shape here would
  * let any address be written into a profile that every viewer then fetches.
@@ -26,6 +39,7 @@ export const updateProfileSchema = z
     .object({
         name: displayNameSchema.optional(),
         photoUrl: z.string().url('Must be a valid URL').nullable().optional(),
+        targetWeightKg: targetWeightKgSchema.nullable().optional(),
     })
     .refine(value => Object.keys(value).length > 0, 'Provide at least one field to update');
 

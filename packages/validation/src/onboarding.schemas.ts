@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ACTIVITY_LEVEL_RANGE, ONBOARDING_LIMITS } from '@dns/constants';
 import { Gender, UserGoal } from '@dns/shared-types';
 
-import { displayNameSchema } from './user.schemas';
+import { displayNameSchema, targetWeightKgSchema } from './user.schemas';
 
 const bodyMeasure = (limits: { min: number; max: number }, label: string) =>
     z
@@ -49,7 +49,7 @@ export const saveOnboardingStepSchema = z
             .max(ACTIVITY_LEVEL_RANGE.max, `Activity level must be at most ${ACTIVITY_LEVEL_RANGE.max}`)
             .optional(),
         goal: z.nativeEnum(UserGoal).optional(),
-        targetWeightKg: bodyMeasure(ONBOARDING_LIMITS.weightKg, 'Target weight').nullable().optional(),
+        targetWeightKg: targetWeightKgSchema.nullable().optional(),
         /** Which step the person is on, so an interrupted questionnaire resumes there. */
         step: z.number().int().min(0).max(ONBOARDING_LIMITS.stepCount).optional(),
     })

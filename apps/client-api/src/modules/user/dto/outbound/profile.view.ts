@@ -28,6 +28,12 @@ export class ProfileView {
     @ApiProperty({ example: 'ОЧ', description: 'Avatar fallback; derived from the name so every surface agrees.' })
     readonly initials: string;
 
+    @ApiProperty({
+        nullable: true,
+        description: 'The weight being worked towards; null when there is none, or the goal is not about weight.',
+    })
+    readonly targetWeightKg: number | null;
+
     @ApiProperty({ type: UserSettingsView })
     readonly settings: UserSettingsView;
 
@@ -37,6 +43,9 @@ export class ProfileView {
         this.name = profile.name;
         this.photoUrl = profile.photoUrl;
         this.initials = profile.initials();
+        // Echoed back because `PATCH /profile` accepts it: a client that sets a
+        // field and gets a body without it cannot tell the write took.
+        this.targetWeightKg = profile.targetWeightKg;
         this.settings = UserSettingsView.from(settings);
     }
 

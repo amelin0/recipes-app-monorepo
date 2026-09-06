@@ -50,7 +50,16 @@ export class ProfileService {
             this.storageService.validateOwnership(input.photoUrl, user.id, StorageScope.ProfilePhoto);
         }
 
-        return this.profileRepository.update(user.id, input);
+        const { targetWeightKg, ...rest } = input;
+
+        return this.profileRepository.update(user.id, {
+            ...rest,
+            // `numeric` columns take strings; the fixed scale here is the same
+            // one the questionnaire writes, so the two paths cannot disagree.
+            ...(targetWeightKg === undefined
+                ? {}
+                : { targetWeightKg: targetWeightKg === null ? null : targetWeightKg.toFixed(1) }),
+        });
     }
 
     updateSettings(user: UserEntity, input: UpdateSettingsInput): Promise<UserSettingsEntity> {
