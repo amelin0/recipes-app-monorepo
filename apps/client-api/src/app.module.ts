@@ -26,6 +26,7 @@ import {
 import { AuthModule } from './modules/auth';
 import { HealthModule } from './modules/health';
 import { NutritionModule } from './modules/nutrition';
+import { ProgressModule } from './modules/progress';
 import { UploadsModule } from './modules/uploads';
 import { UserModule } from './modules/user';
 
@@ -104,6 +105,7 @@ import { UserModule } from './modules/user';
         UserModule,
         UploadsModule,
         NutritionModule,
+        ProgressModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },

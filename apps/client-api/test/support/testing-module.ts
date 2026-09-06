@@ -21,6 +21,7 @@ import {
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
 import { NutritionModule } from '../../src/modules/nutrition';
+import { ProgressModule } from '../../src/modules/progress';
 import { UserModule } from '../../src/modules/user';
 
 /**
@@ -111,6 +112,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             AuthModule,
             UserModule,
             NutritionModule,
+            ProgressModule,
         ],
     })
         .overrideProvider(OAuthService)

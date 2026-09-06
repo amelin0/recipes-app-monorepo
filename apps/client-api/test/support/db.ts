@@ -11,7 +11,8 @@ export async function truncateAuthTables(db: DrizzleDB): Promise<void> {
     // `users` alone would be enough — every other table cascades from it —
     // but naming them keeps this honest if one ever stops hanging off a user.
     await db.execute(
-        sql`TRUNCATE TABLE nutrition_goals, meal_log_entries, water_log_entries, daily_steps, feedback,
+        sql`TRUNCATE TABLE nutrition_goals, meal_log_entries, water_log_entries, daily_steps,
+            body_measurements, feedback,
             account_deletion_requests, user_reminders, user_settings, profiles,
             oauth_identities, password_reset_permits, otp_codes, refresh_tokens, users CASCADE`,
     );
