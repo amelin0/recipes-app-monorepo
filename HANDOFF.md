@@ -19,6 +19,7 @@
 | NestJS 11 + Drizzle + nestjs-zod, модульний моноліт, DDD-lite              | [ADR-0001](docs/adr/0001-nestjs-drizzle-modular-monolith.md)         |
 | Два сервіси: `client-api` :3000 і `admin-api` :3001, без префікса `/admin` | [ADR-0002](docs/adr/0002-split-client-and-admin-api.md)              |
 | Окремі `users` і `admins`, ланцюжки сесій на пристрій, deny-by-default     | [ADR-0003](docs/adr/0003-auth-model-tokens-and-admin-permissions.md) |
+| Шляхи клієнтського API за REST-конвенціями, `/profile` замість `/users/me` | [ADR-0004](docs/adr/0004-client-api-url-conventions.md)              |
 
 Додатково, поза ADR:
 
@@ -28,12 +29,21 @@
 - Патерни портуються з `D:\PhpstormProjects\11am-app` —
   `apps/mobile-api/CLAUDE.md` і `apps/mobile-api/.claude/skills/`.
 
-### Прийняте припущення (не підтверджене замовником)
+### Словник шляхів клієнтського API
 
-Шляхи клієнтського API виводимо зі специфікацій `docs/` і TODO-міток у
-мобілці. `.claude/knowledge/**` — довідник **доменної моделі** (таблиці,
-поля, енуми, формули), а не контракт URL: він описує V1 на Supabase.
-Кожен конкретний шлях фіксується в `plan.md` свого зрізу.
+Вирішено 2026-09-06, зафіксовано в
+[ADR-0004](docs/adr/0004-client-api-url-conventions.md): шляхи виводяться за
+REST-конвенціями, а не успадковуються з V1. Ключове — колекції в множині,
+синглтон поточного користувача це `/profile` (колекції `/users` у клієнтському
+API немає), часткова зміна через один `PATCH` із частковим тілом, булевий стан
+через `PUT`/`DELETE` підресурсу замість `toggle`, фільтри в query.
+
+Виведена карта шляхів на всі домени —
+[`.claude/knowledge/client-api-routes.md`](.claude/knowledge/client-api-routes.md).
+Остаточний контракт кожного домену фіксує його `plan.md`.
+
+`.claude/knowledge/**` (V1 на Supabase) лишається довідником **доменної
+моделі** — таблиці, поля, енуми, формули — і не є контрактом URL.
 
 ---
 
