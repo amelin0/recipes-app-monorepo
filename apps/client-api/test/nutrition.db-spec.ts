@@ -84,6 +84,26 @@ describe('Nutrition', () => {
             expect(day.goal?.dailyCalories).toBe(2100);
         });
 
+        /**
+         * The progress cards each edit their own target, so a narrow patch has
+         * to leave the other six alone — sending the whole goal from a card
+         * would overwrite them with whatever that screen last read.
+         */
+        it('moves one target without disturbing the rest', async () => {
+            await nutrition.upsertGoal(user.id, GOAL);
+            const patched = await nutrition.patchGoal(user.id, { dailyWaterMl: 3000 });
+
+            expect(patched.dailyWaterMl).toBe(3000);
+            expect(patched.dailyCalories).toBe(GOAL.dailyCalories);
+            expect(patched.dailyProteinG).toBe(GOAL.dailyProteinG);
+        });
+
+        it('refuses to patch a goal that has never been set', async () => {
+            await expect(nutrition.patchGoal(user.id, { dailyWaterMl: 3000 })).rejects.toBeInstanceOf(
+                NotFoundException,
+            );
+        });
+
         it('falls back to the default step target while nothing sets it', async () => {
             const goal = await nutrition.upsertGoal(user.id, GOAL);
             expect(goal.dailyStepsTarget).toBe(DAILY_STEPS_TARGET_DEFAULT);
