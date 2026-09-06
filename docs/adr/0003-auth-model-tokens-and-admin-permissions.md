@@ -140,10 +140,10 @@ FR-006.
 
 ## Specs that reference this ADR
 
-- [`client/auth/sign-up`](../specs/client/auth/sign-up/spec.md) — FR-002, FR-004, FR-005
-- [`client/auth/sign-in`](../specs/client/auth/sign-in/spec.md) — пороги лімітів
-- [`client/auth/password-reset`](../specs/client/auth/password-reset/spec.md) — TTL коду, пороги
-- [`client/auth/session`](../specs/client/auth/session/spec.md) — FR-001, FR-006, FR-007
+- [`client/auth/sign-up`](../specs/client/auth/sign-up/) — FR-002, FR-004, FR-005 · [plan](../specs/client/auth/sign-up/plan.md)
+- [`client/auth/sign-in`](../specs/client/auth/sign-in/) — пороги лімітів · [plan](../specs/client/auth/sign-in/plan.md)
+- [`client/auth/password-reset`](../specs/client/auth/password-reset/) — TTL коду, пороги · [plan](../specs/client/auth/password-reset/plan.md)
+- [`client/auth/session`](../specs/client/auth/session/) — FR-001, FR-006, FR-007 · [plan](../specs/client/auth/session/plan.md)
 
 ## Links
 
