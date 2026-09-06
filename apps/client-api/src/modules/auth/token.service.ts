@@ -1,16 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 
 import { AUTH_POLICY } from '@dns/constants';
-import { RefreshTokenRepository, UserEntity } from '@dns/database';
+import { RefreshTokenRepository, UserEntity, UserRepository } from '@dns/database';
 import { AuthTokens } from '@dns/shared-types';
 
 import { AllConfig } from '../../common/config';
 
+import { AuthErrorCode } from './auth.errors';
 import { AccessTokenPayload, RefreshTokenPayload } from './auth.types';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class TokenService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService<AllConfig>,
         private readonly refreshTokenRepository: RefreshTokenRepository,
+        private readonly userRepository: UserRepository,
     ) {}
 
     /**
@@ -46,6 +48,72 @@ export class TokenService {
         });
 
         return { accessToken, refreshToken };
+    }
+
+    /**
+     * Exchanges a refresh token for a new pair, keeping the device's chain.
+     *
+     * Every rejection is the same 401: telling a caller *why* a token failed
+     * would say whether the id exists and whether it was already spent.
+     */
+    async rotate(refreshToken: string): Promise<AuthTokens> {
+        const payload = await this.verifyRefreshToken(refreshToken).catch(() => {
+            throw this.invalidRefreshToken();
+        });
+
+        if (payload.type !== 'refresh') throw this.invalidRefreshToken();
+
+        const stored = await this.refreshTokenRepository.findById(payload.jti);
+        if (!stored) throw this.invalidRefreshToken();
+
+        // Before the replay check: a token whose signature is valid but whose
+        // body does not match the stored digest was minted by someone holding
+        // the refresh secret, not handed out by us. Treating that as a replay
+        // would let an attacker revoke a victim's live chain at will.
+        if (!(await compare(refreshToken, stored.tokenHash))) throw this.invalidRefreshToken();
+
+        // The genuine token, presented a second time. Only theft explains
+        // that, so the whole chain goes — and only that chain, leaving the
+        // user's other devices signed in (session FR-006).
+        if (stored.isRotated()) {
+            await this.refreshTokenRepository.deleteFamily(stored.familyId);
+            throw this.invalidRefreshToken();
+        }
+
+        if (stored.isExpired()) throw this.invalidRefreshToken();
+
+        const user = await this.userRepository.findById(stored.userId);
+        if (!user || !user.isEmailVerified()) throw this.invalidRefreshToken();
+
+        await this.refreshTokenRepository.markRotated(stored.id);
+
+        return this.issuePair(user, stored.familyId);
+    }
+
+    /**
+     * Ends one device's session. Answers the same way whether or not the token
+     * was valid — a caller signing out has nothing to gain from being told.
+     */
+    async revokeChain(refreshToken: string): Promise<void> {
+        const payload = await this.verifyRefreshToken(refreshToken).catch(() => null);
+        if (!payload) return;
+
+        const stored = await this.refreshTokenRepository.findById(payload.jti);
+        if (!stored) return;
+
+        await this.refreshTokenRepository.deleteFamily(stored.familyId);
+    }
+
+    /** Signs every device out — "log out everywhere", and after a password change (session FR-007). */
+    revokeAllForUser(userId: string): Promise<void> {
+        return this.refreshTokenRepository.deleteAllForUser(userId);
+    }
+
+    private invalidRefreshToken(): UnauthorizedException {
+        return new UnauthorizedException({
+            message: 'Invalid refresh token',
+            code: AuthErrorCode.InvalidRefreshToken,
+        });
     }
 
     verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {

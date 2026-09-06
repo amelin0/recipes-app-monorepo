@@ -21,17 +21,22 @@ import {
     AuthTokensView,
     CurrentUserView,
     LoginInboundDto,
+    RefreshTokenInboundDto,
     RegisterInboundDto,
     ResendEmailCodeInboundDto,
     VerifyEmailInboundDto,
 } from './dto';
 import { JwtGuard } from './guards';
+import { TokenService } from './token.service';
 
 @ApiTags('auth')
 @Controller('auth')
 @UseGuards(JwtGuard)
 export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+    constructor(
+        private readonly authService: AuthService,
+        private readonly tokenService: TokenService,
+    ) {}
 
     @Public()
     @Post('register')
@@ -81,5 +86,31 @@ export class AuthController {
     @ApiUnauthorizedResponse({ description: 'Missing, expired or revoked access token.' })
     me(@CurrentUser() user: UserEntity): CurrentUserView {
         return CurrentUserView.from(user);
+    }
+
+    @Public()
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    @SetThrottleKey(ThrottleKey.RefreshToken)
+    @ApiOkResponse({ type: AuthTokensView })
+    @ApiUnauthorizedResponse({ description: 'Unknown, expired or already-spent token. A replay revokes the chain.' })
+    async refresh(@Body() body: RefreshTokenInboundDto): Promise<AuthTokensView> {
+        return AuthTokensView.from(await this.tokenService.rotate(body.refreshToken));
+    }
+
+    @Public()
+    @Post('logout')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiNoContentResponse({ description: 'Ends this device session. Always 204, valid token or not.' })
+    async logout(@Body() body: RefreshTokenInboundDto): Promise<void> {
+        await this.tokenService.revokeChain(body.refreshToken);
+    }
+
+    @Post('logout-all')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiBearerAuth()
+    @ApiNoContentResponse({ description: 'Ends every session of the account.' })
+    async logoutAll(@CurrentUser() user: UserEntity): Promise<void> {
+        await this.tokenService.revokeAllForUser(user.id);
     }
 }
