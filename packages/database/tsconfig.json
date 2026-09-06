@@ -1,0 +1,14 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "types": ["node"],
+        // Nest shape: `@Inject()` on BaseRepository needs CommonJS emit
+        // semantics — under the base ESM template decorated classes report TS1272.
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true
+    },
+    "include": ["src/**/*.ts", "drizzle.config.ts"]
+}
