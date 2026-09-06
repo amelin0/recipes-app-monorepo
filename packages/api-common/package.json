@@ -1,0 +1,48 @@
+{
+    "name": "@dns/api-common",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src/",
+        "test": "tsx --test \"src/**/*.test.ts\""
+    },
+    "dependencies": {
+        "@dns/shared-types": "workspace:*"
+    },
+    "peerDependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@nestjs/config": "^4.0.0",
+        "@nestjs/core": "^11.0.0",
+        "@nestjs/throttler": "^6.0.0",
+        "express": "^5.0.0",
+        "nestjs-pino": "^4.0.0",
+        "nestjs-zod": "^5.0.0",
+        "pino": "^10.0.0",
+        "pino-http": "^11.0.0",
+        "rxjs": "^7.0.0",
+        "zod": "^3.24.0"
+    },
+    "devDependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@nestjs/config": "^4.0.0",
+        "@nestjs/core": "^11.0.0",
+        "@nestjs/throttler": "^6.0.0",
+        "@types/express": "^5.0.6",
+        "@types/node": "^22.10.0",
+        "express": "^5.0.0",
+        "nestjs-pino": "^4.0.0",
+        "nestjs-zod": "^5.0.0",
+        "pino": "^10.0.0",
+        "pino-http": "^11.0.0",
+        "pino-pretty": "^13.1.3",
+        "rxjs": "^7.0.0",
+        "tsx": "^4.21.0",
+        "zod": "^3.24.0"
+    }
+}
