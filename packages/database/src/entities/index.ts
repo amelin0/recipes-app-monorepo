@@ -10,3 +10,6 @@ export { AccountDeletionRequestEntity } from './account-deletion-request.entity'
 export { FeedbackEntity } from './feedback.entity';
 export { NutritionGoalEntity, MealLogEntryEntity, WaterLogEntryEntity, DailyStepsEntity } from './nutrition.entity';
 export { BodyMeasurementEntity } from './body-measurement.entity';
+export { ReferenceEntity } from './catalog-reference.entity';
+export { ProductEntity } from './product.entity';
+export { RecipeEntity, RecipeIngredientEntity, RecipeStepEntity } from './recipe.entity';

@@ -17,6 +17,7 @@
         "db:seed": "tsx src/seeds/seed.ts"
     },
     "dependencies": {
+        "@dns/constants": "workspace:*",
         "@dns/shared-types": "workspace:*",
         "drizzle-orm": "0.45.2",
         "postgres": "^3.4.0"

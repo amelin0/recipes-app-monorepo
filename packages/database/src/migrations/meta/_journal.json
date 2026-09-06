@@ -1,48 +1,55 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1788702442946,
-      "tag": "0000_thin_iceman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1788705980454,
-      "tag": "0001_mighty_corsair",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1788717413025,
-      "tag": "0002_unknown_amphibian",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1788720303365,
-      "tag": "0003_dry_lady_ursula",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1788722185052,
-      "tag": "0004_overjoyed_gateway",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1788724235643,
-      "tag": "0005_ambiguous_blob",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1788702442946,
+            "tag": "0000_thin_iceman",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1788705980454,
+            "tag": "0001_mighty_corsair",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1788717413025,
+            "tag": "0002_unknown_amphibian",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1788720303365,
+            "tag": "0003_dry_lady_ursula",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1788722185052,
+            "tag": "0004_overjoyed_gateway",
+            "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "7",
+            "when": 1788724235643,
+            "tag": "0005_ambiguous_blob",
+            "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "7",
+            "when": 1788736177982,
+            "tag": "0006_colossal_khan",
+            "breakpoints": true
+        }
+    ]
 }

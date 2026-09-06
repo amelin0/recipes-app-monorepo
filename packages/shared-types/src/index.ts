@@ -1,5 +1,6 @@
 export * from './api';
 export * from './auth';
+export * from './catalog';
 export * from './feedback';
 export * from './i18n';
 export * from './nutrition';
