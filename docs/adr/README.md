@@ -31,3 +31,4 @@ Skip an ADR for routine choices that follow from existing skills / conventions.
 <!-- Update this list when adding a new ADR. -->
 
 - [ADR-0001](./0001-nestjs-drizzle-modular-monolith.md) — Бекенд: модульний моноліт на NestJS + Drizzle, а не продовження Supabase — **Accepted**
+- [ADR-0002](./0002-split-client-and-admin-api.md) — Два окремі сервіси: client-api і admin-api замість одного застосунку з бакетами — **Accepted**
