@@ -19,6 +19,7 @@ import {
     otpConfig,
     throttlerConfig,
 } from './common/config';
+import { AuthModule } from './modules/auth';
 import { HealthModule } from './modules/health';
 
 @Module({
@@ -69,6 +70,7 @@ import { HealthModule } from './modules/health';
             inject: [ConfigService],
             useFactory: (configService: ConfigService<AllConfig>) => configService.getOrThrow('otp', { infer: true }),
         }),
+        AuthModule,
         HealthModule,
     ],
     providers: [

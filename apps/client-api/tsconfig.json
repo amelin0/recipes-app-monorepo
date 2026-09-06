@@ -21,7 +21,8 @@
             "@dns/api-infrastructure/*": ["../../packages/api-infrastructure/src/*"],
             "@dns/constants": ["../../packages/constants/src"],
             "@dns/database": ["../../packages/database/src"],
-            "@dns/shared-types": ["../../packages/shared-types/src"]
+            "@dns/shared-types": ["../../packages/shared-types/src"],
+            "@dns/validation": ["../../packages/validation/src"]
         }
     },
     "include": ["src/**/*"],
