@@ -29,20 +29,21 @@
 
 Синглтон поточного користувача; колекції `/users` у клієнтському API немає.
 
-| Method | Path                        | Статус | Що                                                               |
-| ------ | --------------------------- | ------ | ---------------------------------------------------------------- |
-| GET    | `/profile`                  | ✅     | агрегат: id, email, імʼя, фото, ініціали + вкладені налаштування |
-| PATCH  | `/profile`                  | ✅     | імʼя (фото — після появи сховища)                                |
-| PATCH  | `/profile/settings`         | ✅     | мова, тема, 4 системи одиниць; часткове тіло                     |
-| GET    | `/profile/reminders`        | ✅     | пʼять карток у порядку показу                                    |
-| PUT    | `/profile/reminders`        | ✅     | збереження розкладу як цілого                                    |
-| POST   | `/profile/deletion-request` | ✅     | запит на видалення, 30 днів                                      |
-| DELETE | `/profile/deletion-request` | ✅     | скасування запиту                                                |
-| GET    | `/profile/referral`         | ○      | код + статистика — блокує домен subscription                     |
-| POST   | `/profile/feedback`         | ✅     | звернення, до 3 зображень                                        |
-| GET    | `/profile/onboarding`       | ○      | стан 16-крокової анкети (resume)                                 |
-| PUT    | `/profile/onboarding`       | ○      | збереження кроку                                                 |
-| GET    | `/profile/recommendations`  | ○      | серверні BMR/TDEE, норми води і кроків                           |
+| Method | Path                           | Статус | Що                                                               |
+| ------ | ------------------------------ | ------ | ---------------------------------------------------------------- |
+| GET    | `/profile`                     | ✅     | агрегат: id, email, імʼя, фото, ініціали + вкладені налаштування |
+| PATCH  | `/profile`                     | ✅     | імʼя (фото — після появи сховища)                                |
+| PATCH  | `/profile/settings`            | ✅     | мова, тема, 4 системи одиниць; часткове тіло                     |
+| GET    | `/profile/reminders`           | ✅     | пʼять карток у порядку показу                                    |
+| PUT    | `/profile/reminders`           | ✅     | збереження розкладу як цілого                                    |
+| POST   | `/profile/deletion-request`    | ✅     | запит на видалення, 30 днів                                      |
+| DELETE | `/profile/deletion-request`    | ✅     | скасування запиту                                                |
+| GET    | `/profile/referral`            | ○      | код + статистика — блокує домен subscription                     |
+| POST   | `/profile/feedback`            | ✅     | звернення, до 3 зображень                                        |
+| GET    | `/profile/onboarding`          | ✅     | стан 16-крокової анкети (resume)                                 |
+| PUT    | `/profile/onboarding`          | ✅     | збереження відповіді одного кроку                                |
+| POST   | `/profile/onboarding/complete` | ✅     | завершення — пише й ціль харчування                              |
+| GET    | `/profile/recommendations`     | ✅     | норми за ADR-0007; `null`, доки анкета неповна                   |
 
 Окремого `GET /profile/settings` навмисно немає: налаштування приходять
 вкладеними в `GET /profile`, а два шляхи читання тих самих даних розходяться
