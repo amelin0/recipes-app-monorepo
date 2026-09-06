@@ -20,6 +20,7 @@ import {
     throttlerConfig,
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
+import { NutritionModule } from '../../src/modules/nutrition';
 import { UserModule } from '../../src/modules/user';
 
 /**
@@ -55,7 +56,16 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: ['.env', '../../.env'],
-                load: [appConfig, authConfig, databaseConfig, emailConfig, oauthConfig, otpConfig, storageConfig, throttlerConfig],
+                load: [
+                    appConfig,
+                    authConfig,
+                    databaseConfig,
+                    emailConfig,
+                    oauthConfig,
+                    otpConfig,
+                    storageConfig,
+                    throttlerConfig,
+                ],
             }),
             DatabaseConnectionModule.forRootAsync({
                 imports: [ConfigModule],
@@ -100,6 +110,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             }),
             AuthModule,
             UserModule,
+            NutritionModule,
         ],
     })
         .overrideProvider(OAuthService)
