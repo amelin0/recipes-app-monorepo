@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { emailSchema, passwordSchema, registerSchema, setNewPasswordSchema } from './auth.schemas';
+import { emailSchema, otpCodeSchema, passwordSchema, registerSchema, setNewPasswordSchema } from './auth.schemas';
 
 test('email is trimmed and lower-cased so comparison is case-insensitive', () => {
     assert.equal(emailSchema.parse('  Oleh.Test@Example.COM '), 'oleh.test@example.com');
@@ -40,4 +40,15 @@ test('the reset form requires the confirmation to match', () => {
     const mismatch = setNewPasswordSchema.safeParse({ ...base, passwordConfirmation: 'passw0rdX' });
     assert.equal(mismatch.success, false);
     assert.equal(mismatch.error?.errors[0]?.path.join('.'), 'passwordConfirmation');
+});
+
+test('the code must be exactly six digits, not six of anything', () => {
+    assert.equal(otpCodeSchema.safeParse('123456').success, true);
+    assert.equal(otpCodeSchema.safeParse('  123456  ').success, true);
+
+    // Regression guard: an escaped `d` that collapses to a literal character
+    // would let this through.
+    assert.equal(otpCodeSchema.safeParse('dddddd').success, false);
+    assert.equal(otpCodeSchema.safeParse('12345').success, false);
+    assert.equal(otpCodeSchema.safeParse('1234567').success, false);
 });

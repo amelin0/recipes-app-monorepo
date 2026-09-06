@@ -34,7 +34,10 @@ export const passwordSchema = z
 export const otpCodeSchema = z
     .string()
     .trim()
-    .regex(new RegExp(`^\d{${AUTH_POLICY.otp.length}}$`), `Code must be ${AUTH_POLICY.otp.length} digits`);
+    // Character class rather than an escape: the pattern is assembled from a
+    // constant, and a lone backslash in a template literal is one careless edit
+    // away from collapsing to a literal 'd'.
+    .regex(new RegExp(`^[0-9]{${AUTH_POLICY.otp.length}}$`), `Code must be ${AUTH_POLICY.otp.length} digits`);
 
 export const registerSchema = z.object({
     email: emailSchema,
