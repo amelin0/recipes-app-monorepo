@@ -10,38 +10,43 @@
 
 ## auth ✅
 
-| Method | Path                            | Спец                            |
-| ------ | ------------------------------- | ------------------------------- |
-| POST   | `/auth/register`                | sign-up FR-001…FR-003           |
-| POST   | `/auth/verify-email`            | sign-up FR-004…FR-007           |
-| POST   | `/auth/resend-code`             | sign-up FR-006                  |
-| POST   | `/auth/login`                   | sign-in FR-001…FR-003           |
-| POST   | `/auth/oauth`                   | sign-in FR-004…FR-006           |
-| POST   | `/auth/refresh`                 | session FR-002                  |
-| POST   | `/auth/logout`                  | session FR-006                  |
-| POST   | `/auth/logout-all`              | session FR-007                  |
-| GET    | `/auth/me`                      | стан автентифікації, не профіль |
-| POST   | `/auth/password-reset/request`  | password-reset FR-001           |
-| POST   | `/auth/password-reset/verify`   | password-reset FR-003           |
-| POST   | `/auth/password-reset/complete` | password-reset FR-004…FR-005    |
+| Method | Path                            | Спец                                                         |
+| ------ | ------------------------------- | ------------------------------------------------------------ |
+| POST   | `/auth/register`                | sign-up FR-001…FR-003                                        |
+| POST   | `/auth/verify-email`            | sign-up FR-004…FR-007                                        |
+| POST   | `/auth/resend-code`             | sign-up FR-006                                               |
+| POST   | `/auth/login`                   | sign-in FR-001…FR-003                                        |
+| POST   | `/auth/oauth`                   | sign-in FR-004…FR-006                                        |
+| POST   | `/auth/refresh`                 | session FR-002                                               |
+| POST   | `/auth/logout`                  | session FR-006                                               |
+| POST   | `/auth/logout-all`              | session FR-007                                               |
+| GET    | `/auth/me`                      | стан автентифікації, не профіль; несе `deletionScheduledFor` |
+| POST   | `/auth/password-reset/request`  | password-reset FR-001                                        |
+| POST   | `/auth/password-reset/verify`   | password-reset FR-003                                        |
+| POST   | `/auth/password-reset/complete` | password-reset FR-004…FR-005                                 |
 
-## profile ○
+## profile ✅ (частково)
 
 Синглтон поточного користувача; колекції `/users` у клієнтському API немає.
 
-| Method      | Path                        | Що                                                            |
-| ----------- | --------------------------- | ------------------------------------------------------------- |
-| GET         | `/profile`                  | профільний агрегат: імʼя, фото, підписка, налаштування        |
-| PATCH       | `/profile`                  | імʼя, фото (profile-edit)                                     |
-| GET / PATCH | `/profile/settings`         | мова, тема, 4 системи одиниць — один PATCH із частковим тілом |
-| GET / PUT   | `/profile/reminders`        | нагадування про їжу і зважування                              |
-| GET         | `/profile/referral`         | код + статистика                                              |
-| POST        | `/profile/feedback`         | звернення, до 3 зображень                                     |
-| POST        | `/profile/deletion-request` | запит на видалення, 30 днів                                   |
-| DELETE      | `/profile/deletion-request` | скасування запиту                                             |
-| GET         | `/profile/onboarding`       | стан 16-крокової анкети (resume)                              |
-| PUT         | `/profile/onboarding`       | збереження кроку                                              |
-| GET         | `/profile/recommendations`  | серверні BMR/TDEE, норми води і кроків                        |
+| Method | Path                        | Статус | Що                                                               |
+| ------ | --------------------------- | ------ | ---------------------------------------------------------------- |
+| GET    | `/profile`                  | ✅     | агрегат: id, email, імʼя, фото, ініціали + вкладені налаштування |
+| PATCH  | `/profile`                  | ✅     | імʼя (фото — після появи сховища)                                |
+| PATCH  | `/profile/settings`         | ✅     | мова, тема, 4 системи одиниць; часткове тіло                     |
+| GET    | `/profile/reminders`        | ✅     | пʼять карток у порядку показу                                    |
+| PUT    | `/profile/reminders`        | ✅     | збереження розкладу як цілого                                    |
+| POST   | `/profile/deletion-request` | ✅     | запит на видалення, 30 днів                                      |
+| DELETE | `/profile/deletion-request` | ✅     | скасування запиту                                                |
+| GET    | `/profile/referral`         | ○      | код + статистика — блокує домен subscription                     |
+| POST   | `/profile/feedback`         | ○      | звернення, до 3 зображень — потребує сховища                     |
+| GET    | `/profile/onboarding`       | ○      | стан 16-крокової анкети (resume)                                 |
+| PUT    | `/profile/onboarding`       | ○      | збереження кроку                                                 |
+| GET    | `/profile/recommendations`  | ○      | серверні BMR/TDEE, норми води і кроків                           |
+
+Окремого `GET /profile/settings` навмисно немає: налаштування приходять
+вкладеними в `GET /profile`, а два шляхи читання тих самих даних розходяться
+першими.
 
 `POST` / `DELETE` на `deletion-request` — та сама симетрія, що в правилі 6
 ADR-0004: запит або існує, або ні.

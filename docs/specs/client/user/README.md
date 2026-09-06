@@ -17,16 +17,19 @@ UI екрана вже реалізовано в мобільному засто
 
 ## Specs
 
-| Feature | Status | Owner | Updated |
-|---|---|---|---|
-| [Profile (Профіль і налаштування)](./profile/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Profile edit (Редагування профілю)](./profile-edit/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [App settings (Мова, тема, одиниці)](./app-settings/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Reminders (Нагадування)](./reminders/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [FAQ (Часті питання)](./faq/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Feedback (Зворотній звʼязок)](./feedback/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Account deletion (Видалення й відновлення)](./account-deletion/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Referral program (Реферальна програма)](./referral/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| Feature                                                                  | Spec        | Plan                               | Owner    | Updated    |
+| ------------------------------------------------------------------------ | ----------- | ---------------------------------- | -------- | ---------- |
+| [Profile (Профіль і налаштування)](./profile/spec.md)                    | Approved    | [plan](./profile/plan.md)          | @amelin0 | 2026-09-06 |
+| [Profile edit (Редагування профілю)](./profile-edit/spec.md)             | Approved    | [plan](./profile-edit/plan.md)     | @amelin0 | 2026-09-06 |
+| [App settings (Мова, тема, одиниці)](./app-settings/spec.md)             | Implemented | [plan](./app-settings/plan.md)     | @amelin0 | 2026-09-06 |
+| [Reminders (Нагадування)](./reminders/spec.md)                           | Implemented | [plan](./reminders/plan.md)        | @amelin0 | 2026-09-06 |
+| [FAQ (Часті питання)](./faq/spec.md)                                     | Draft       | —                                  | @amelin0 | 2026-08-19 |
+| [Feedback (Зворотній звʼязок)](./feedback/spec.md)                       | Draft       | —                                  | @amelin0 | 2026-08-19 |
+| [Account deletion (Видалення й відновлення)](./account-deletion/spec.md) | Approved    | [plan](./account-deletion/plan.md) | @amelin0 | 2026-09-06 |
+| [Referral program (Реферальна програма)](./referral/spec.md)             | Draft       | —                                  | @amelin0 | 2026-08-20 |
+
+`Approved` означає, що серверна частина реалізована не повністю — деталі в
+розділі «Що ще не побудовано» відповідного `plan.md`.
 
 ## Related
 
