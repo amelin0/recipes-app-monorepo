@@ -122,16 +122,17 @@ Healthcheck контейнера і blackbox-проба дивляться на 
 Усе під `grafana/provisioning/alerting/` — контактна точка, дерево
 маршрутизації і сім правил у теці `DNS`, тій самій, де дашборд.
 
-Налаштувати, один раз:
+Група вже вписана — `-1003784473088`, та сама, що й у 11am. Лишається одне:
+покласти токен бота в `TELEGRAM_BOT_TOKEN` у `.env.obs`. Бот мусить бути
+учасником групи, інакше Telegram відповість `403 bot is not a member`.
 
-1. `@BotFather` → `/newbot` → віддає токен.
-2. Додати бота в групу, написати туди будь-що, тоді
-   `curl "https://api.telegram.org/bot<TOKEN>/getUpdates"` і взяти
-   `message.chat.id` — для групи він відʼємний.
-3. Токен → `TELEGRAM_BOT_TOKEN` у `.env.obs`.
-4. **Chat id — рукою в `contact-points.yml`**, замість `REPLACE_WITH_CHAT_ID`.
+Токен береться в `@BotFather` → `/newbot`. Якщо колись знадобиться інша
+група: додати туди бота, написати будь-що, тоді
+`curl "https://api.telegram.org/bot<TOKEN>/getUpdates"` і взяти
+`message.chat.id` — для групи він відʼємний.
 
-Крок 4 виглядає як недогляд, але це обхід
+**Chat id живе інлайном у `contact-points.yml`, не в змінній оточення.** Це
+виглядає як недогляд, але це обхід
 [grafana/grafana#69950](https://github.com/grafana/grafana/issues/69950):
 Grafana підставляє `$VAR` у provisioning **після** парсингу YAML і перетипує
 результат, тож відʼємний id повертається числом і валідація падає. Лапки не
