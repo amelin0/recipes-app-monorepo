@@ -9,6 +9,7 @@ Each feature lives in its own folder containing `spec.md` + `plan.md`
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
+| [Recipe catalogue (Каталог рецептів)](./catalog/spec.md) | Draft | @amelin0 | 2026-09-07 |
 
 ## Related
 
