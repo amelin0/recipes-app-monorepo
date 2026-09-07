@@ -145,6 +145,26 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 і `logs`: compose автоматично читає лише файл, який називається рівно `.env`,
 а `:?`-гварди в compose-файлах зупиняють інтерполяцію ще до запуску.
 
+### Мок-рецепти
+
+Міграції засівають довідники, але не самі страви — у `recipes` після міграцій
+нуль рядків, і список рецептів у застосунку буде порожній. Шість мок-страв
+кладе окремий сід:
+
+```bash
+docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \n  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
+```
+
+Ідемпотентний — повторний запуск нічого не змінює. Це **риштування, не
+контент**: справжні рецепти прийдуть імпортом з адмінки, і тоді ці шість
+знімаються двома рядками (спершу страви — `recipe_ingredients` тримає
+продукти через `ON DELETE RESTRICT`):
+
+```sql
+delete from recipes  where id::text like '5eed%';
+delete from products where id::text like '5eed%';
+```
+
 ## nginx
 
 Готові vhost'и під dev-сервер лежать у `nginx/`, названі за хостами — див.
