@@ -1,11 +1,17 @@
-# Grafana vhost. Grafana listens on 127.0.0.1:3300 only; this is the one way in.
+# Grafana vhost. Grafana is published on 127.0.0.1 only; nginx runs on the
+# host, so this is the one way in.
+#
+# There is deliberately no vhost for Prometheus: it has no authentication at
+# all. Reach it with `ssh -L 9090:127.0.0.1:${PROMETHEUS_HTTP_PORT} <host>`,
+# or from Grafana's Explore.
 
 server {
     listen 80;
     server_name grafana.example.com;
 
     location / {
-        proxy_pass http://127.0.0.1:3300;
+        # Must equal GRAFANA_HTTP_PORT in .env.obs.
+        proxy_pass http://127.0.0.1:3030;
         proxy_http_version 1.1;
 
         proxy_set_header Host              $host;

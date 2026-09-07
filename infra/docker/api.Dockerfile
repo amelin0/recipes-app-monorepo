@@ -133,6 +133,11 @@ EXPOSE 3000
 # Node 22 has global fetch, so the image needs neither curl nor wget.
 # /health/ready, not /health: the latter answers ok with a dead database, and
 # a container that cannot reach Postgres is not one to route traffic to.
+#
+# This is the fallback for a bare `docker run`. Both compose services override
+# it — admin-api must, since it has no readiness route, and both APIs read the
+# same .env.prod, where CLIENT_API_PORT is set and would win the || below even
+# in the admin container.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:'+(process.env.CLIENT_API_PORT||process.env.ADMIN_API_PORT||3000)+'/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 

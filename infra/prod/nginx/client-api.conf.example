@@ -22,7 +22,9 @@ server {
     # }
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        # Must equal CLIENT_API_PORT in .env.prod — nginx runs on the host and
+        # the container publishes that same number on loopback.
+        proxy_pass http://127.0.0.1:3028;
         proxy_http_version 1.1;
 
         proxy_set_header Host              $host;

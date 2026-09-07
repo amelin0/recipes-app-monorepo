@@ -86,7 +86,7 @@ groups:
                 severity: critical
                 service: client-api
             annotations:
-                summary: 'Prometheus cannot reach client-api:3000/metrics — the container is down or off the network'
+                summary: 'Prometheus cannot reach client-api /metrics — the container is down, off the network, or on a different port than prometheus.yml expects'
                 description: >-
                     Distinct from the readiness alert: the process itself is unreachable rather
                     than a dependency having failed. A deploy that failed its health gate, a

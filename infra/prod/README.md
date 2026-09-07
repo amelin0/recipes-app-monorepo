@@ -18,6 +18,38 @@ Two compose stacks, deliberately separate:
 памʼяті процесу: для однієї репліки це нормально, і це те, що треба
 виправити перед появою другої.
 
+## Порти
+
+nginx стоїть **на хості**, не в контейнері, тож усе публікується на
+`127.0.0.1` — він дотягнеться, а ззовні жоден із цих портів не видно.
+
+| Що | Змінна | У нас | Де ще згадується |
+| --- | --- | --- | --- |
+| client-api | `CLIENT_API_PORT` (`.env.prod`) | 3028 | `prometheus/prometheus.yml`, `nginx/client-api.conf.example` |
+| admin-api | `ADMIN_API_PORT` (`.env.prod`) | 3029 | `prometheus/prometheus.yml` |
+| Grafana | `GRAFANA_HTTP_PORT` (`.env.obs`) | 3030 | `nginx/grafana.conf.example` |
+| Prometheus | `PROMETHEUS_HTTP_PORT` (`.env.obs`) | 3031 | — |
+
+У API **одне число на сервіс**: воно ж усередині контейнера, воно ж на хості.
+Тому в compose немає `CLIENT_API_PORT: '3000'` у блоці `environment` — цей блок
+**перекриває** `env_file`, і значення з `.env.prod` тихо ігнорувалося б, а
+застосунок слухав би порт, якого публікація не віддає.
+
+**Зміна порту API — це два файли, не один.** Prometheus не підставляє змінні
+оточення в `static_configs`: `${VAR}` він скрейпив би буквально. Забути про
+`prometheus.yml` — це тиха поломка: ціль просто стане `DOWN`, і за дві хвилини
+прилетить `dns-api-unscrapeable`, ніби сервіс упав.
+
+Перевірити, що обрані порти вільні:
+
+```bash
+ss -ltnp | grep -E ':(3028|3029|3030|3031)\b'   # порожньо — можна
+```
+
+**Prometheus не має жодної автентифікації**: його UI виконує довільні запити, а
+admin-API вміє видаляти серії. Він навмисно без vhost — тільки тунелем
+(`ssh -L 9090:127.0.0.1:3031 <host>`) або через Grafana Explore.
+
 ## Перший запуск
 
 ```bash
@@ -77,13 +109,13 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 публікує імена маршрутів, обсяги трафіку і внутрішній стан процесу.
 `client-api.conf.example` повертає на нього 404.
 
-Grafana слухає лише `127.0.0.1:3300`; nginx — єдиний шлях до неї.
+Grafana слухає лише `127.0.0.1:$GRAFANA_HTTP_PORT`; nginx — єдиний шлях до неї.
 
 ## Що з чим зʼєднано
 
 `service` — єдина мітка, яка тримає логи й метрики разом:
 
-- Prometheus скрейпить `client-api:3000` **за іменем compose-сервісу**;
+- Prometheus скрейпить `client-api` **за іменем compose-сервісу**;
 - Promtail виводить мітку `service` **з того самого імені**.
 
 Перейменувати сервіс у `docker-compose.prod.yml` — значить тихо розʼєднати
@@ -154,9 +186,9 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
 
 ```bash
 curl -su admin:$GRAFANA_ADMIN_PASSWORD \
-  http://localhost:3300/api/v1/provisioning/alert-rules | jq length
+  http://localhost:$GRAFANA_HTTP_PORT/api/v1/provisioning/alert-rules | jq length
 curl -su admin:$GRAFANA_ADMIN_PASSWORD \
-  http://localhost:3300/api/v1/provisioning/contact-points | jq '.[].name'
+  http://localhost:$GRAFANA_HTTP_PORT/api/v1/provisioning/contact-points | jq '.[].name'
 ```
 
 Кнопка «Test» на контактній точці недоступна (вона read-only) — щоб перевірити
@@ -168,7 +200,7 @@ curl -su admin:$GRAFANA_ADMIN_PASSWORD \
 | Правило | Рівень | Умова |
 | --- | --- | --- |
 | `dns-readiness-failing` | critical | `/health/ready` не 200 — 2 хв |
-| `dns-api-unscrapeable` | critical | Prometheus не дістає `client-api:3000` — 2 хв |
+| `dns-api-unscrapeable` | critical | Prometheus не дістає `client-api` — 2 хв |
 | `dns-disk-low` | critical | менш ніж 15% вільно — 15 хв |
 | `dns-5xx-rate` | warning | понад 5% відповідей 5xx — 5 хв |
 | `dns-p95-latency` | warning | p95 понад 1 с — 10 хв |
