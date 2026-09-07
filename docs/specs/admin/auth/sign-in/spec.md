@@ -2,7 +2,7 @@
 title: Sign in (Вхід в адмінпанель)
 bucket: admin
 domain: auth
-status: Draft
+status: Implemented
 owner: '@amelin0'
 created: 2026-09-07
 updated: 2026-09-07
