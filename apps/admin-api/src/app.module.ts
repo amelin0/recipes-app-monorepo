@@ -5,11 +5,23 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
 import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, ResponseInterceptor } from '@dns/api-common';
+import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DatabaseConnectionModule } from '@dns/database';
 
-import { AllConfig, appConfig, AppEnv, authConfig, databaseConfig, throttlerConfig } from './common/config';
+import {
+    AllConfig,
+    appConfig,
+    AppEnv,
+    authConfig,
+    databaseConfig,
+    storageConfig,
+    throttlerConfig,
+} from './common/config';
 import { AdminJwtGuard, AdminRolesGuard, AuthModule } from './modules/auth';
+import { CatalogModule } from './modules/catalog';
 import { HealthModule } from './modules/health';
+import { RecipeModule } from './modules/recipe';
+import { UploadModule } from './modules/upload';
 
 @Module({
     imports: [
@@ -18,7 +30,7 @@ import { HealthModule } from './modules/health';
             // App-local .env first, then the monorepo root one that
             // docker-compose and the clients also read.
             envFilePath: ['.env', '../../.env'],
-            load: [appConfig, authConfig, databaseConfig, throttlerConfig],
+            load: [appConfig, authConfig, databaseConfig, storageConfig, throttlerConfig],
         }),
         LoggerModule.forRootAsync({
             inject: [ConfigService],
@@ -45,7 +57,17 @@ import { HealthModule } from './modules/health';
                 url: configService.getOrThrow('database.url', { infer: true }),
             }),
         }),
+        StorageModule.forRootAsync({
+            isGlobal: true,
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<AllConfig>) =>
+                configService.getOrThrow('storage', { infer: true }),
+        }),
         AuthModule,
+        CatalogModule,
+        RecipeModule,
+        UploadModule,
         HealthModule,
     ],
     providers: [

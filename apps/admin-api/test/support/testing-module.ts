@@ -1,10 +1,21 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DATABASE_CONNECTION, DatabaseConnectionModule, DrizzleDB } from '@dns/database';
 
-import { AllConfig, appConfig, authConfig, databaseConfig, throttlerConfig } from '../../src/common/config';
+
+import {
+    AllConfig,
+    appConfig,
+    authConfig,
+    databaseConfig,
+    storageConfig,
+    throttlerConfig,
+} from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
+import { CatalogModule } from '../../src/modules/catalog';
+import { RecipeModule } from '../../src/modules/recipe';
 
 export interface AdminTestContext {
     moduleRef: TestingModule;
@@ -26,7 +37,7 @@ export async function createAdminTestContext(): Promise<AdminTestContext> {
             ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: ['.env', '../../.env'],
-                load: [appConfig, authConfig, databaseConfig, throttlerConfig],
+                load: [appConfig, authConfig, databaseConfig, storageConfig, throttlerConfig],
             }),
             DatabaseConnectionModule.forRootAsync({
                 imports: [ConfigModule],
@@ -35,7 +46,18 @@ export async function createAdminTestContext(): Promise<AdminTestContext> {
                     url: configService.getOrThrow('database.url', { infer: true }),
                 }),
             }),
+            // Registered because AppModule registers it globally; no test
+            // reaches S3, but the module graph must still resolve.
+            StorageModule.forRootAsync({
+                isGlobal: true,
+                imports: [ConfigModule],
+                inject: [ConfigService],
+                useFactory: (configService: ConfigService<AllConfig>) =>
+                    configService.getOrThrow('storage', { infer: true }),
+            }),
             AuthModule,
+            CatalogModule,
+            RecipeModule,
         ],
     }).compile();
 

@@ -1,7 +1,8 @@
 import type { ThrottleRuleConfig } from '@dns/api-common';
+import type { StorageConfig } from '@dns/api-infrastructure/storage';
 import type { DatabaseConfig } from '@dns/database';
 
-export type { DatabaseConfig, ThrottleRuleConfig };
+export type { DatabaseConfig, StorageConfig, ThrottleRuleConfig };
 
 export enum AppEnv {
     Dev = 'development',
@@ -12,6 +13,8 @@ export enum AppEnv {
 export interface AppConfig {
     env: AppEnv;
     port: number;
+    /** Maximum rows accepted in one recipe CSV import. */
+    importMaxRows: number;
 }
 
 export interface AuthConfig {
@@ -45,5 +48,6 @@ export interface AllConfig {
     app: AppConfig;
     auth: AuthConfig;
     database: DatabaseConfig;
+    storage: StorageConfig;
     throttler: ThrottlerConfig;
 }

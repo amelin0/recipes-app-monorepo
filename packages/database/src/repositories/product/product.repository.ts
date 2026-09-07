@@ -63,6 +63,34 @@ export class ProductRepository extends BaseRepository {
         return { items, total };
     }
 
+    /**
+     * Product search for the admin panel's recipe form.
+     *
+     * Global products only, and that is a rule rather than a shortcut: a
+     * catalogue dish built on somebody's custom product would pin that row in
+     * place forever — `recipe_ingredients` references products with ON DELETE
+     * RESTRICT — and one person's private entry would quietly become part of
+     * everyone's catalogue.
+     */
+    async searchGlobal(params: {
+        language: string;
+        query?: string;
+        page: number;
+        limit: number;
+    }): Promise<ProductPage> {
+        const where = eq(products.source, ContentSource.Global);
+
+        const [items, total] = await Promise.all([
+            this.findMany(params.language, where, params.query, {
+                limit: params.limit,
+                offset: (params.page - 1) * params.limit,
+            }),
+            this.count(params.language, where, params.query),
+        ]);
+
+        return { items, total };
+    }
+
     /** The fifteen one-tap chips the filter screen opens with (recipe-filters FR-002). */
     async findQuickPicks(language: string): Promise<ProductEntity[]> {
         return this.findMany(language, eq(products.isQuickPick, true));
@@ -76,6 +104,16 @@ export class ProductRepository extends BaseRepository {
     async findByIds(ids: string[], userId: string, language: string): Promise<ProductEntity[]> {
         if (ids.length === 0) return [];
         return this.findMany(language, and(inArray(products.id, ids), this.visibleTo(userId)));
+    }
+
+    /**
+     * The admin counterpart of `findByIds`: global rows only, no owner in the
+     * picture. Used when building a catalogue dish, where a private product
+     * must not become part of everyone's catalogue.
+     */
+    async findGlobalByIds(ids: string[], language: string): Promise<ProductEntity[]> {
+        if (ids.length === 0) return [];
+        return this.findMany(language, and(inArray(products.id, ids), eq(products.source, ContentSource.Global)));
     }
 
     /**

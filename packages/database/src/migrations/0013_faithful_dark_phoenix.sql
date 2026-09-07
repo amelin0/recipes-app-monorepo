@@ -1,0 +1,2 @@
+ALTER TABLE "recipes" ADD COLUMN "import_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "recipes_import_key_unique" ON "recipes" USING btree ("import_key") WHERE "recipes"."import_key" is not null;
