@@ -5,25 +5,64 @@
 # already exists.
 #
 #   sudo ./install.sh oleh.cherednik@gmail.com
+#   sudo ./install.sh oleh.cherednik@gmail.com --host dev.admin.rationfit.com
 #
 # The address goes to Let's Encrypt as the account contact — it is where
 # expiry warnings land, so use a mailbox somebody reads.
 #
+# `--host` may be repeated, and narrows the run to those names. Adding one new
+# subdomain to a server that is already serving the others is exactly what it
+# is for.
+#
 # Prerequisites:
-#   • the A records for all four hosts already point at this machine
-#     (HTTP-01 validation fails otherwise, and Let's Encrypt rate-limits
-#     repeated failures)
+#   • the A records for the hosts already point at this machine (HTTP-01
+#     validation fails otherwise, and Let's Encrypt rate-limits repeated
+#     failures)
 #   • nginx and certbot installed:  apt install nginx certbot
 #
-# Why the bootstrap step: the real vhosts reference certificates that do not
-# exist yet, so `nginx -t` would fail if they went in first. A :80-only server
-# block goes in, certbot validates against it, then the real files replace it.
+# ── SAFE TO RE-RUN ON A SERVING BOX ──────────────────────────────────────
+#
+# A certificate that exists is never re-issued, and — the part that matters —
+# the ACME bootstrap block is written **only for hosts that have no
+# certificate yet**. It used to name all of them, and because `sites-enabled`
+# is read alphabetically, `00-acme-bootstrap` won the `server_name` match and
+# took :80 away from the working vhosts for the length of the run.
+#
+# Why a bootstrap is needed at all: the real vhosts reference certificates
+# that do not exist yet, so `nginx -t` fails if they go in first. A :80-only
+# block goes in, certbot validates against it, then the real file replaces it.
 
 set -euo pipefail
 
-EMAIL="${1:-}"
+EMAIL=''
+SELECTED=''
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --host)
+            SELECTED="$SELECTED ${2:-}"
+            [ -n "${2:-}" ] || {
+                echo "--host needs a value" >&2
+                exit 1
+            }
+            shift
+            ;;
+        -h | --help)
+            sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *)
+            if [ -z "$EMAIL" ]; then EMAIL="$1"; else
+                echo "unexpected argument: $1 (try --help)" >&2
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+
 if [ -z "$EMAIL" ]; then
-    echo "usage: sudo $0 <email-for-letsencrypt>" >&2
+    echo "usage: sudo $0 <email-for-letsencrypt> [--host <name>]..." >&2
     exit 1
 fi
 if [ "$(id -u)" -ne 0 ]; then
@@ -32,7 +71,8 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-HOSTS="dev.api.client.rationfit.com dev.api.admin.rationfit.com dev.admin.rationfit.com dev.grafana.rationfit.com"
+ALL_HOSTS="dev.api.client.rationfit.com dev.api.admin.rationfit.com dev.admin.rationfit.com dev.grafana.rationfit.com"
+HOSTS="${SELECTED:-$ALL_HOSTS}"
 WEBROOT=/var/www/html
 SA=/etc/nginx/sites-available
 SE=/etc/nginx/sites-enabled
@@ -51,21 +91,34 @@ for h in $HOSTS; do
     }
 done
 
-echo "── 1/5  ACME bootstrap on :80"
-mkdir -p "$WEBROOT/.well-known/acme-challenge"
-cat > "$SA/00-acme-bootstrap" <<EOF
+# Only the ones that still need a certificate. Naming a host that already has
+# a working vhost here would hijack its :80 for the run, because
+# `00-acme-bootstrap` sorts first in sites-enabled and nginx takes the first
+# matching server_name.
+PENDING=''
+for h in $HOSTS; do
+    [ -f "/etc/letsencrypt/live/$h/fullchain.pem" ] || PENDING="$PENDING $h"
+done
+
+if [ -n "$PENDING" ]; then
+    echo "── 1/5  ACME bootstrap on :80 for:$PENDING"
+    mkdir -p "$WEBROOT/.well-known/acme-challenge"
+    cat > "$SA/00-acme-bootstrap" <<EOF
 # Temporary. Written by infra/prod/nginx/install.sh and removed in step 4.
 server {
     listen 80;
     listen [::]:80;
-    server_name $HOSTS;
+    server_name$PENDING;
     location ^~ /.well-known/acme-challenge/ { root $WEBROOT; }
     location / { return 404; }
 }
 EOF
-ln -sf "$SA/00-acme-bootstrap" "$SE/00-acme-bootstrap"
-nginx -t
-systemctl reload nginx
+    ln -sf "$SA/00-acme-bootstrap" "$SE/00-acme-bootstrap"
+    nginx -t
+    systemctl reload nginx
+else
+    echo "── 1/5  every certificate is already in place — no bootstrap needed"
+fi
 
 echo "── 2/5  certificates"
 # One certificate per host, not one with three SANs: each vhost points at
@@ -115,9 +168,15 @@ fi
 echo "── 4/5  real vhosts"
 rm -f "$SE/00-acme-bootstrap" "$SA/00-acme-bootstrap"
 for h in $HOSTS; do
-    install -m 0644 "$HERE/$h" "$SA/$h"
-    ln -sf "$SA/$h" "$SE/$h"
-    echo "    $h"
+    # Say which ones actually change: on a serving box the interesting line is
+    # the one file that moved, not the three that did not.
+    if cmp -s "$HERE/$h" "$SA/$h"; then
+        echo "    $h — unchanged"
+    else
+        install -m 0644 "$HERE/$h" "$SA/$h"
+        echo "    $h — updated"
+    fi
+    ln -sfn "$SA/$h" "$SE/$h"
 done
 
 echo "── 5/5  reload"
