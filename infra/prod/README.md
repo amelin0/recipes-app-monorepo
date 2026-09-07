@@ -53,6 +53,48 @@ ss -ltnp | grep -E ':(3028|3029|3030|3031)\b'   # порожньо — можн�
 admin-API вміє видаляти серії. Він навмисно без vhost — тільки тунелем
 (`ssh -L 9090:127.0.0.1:3031 <host>`) або через Grafana Explore.
 
+## Postgres, який поза Docker
+
+Контейнер ходить у базу через `host.docker.internal`, який `extra_hosts`
+розвʼязує в шлюз docker-мосту (зазвичай `172.17.0.1`). Postgres із коробки
+слухає **тільки `127.0.0.1`**, тож усе виглядатиме як `connection refused` —
+і це не помилка конфігурації застосунку.
+
+```bash
+# 1. Роль і база
+sudo -u postgres psql -c "CREATE ROLE dns LOGIN PASSWORD 'СИЛЬНИЙ_ПАРОЛЬ';"
+sudo -u postgres psql -c "CREATE DATABASE dns OWNER dns;"
+
+# 2. Слухати міст, а не лише loopback
+sudo -u postgres psql -c "SHOW config_file;"     # шлях до postgresql.conf
+#   listen_addresses = 'localhost,172.17.0.1'    ← додати міст, не '*'
+
+# 3. Пустити docker-підмережу в pg_hba.conf (поруч із postgresql.conf)
+#   host  dns  dns  172.16.0.0/12  scram-sha-256
+
+sudo systemctl restart postgresql
+```
+
+`172.16.0.0/12` покриває всі мережі, які docker роздає за замовчуванням.
+`listen_addresses = '*'` теж працює, але відкриває Postgres на публічний
+інтерфейс — тоді доступ мусить закривати фаєрвол, і це на один шар захисту
+менше.
+
+Перевірити ще до контейнерів:
+
+```bash
+docker run --rm --add-host=host.docker.internal:host-gateway postgres:16 \
+  psql "postgresql://dns:ПАРОЛЬ@host.docker.internal:5432/dns" -c "select 1"
+```
+
+Ця команда — найшвидший спосіб відрізнити «база не пускає» від «застосунок
+зламаний»: вона не залежить від жодного нашого образу.
+
+**Нічого не валідує змінні оточення на старті.** Порожній `JWT_SECRET` не
+завадить контейнеру піднятися — впаде вже логін, у рантаймі. Єдина змінна з
+негайним зворотним звʼязком — `DATABASE_URL`: без неї `/health/ready` віддає
+503, і контейнер не стає healthy.
+
 ## Перший запуск
 
 ```bash
@@ -102,6 +144,26 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 `--env-file` обовʼязковий у **кожній** команді до цих стеків, включно з `ps`
 і `logs`: compose автоматично читає лише файл, який називається рівно `.env`,
 а `:?`-гварди в compose-файлах зупиняють інтерполяцію ще до запуску.
+
+### Мок-рецепти
+
+Міграції засівають довідники, але не самі страви — у `recipes` після міграцій
+нуль рядків, і список рецептів у застосунку буде порожній. Шість мок-страв
+кладе окремий сід:
+
+```bash
+docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \n  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
+```
+
+Ідемпотентний — повторний запуск нічого не змінює. Це **риштування, не
+контент**: справжні рецепти прийдуть імпортом з адмінки, і тоді ці шість
+знімаються двома рядками (спершу страви — `recipe_ingredients` тримає
+продукти через `ON DELETE RESTRICT`):
+
+```sql
+delete from recipes  where id::text like '5eed%';
+delete from products where id::text like '5eed%';
+```
 
 ## nginx
 
