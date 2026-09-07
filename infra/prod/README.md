@@ -178,6 +178,12 @@ delete from products where id::text like '5eed%';
 переписує `IMAGE_TAG` у `.env.prod` і **перевіряє, що нове піднялося**, а якщо
 ні — повертає попередній тег.
 
+Той самий скрипт викликає GitHub Actions: push у `development` запускає
+`.github/workflows/deploy.yml` на **self-hosted раннері на цьому ж сервері**,
+і тіло job'а — рівно один рядок `deploy.sh --ref development`. Друга
+реалізація в YAML — це те, як вони тихо розходяться, і помітно це стає під час
+інциденту. Підключення раннера — [`docs/runbooks/register-actions-runner.md`](../../docs/runbooks/register-actions-runner.md).
+
 Порядок навмисний: міграції **до** підміни контейнерів, тож падіння там
 зупиняє деплой, поки стара збірка ще обслуговує.
 
