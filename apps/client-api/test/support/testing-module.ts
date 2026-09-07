@@ -20,6 +20,7 @@ import {
     throttlerConfig,
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
+import { CatalogModule } from '../../src/modules/catalog';
 import { NutritionModule } from '../../src/modules/nutrition';
 import { ProgressModule } from '../../src/modules/progress';
 import { UserModule } from '../../src/modules/user';
@@ -113,6 +114,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             UserModule,
             NutritionModule,
             ProgressModule,
+            CatalogModule,
         ],
     })
         .overrideProvider(OAuthService)
