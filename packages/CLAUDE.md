@@ -2,13 +2,13 @@
 
 ## Overview
 
-All packages are internal workspaces consumed by `apps/api` and `apps/mobile`
-(web consumes API over HTTP only). Each package exports through `src/index.ts`.
+All packages are internal workspaces consumed by `apps/client-api`,
+`apps/admin-api` and `apps/mobile` (web consumes the API over HTTP only).
+Each package exports through `src/index.ts`.
 
-> Currently empty — packages are created by the backend developer as the
-> API takes shape. The intended split mirrors the 11am-app reference:
+The split mirrors the 11am-app reference.
 
-## Planned packages
+## Packages
 
 ### @dns/shared-types
 
@@ -24,8 +24,11 @@ All packages are internal workspaces consumed by `apps/api` and `apps/mobile`
 
 ### @dns/constants
 
-- Static data: enums, config values, magic numbers
-- Must be pure values — no side effects, no imports from other packages
+- Static data tables and the formulas that read them (language list,
+  measurement units, Atwater factors)
+- No side effects at import time
+- May import `@dns/shared-types` for the enums it indexes — that package is
+  types-only, so the dependency adds nothing at runtime. Nothing else.
 
 ### @dns/utils
 
@@ -37,12 +40,23 @@ All packages are internal workspaces consumed by `apps/api` and `apps/mobile`
 - Owns `db:generate`, `db:migrate`, `db:studio`, `db:seed` scripts
   referenced from the root `package.json`
 
-### @dns/api-common / @dns/api-infrastructure
+### @dns/api-common
 
-- Backend-only shared modules (guards, interceptors, infra adapters)
+- Backend-only cross-cutting NestJS building blocks shared by both APIs:
+  `GlobalExceptionFilter`, `ResponseInterceptor` (`{ data: T }` envelope),
+  `CustomThrottlerGuard` + `@SetThrottleKey`, pino logger config
+
+### @dns/api-infrastructure
+
+- Dynamic modules for external infrastructure, subpath-exported:
+  `email/` (Resend, stub client when `RESEND_API_KEY` is absent), `otp/`,
+  `oauth/` (Apple, Google), `storage/` (S3 / MinIO presigned URLs)
+- Each follows the `forRootAsync` pattern
 
 ## Rules
 
 1. Packages never import from `apps/*`.
-2. `shared-types` and `constants` stay runtime-free.
+2. `shared-types` carries no runtime code at all — types, interfaces and
+   enums only. `constants` carries values and pure functions, but no
+   side effects at import time.
 3. Every package exports only through `src/index.ts`.

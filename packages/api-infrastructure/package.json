@@ -1,0 +1,38 @@
+{
+    "name": "@dns/api-infrastructure",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./email": "./src/email/index.ts",
+        "./otp": "./src/otp/index.ts",
+        "./oauth": "./src/oauth/index.ts",
+        "./storage": "./src/storage/index.ts",
+        "./purchases": "./src/purchases/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src/",
+        "test": "tsx --test \"src/**/*.test.ts\""
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.700.0",
+        "@aws-sdk/s3-request-presigner": "^3.700.0",
+        "@dns/shared-types": "workspace:*",
+        "apple-signin-auth": "^2.0.0",
+        "bcryptjs": "^3.0.3",
+        "google-auth-library": "^10.6.2",
+        "resend": "^6.26.0"
+    },
+    "peerDependencies": {
+        "@nestjs/common": "^11.0.0"
+    },
+    "devDependencies": {
+        "@nestjs/common": "^11.0.0",
+        "@types/bcryptjs": "^3.0.0",
+        "@types/node": "^22.10.0",
+        "tsx": "^4.21.0"
+    }
+}

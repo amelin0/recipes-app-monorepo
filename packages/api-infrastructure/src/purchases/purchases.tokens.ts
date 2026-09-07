@@ -1,0 +1,1 @@
+export const PURCHASES_CONFIG = Symbol('PURCHASES_CONFIG');

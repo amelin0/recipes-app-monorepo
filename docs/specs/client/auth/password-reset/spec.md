@@ -2,12 +2,12 @@
 title: Password reset (Відновлення паролю)
 bucket: client
 domain: auth
-status: Draft
+status: Implemented
 owner: '@amelin0'
 created: 2026-07-18
-updated: 2026-08-19
-plan: null
-related-adrs: []
+updated: 2026-09-06
+plan: ./plan.md
+related-adrs: [ADR-0003]
 supersedes: null
 ---
 

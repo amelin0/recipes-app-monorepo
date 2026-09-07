@@ -1,0 +1,275 @@
+---
+spec: ./spec.md
+status: Implemented
+owner: '@amelin0'
+created: 2026-09-06
+updated: 2026-09-06
+related-adrs: [ADR-0004, ADR-0007]
+related-runbooks: []
+---
+
+# Plan: Profile setup (Анкета знайомства)
+
+## Summary
+
+FR-001, FR-005, FR-006…FR-006h і FR-008 — серверна частина: колонки анкети на
+`profiles`, трійка `GET` / `PUT /profile/onboarding` і
+`POST /profile/onboarding/complete`, плюс `GET /profile/recommendations`.
+FR-002, FR-003, FR-004, FR-007, FR-008a, FR-009, FR-010, FR-011 — клієнтські:
+маршрутизація, прогрес, блокування кнопки, повернення на крок, підсумковий
+екран і пояснення перед системним запитом сповіщень. FR-012 (нагадування)
+використовує `PUT /profile/reminders` із
+[`../../user/reminders/plan.md`](../../user/reminders/plan.md) — та сама
+таблиця, що й екран профілю, бо це вимога FR-006 тієї специфікації.
+
+**Формули — [ADR-0007](../../../../adr/0007-daily-norm-formulas.md)** (статус
+`Proposed`: калорійна частина спирається на Mifflin-St Jeor, норми води і
+кроків — евристики, що потребують підпису фахівця).
+
+## Database
+
+Власних таблиць не додає — розширює `profiles`
+([../../user/profile/plan.md](../../user/profile/plan.md)) і пише в
+`nutrition_goals` ([../../nutrition/goal-setup/plan.md](../../nutrition/goal-setup/plan.md)).
+
+### Нові колонки `profiles`
+
+| Column | Type | Constraints |
+|---|---|---|
+| `gender` | `gender` | NULL — `male` \| `female` |
+| `birth_date` | `date` | NULL |
+| `weight_kg` | `numeric(5,1)` | NULL |
+| `height_cm` | `numeric(4,1)` | NULL |
+| `activity_level` | `smallint` | NULL — 1..8 |
+| `goal` | `user_goal` | NULL — `maintain` \| `gain-muscle` \| `lose-weight` \| `learn-cooking` |
+| `target_weight_kg` | `numeric(5,1)` | NULL |
+| `onboarding_step` | `integer` | NOT NULL, default `0` |
+| `onboarding_completed_at` | `timestamptz` | NULL |
+
+**Усі відповіді nullable.** Анкета заповнюється покроково (FR-005), і профіль
+на середині — це нормальний стан, а не зламаний. Обовʼязковість забезпечує
+перевірка при завершенні, а не схема.
+
+**Вага і зріст завжди в метричних одиницях** (FR-006d), незалежно від обраної
+системи. Розрахунок не має залежати від налаштування показу, а зміна системи
+пізніше має змінити подання, а не втратити значення.
+
+**`activity_level` nullable, а не `0`.** Специфікація описує 0 як «ще не
+обрано» — але це стан відсутності відповіді, і `NULL` каже це прямо, тоді як
+нуль довелося б окремо вчити не потрапляти у формулу.
+
+**`onboarding_completed_at` на акаунті, а не на пристрої** (FR-001) — новий
+телефон не питає ті самі шістнадцять питань заново.
+
+**`onboarding_step` окремо від прапорця завершення.** Крок каже, звідки
+продовжити; завершеність каже, чи продовжувати взагалі. Виводити одне з
+іншого («крок 16 означає готово») зламалося б тієї миті, коли кроків стане
+сімнадцять.
+
+### Нові колонки `nutrition_goals`
+
+`recommended_calories`, `recommended_water_ml`, `recommended_steps` —
+**зліпок** того, що формули порадили в момент збереження цілі. Потрібен, щоб
+питання «наскільки користувач відхилився від рекомендації» (Key Entities
+специфікації) мало з чим порівнювати: свіжа рекомендація зсувається разом із
+вагою, і без зліпка відхилення обчислювалося б проти рухомої мішені.
+
+### Migrations
+
+- `0004_overjoyed_gateway.sql` — колонки анкети і зліпок рекомендації.
+
+## API contract
+
+### `GET /profile/onboarding`
+
+**Auth:** `JwtGuard`
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "step": 7,
+    "completed": false,
+    "name": "Олег",
+    "gender": "male",
+    "birthDate": "1995-06-15",
+    "weightKg": 80,
+    "heightCm": 180,
+    "activityLevel": null,
+    "goal": null,
+    "targetWeightKg": null
+  }
+}
+```
+
+Читається на старті застосунку: стан живе на акаунті, тож новий пристрій
+продовжує, а не починає (FR-001, FR-002).
+
+### `PUT /profile/onboarding`
+
+**Auth:** `JwtGuard`
+
+**Request body** — усі поля необовʼязкові; виклик несе відповідь щойно
+пройденого кроку:
+
+```json
+{ "weightKg": 80, "heightCm": 180, "step": 7 }
+```
+
+| Field | Validation |
+|---|---|
+| `name` | 1–100 символів після обрізання |
+| `gender` | `male` \| `female` |
+| `birthDate` | `YYYY-MM-DD`, вік у межах `ONBOARDING_LIMITS.age` |
+| `weightKg` | 30–250 |
+| `heightCm` | 130–220 |
+| `activityLevel` | ціле 1–8 |
+| `goal` | один із чотирьох |
+| `targetWeightKg` | 30–250, або `null` |
+| `step` | 0–16 |
+
+**Response 200:** стан анкети після збереження.
+
+**Errors:** `422` — значення поза діапазоном або порожнє тіло; `401`.
+
+**Крок ніколи не йде назад.** Повернення на попереднє питання, щоб змінити
+відповідь (FR-007), не має змушувати застосунок наступного разу продовжувати
+звідти — зберігається максимум із поточного і надісланого.
+
+**Вибір «навчитись готувати» очищає цільову вагу.** Ця мета не про вагу
+(FR-006f), і залишена від попереднього проходу ціль суперечила б їй мовчки.
+
+### `POST /profile/onboarding/complete`
+
+**Auth:** `JwtGuard`
+
+**Request body:**
+
+```json
+{ "dailyCalories": 1700, "dailyWaterMl": 2500, "dailySteps": 9000 }
+```
+
+Це те, що користувач **залишив на екранах 14–16**, а не те, що йому порадили
+(FR-006h).
+
+**Response 200:** стан анкети; `completed: true`.
+
+**Errors:**
+
+- `400` `user.onboarding-incomplete` — якась із відповідей, потрібних формулі,
+  відсутня.
+- `422`, `401`.
+
+**Завершення пише і прапорець, і ціль харчування — однією дією.** Кроки 14–16
+є екраном цілі в іншому вбранні; акаунт, позначений завершеним, але без цілі,
+викинув би людину на екран трекінгу без кілець і без пояснення, чому їх немає.
+
+**Розкладка БЖВ рахується від калорій, які обрав користувач**, а не від
+рекомендованих: він міг зрушити диск, і частки мають слідувати за його
+вибором.
+
+Дієслівний підресурс — виняток за правилом 7 ADR-0004. Завершення не є
+створенням сутності, а `PUT /profile/onboarding` уже означає «зберегти
+відповідь»; довантажити в нього ще й «і заверши» означало б сховати побічний
+ефект, що пише ціль.
+
+### `GET /profile/recommendations`
+
+**Auth:** `JwtGuard`
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "calories": 2150, "waterMl": 2400, "steps": 5000,
+    "proteinG": 161, "fatsG": 72, "carbsG": 215, "fiberG": 30
+  }
+}
+```
+
+`{"data": null}`, доки анкета не зібрала все, що потрібно формулі.
+
+**Рахується наживо, не читається зі сховища.** Після зміни ваги рекомендація
+має піти за нею — цього чекає `progress/metric-logging`. Зліпок у
+`nutrition_goals` — інша річ і відповідає на інше питання.
+
+**`null`, а не число з підставленими дефолтами.** Норма, порахована з
+вигаданої ваги, виглядає так само авторитетно, як справжня.
+
+## Environment variables
+
+Власних не додає.
+
+## File structure
+
+```
+apps/client-api/src/modules/user/onboarding.controller.ts
+apps/client-api/src/modules/user/onboarding.service.ts
+apps/client-api/src/modules/user/dto/outbound/onboarding.view.ts
+packages/database/src/schema/profiles.schema.ts              # колонки анкети
+packages/database/src/schema/nutrition-goals.schema.ts       # зліпок рекомендації
+packages/database/src/entities/profile.entity.ts             # hasCompletedOnboarding()
+packages/validation/src/onboarding.schemas.ts
+packages/constants/src/nutrition-formulas.ts                 # ADR-0007
+```
+
+## Shared contract
+
+- `@dns/shared-types` — `Gender`, `UserGoal`, `UnitSystem`, `BodyProfile`,
+  `DailyNorms`, `MacroTargets`.
+- `@dns/validation` — `saveOnboardingStepSchema`, `completeOnboardingSchema`,
+  `birthDateSchema`.
+- `@dns/constants` — `ONBOARDING_LIMITS` (дзеркалить діапазони коліщат
+  клієнта), `recommendedDailyNorms`, `macroTargetsFor`, `ageFromBirthDate`.
+
+## Security & edge cases
+
+- Анкета читається і пишеться лише для власника токена.
+- Формула отримує `null` замість підставлених дефолтів, коли бракує
+  відповідей — і викликач зобовʼязаний це обробити, бо тип так каже.
+- Рівень активності поза 1–8 затискається у формулі й відхиляється схемою:
+  подвійний захист, бо число з клієнта потрапляє прямо в множник.
+- Вік рахується у цілих роках з урахуванням дня народження — покрито тестом,
+  бо помилка на день зсуває норму на 5 ккал і виглядає як «сервер бреше».
+
+## Rollout
+
+- Feature flag: немає.
+- Порядок: БД-міграція → деплой `client-api` → реліз застосунку.
+- Наявні акаунти мають `onboarding_step = 0` і `completed_at = NULL`, тобто
+  побачать анкету. Для тестових акаунтів це правильно; якщо колись
+  доведеться мігрувати справжніх — це окреме рішення.
+
+## Verification
+
+- `packages/constants/src/nutrition-formulas.test.ts` — 13 тестів: звірка з
+  опублікованою формулою Mifflin-St Jeor, краї шкали активності, напрямок
+  впливу мети, кратність кроку диска, сходження БЖВ назад у калорії, вік.
+- `apps/client-api/test/onboarding.db-spec.ts` — покроке збереження, крок не
+  йде назад, очищення цільової ваги, відсутність рекомендації до повних
+  відповідей, відмова завершити незаповнену анкету, запис цілі при завершенні,
+  зліпок рекомендації.
+- Смоук: чоловік 31 рік, 80 кг, 180 см, рівень 1, «підтримувати» має дати
+  2150 ккал / 2400 мл / 5000 кроків.
+
+## Що ще не побудовано
+
+- **Формули чекають на підпис.** ADR-0007 у статусі `Proposed`: норми води і
+  кроків, множники мети й розкладка БЖВ вибрані інженерно, а не фахівцем.
+  Числа правдоподібні, але це все, що про них можна чесно сказати.
+- **Відкриті питання самої специфікації** лишаються відкритими: варіант статі
+  поза двома, мінімальний вік, імперський зріст (футами чи дюймами),
+  блокувати чи попереджати про суперечність цільової ваги і мети, пороги
+  попереджень на кроці калорій. Жодне з них не блокує серверну частину —
+  перші два вплинуть на схему і формулу, решта клієнтські.
+
+## Related
+
+- Spec: [./spec.md](./spec.md)
+- Plan (профіль): [../../user/profile/plan.md](../../user/profile/plan.md)
+- Plan (ціль харчування): [../../nutrition/goal-setup/plan.md](../../nutrition/goal-setup/plan.md)
+- Plan (нагадування): [../../user/reminders/plan.md](../../user/reminders/plan.md)
+- ADRs: [ADR-0004](../../../../adr/0004-client-api-url-conventions.md),
+  [ADR-0007](../../../../adr/0007-daily-norm-formulas.md)

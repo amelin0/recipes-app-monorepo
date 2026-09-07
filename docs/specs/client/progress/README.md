@@ -9,14 +9,19 @@
 бере фічу в роботу).
 
 UI реалізовано в застосунку на мок-даних (дизайн: Figma RF-mobile-app).
+Серверна частина — `apps/client-api/src/modules/progress/`.
+
+Три з шести показників домен не зберігає: калорії, вода і кроки належать
+[`nutrition/`](../nutrition), а прогрес їх лише читає. Власні тут — вага,
+обʼєм талії і зріст.
 
 ## Specs
 
-| Feature | Status | Owner | Updated |
-|---|---|---|---|
-| [Metrics overview (Екран прогресу)](./metrics-overview/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Metric detail (Детальний екран показника)](./metric-detail/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Metric logging (Вимір і ціль)](./metric-logging/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| Feature                                                              | Status      | Owner    | Updated    |
+| -------------------------------------------------------------------- | ----------- | -------- | ---------- |
+| [Metrics overview (Екран прогресу)](./metrics-overview/spec.md)      | Implemented | @amelin0 | 2026-09-06 |
+| [Metric detail (Детальний екран показника)](./metric-detail/spec.md) | Implemented | @amelin0 | 2026-09-06 |
+| [Metric logging (Вимір і ціль)](./metric-logging/spec.md)            | Implemented | @amelin0 | 2026-09-06 |
 
 ## Related
 

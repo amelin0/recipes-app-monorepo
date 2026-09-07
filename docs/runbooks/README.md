@@ -18,4 +18,4 @@ Use [`../templates/runbook.md`](../templates/runbook.md) (or run
 
 <!-- Update this list when adding a new runbook. -->
 
-- _(none yet)_
+- [`execute-overdue-account-deletions`](./execute-overdue-account-deletions.md) — виконати прострочені запити на видалення акаунту, поки завдання-прибиральник не написане (**high**)

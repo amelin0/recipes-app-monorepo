@@ -15,14 +15,17 @@ UI обох екранів уже реалізовано в мобільному
 
 ## Specs
 
-| Feature | Status | Owner | Updated |
-|---|---|---|---|
-| [Daily tracking (Головний екран)](./daily-tracking/spec.md) | Draft | @amelin0 | 2026-08-19 |
-| [Goal setup (Налаштування цілі)](./goal-setup/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Meal logging (Відмітити прийом їжі)](./meal-logging/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| Feature                                                       | Spec        | Plan                             | Owner    | Updated    |
+| ------------------------------------------------------------- | ----------- | -------------------------------- | -------- | ---------- |
+| [Daily tracking (Головний екран)](./daily-tracking/spec.md)   | Approved    | [plan](./daily-tracking/plan.md) | @amelin0 | 2026-09-06 |
+| [Goal setup (Налаштування цілі)](./goal-setup/spec.md)        | Approved    | [plan](./goal-setup/plan.md)     | @amelin0 | 2026-09-06 |
+| [Meal logging (Відмітити прийом їжі)](./meal-logging/spec.md) | Implemented | [plan](./meal-logging/plan.md)   | @amelin0 | 2026-09-06 |
+
+`Approved` означає, що серверна частина реалізована не повністю — деталі в
+розділі «Що ще не побудовано» відповідного `plan.md`.
 
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/tracking/`
-- Код (майбутній API): `apps/api/src/client/`
+- Код (майбутній API): `apps/client-api/src/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/nutrition/`](../../../../.claude/knowledge/nutrition)

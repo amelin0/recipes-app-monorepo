@@ -51,3 +51,6 @@ coverage/
 
 # scratch
 temp/
+
+# NestJS build output
+apps/*/dist

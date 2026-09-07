@@ -2,12 +2,12 @@
 title: Metric logging (Додати вимір і нагадування)
 bucket: client
 domain: progress
-status: Draft
+status: Implemented
 owner: '@amelin0'
 created: 2026-08-19
-updated: 2026-08-20
-plan: null
-related-adrs: []
+updated: 2026-09-06
+plan: ./plan.md
+related-adrs: [ADR-0004, ADR-0007]
 supersedes: null
 ---
 
@@ -22,7 +22,7 @@ supersedes: null
 > вимірів (673:43135, 673:43255, 673:43309) і цілей (673:51297,
 > 673:51308, 811:49342), нагадування зважування (673:43333).
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 — Записати новий вимір (Priority: P1)
 
@@ -140,7 +140,7 @@ supersedes: null
   показувати картку рекомендації взагалі?
 - Нагадування вимкнено — дата наступного зважування не має сенсу.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -182,7 +182,7 @@ supersedes: null
 - **Рекомендована норма калорій**: значення, яке система пропонує після
   зміни ваги.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 - **SC-001**: Записати вимір — не більше 3 тапів від екрана прогресу.
 - **SC-002**: Збережений вимір одразу видно в списку записів і на

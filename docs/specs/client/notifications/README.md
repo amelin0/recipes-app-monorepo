@@ -17,12 +17,12 @@ RF-mobile-app) — специфікації фіксують продуктов�
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Inbox (Сповіщення)](./inbox/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Inbox (Сповіщення)](./inbox/spec.md) | Approved | @amelin0 | 2026-09-07 |
 
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/notifications/`
-- Код (майбутній API): `apps/api/src/client/notifications/`
+- Код (майбутній API): `apps/client-api/src/notifications/`
 - Специфікації: [user/reminders](../user/reminders/spec.md) (розклад
   нагадувань), [user/profile](../user/profile/spec.md) (вхід через
   дзвіночок на головній)

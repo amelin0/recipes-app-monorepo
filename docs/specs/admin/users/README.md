@@ -12,5 +12,5 @@ Each feature lives in its own folder containing `spec.md` + `plan.md`
 
 ## Related
 
-- Code: `apps/api/src/admin/users/`
+- Code: `apps/admin-api/src/users/`
 - Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)

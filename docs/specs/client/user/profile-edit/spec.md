@@ -2,12 +2,12 @@
 title: Profile edit (Редагування профілю)
 bucket: client
 domain: user
-status: Draft
+status: Approved
 owner: '@amelin0'
 created: 2026-08-19
-updated: 2026-08-19
-plan: null
-related-adrs: []
+updated: 2026-09-06
+plan: ./plan.md
+related-adrs: [ADR-0004]
 supersedes: null
 ---
 

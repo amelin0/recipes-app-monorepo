@@ -9,10 +9,10 @@ Each feature lives in its own folder containing `spec.md` + `plan.md`
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Meal plan (Вкладка «План»)](./plan/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Meal plan (Вкладка «План»)](./plan/spec.md) | Approved | @amelin0 | 2026-09-07 |
 
 ## Related
 
 - Code (UI, мок): `apps/mobile/src/view/meal-plan/`
-- Code (майбутній API): `apps/api/src/client/`
+- Code (API): `apps/client-api/src/modules/meal-plan/`
 - Knowledge: [`.claude/knowledge/`](../../../../.claude/knowledge)

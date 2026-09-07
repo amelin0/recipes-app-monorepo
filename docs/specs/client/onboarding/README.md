@@ -16,10 +16,13 @@ RF-mobile-app) — знайомство працює локально й не з
 
 ## Specs
 
-| Feature | Status | Owner | Updated |
-|---|---|---|---|
-| [Intro slides (Знайомство із застосунком)](./intro-slides/spec.md) | Draft | @amelin0 | 2026-08-18 |
-| [Profile setup (Анкета персоналізації)](./profile-setup/spec.md) | Draft | @amelin0 | 2026-08-18 |
+| Feature | Spec | Plan | Owner | Updated |
+|---|---|---|---|---|
+| [Intro slides (Знайомство із застосунком)](./intro-slides/spec.md) | Draft | — | @amelin0 | 2026-08-18 |
+| [Profile setup (Анкета персоналізації)](./profile-setup/spec.md) | Implemented | [plan](./profile-setup/plan.md) | @amelin0 | 2026-09-06 |
+
+`Intro slides` лишається без плану навмисно: екрани повністю локальні й
+нічого не просять у сервера.
 
 ## Related
 
