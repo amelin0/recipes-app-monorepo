@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { RECIPE_CALORIE_FILTER } from '@dns/constants';
 import { ReferenceRepository, UserEntity, UserRepository, schema } from '@dns/database';
 import { ContentSource, RecipeTab } from '@dns/shared-types';
+import { CreateRecipeInputDto } from '@dns/validation';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { ProductService } from '../src/modules/catalog/product.service';
@@ -470,6 +471,170 @@ describe('Catalog', () => {
                     groupId: '11111111-1111-4111-8111-111111111111',
                 }),
             ).rejects.toBeInstanceOf(BadRequestException);
+        });
+    });
+
+    describe('creating a dish', () => {
+        const carrotAndCucumber = async (): Promise<CreateRecipeInputDto> => ({
+            title: 'Морквяний салат',
+            ingredients: [
+                { productId: await productIdByName('Морква'), amountG: 200 },
+                { productId: await productIdByName('Огірки'), amountG: 100 },
+            ],
+        });
+
+        it('adds up the composition instead of asking the client for a total', async () => {
+            const detail = await recipes.create(user.id, await carrotAndCucumber());
+
+            // Carrot 41 kcal / 0.9 P / 0.2 F / 9.6 C per 100 g, cucumber
+            // 15 / 0.7 / 0.1 / 3.6 — so 200 g and 100 g come to 82+15 = 97.
+            expect(detail.recipe.calories).toBe(97);
+            expect(detail.recipe.proteinG).toBe(2.5);
+            expect(detail.recipe.fatsG).toBe(0.5);
+            expect(detail.recipe.carbsG).toBe(22.8);
+            expect(detail.recipe.source).toBe(ContentSource.Custom);
+        });
+
+        it('derives one serving, the weight of what went in, and the sum of the timers', async () => {
+            const detail = await recipes.create(user.id, {
+                ...(await carrotAndCucumber()),
+                steps: [
+                    { title: 'Нарізати', durationMinutes: 5 },
+                    { title: 'Заправити', durationMinutes: 3 },
+                ],
+            });
+
+            expect(detail.recipe.servings).toBe(1);
+            expect(detail.recipe.totalWeightG).toBe(300);
+            expect(detail.recipe.cookTimeMinutes).toBe(8);
+            // One serving means the card and the whole dish say the same thing.
+            expect(detail.recipe.caloriesPerServing).toBe(detail.recipe.calories);
+        });
+
+        it('leaves the cooking time unknown rather than calling it zero', async () => {
+            const detail = await recipes.create(user.id, {
+                ...(await carrotAndCucumber()),
+                steps: [{ title: 'Змішати' }],
+            });
+
+            expect(detail.recipe.cookTimeMinutes).toBeNull();
+        });
+
+        it('lands on the «own» tab and stays invisible to everybody else', async () => {
+            const created = await recipes.create(user.id, await carrotAndCucumber());
+
+            const own = await recipes.list(user.id, listQuery({ tab: RecipeTab.Own }));
+            expect(own.items.map(item => item.id)).toEqual([created.recipe.id]);
+
+            const stranger = await register(OTHER_EMAIL);
+            const theirs = await recipes.list(stranger.id, listQuery());
+            expect(theirs.items).toHaveLength(0);
+            await expect(recipes.detail(stranger.id, created.recipe.id)).rejects.toBeInstanceOf(NotFoundException);
+        });
+
+        it('keeps a step’s chips pointing at this dish’s own ingredient rows', async () => {
+            const detail = await recipes.create(user.id, {
+                ...(await carrotAndCucumber()),
+                steps: [{ title: 'Натерти моркву', ingredientIndexes: [0] }],
+            });
+
+            const carrot = detail.ingredients.find(ingredient => ingredient.name === 'Морква');
+            expect(detail.steps[0]?.ingredientIds).toEqual([carrot?.id]);
+        });
+
+        it('stores a step that has only a timer, with no words at all', async () => {
+            const detail = await recipes.create(user.id, {
+                ...(await carrotAndCucumber()),
+                steps: [{ durationMinutes: 10 }],
+            });
+
+            expect(detail.steps).toHaveLength(1);
+            expect(detail.steps[0]?.stepNumber).toBe(1);
+            expect(detail.steps[0]?.durationMinutes).toBe(10);
+            expect(detail.steps[0]?.title).toBe('');
+        });
+
+        it('refuses an ingredient naming a product this account cannot see', async () => {
+            const stranger = await register(OTHER_EMAIL);
+            const theirs = await productService.create(stranger.id, {
+                name: 'Чужий продукт',
+                proteinPer100g: 10,
+                fatsPer100g: 1,
+                carbsPer100g: 2,
+            });
+
+            await expect(
+                recipes.create(user.id, {
+                    title: 'Крадена страва',
+                    ingredients: [{ productId: theirs.id, amountG: 100 }],
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+        });
+
+        it('refuses a step chip pointing past the ingredient list', async () => {
+            await expect(
+                recipes.create(user.id, {
+                    ...(await carrotAndCucumber()),
+                    steps: [{ title: 'Крок', ingredientIndexes: [5] }],
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+        });
+
+        it('refuses an unknown cuisine instead of failing on the foreign key', async () => {
+            await expect(
+                recipes.create(user.id, {
+                    ...(await carrotAndCucumber()),
+                    cuisineId: '11111111-1111-4111-8111-111111111111',
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+        });
+
+        it('nothing is written when one ingredient is bad', async () => {
+            await expect(
+                recipes.create(user.id, {
+                    title: 'Половина страви',
+                    ingredients: [
+                        { productId: await productIdByName('Морква'), amountG: 100 },
+                        { productId: '11111111-1111-4111-8111-111111111111', amountG: 50 },
+                    ],
+                }),
+            ).rejects.toBeInstanceOf(BadRequestException);
+
+            const own = await recipes.list(user.id, listQuery({ tab: RecipeTab.Own }));
+            expect(own.items).toHaveLength(0);
+        });
+    });
+
+    describe('removing a dish', () => {
+        it('removes an own dish and everything hanging off it', async () => {
+            const created = await recipes.create(user.id, {
+                title: 'Тимчасова',
+                ingredients: [{ productId: await productIdByName('Морква'), amountG: 100 }],
+                steps: [{ title: 'Крок', ingredientIndexes: [0] }],
+            });
+
+            await recipes.remove(user.id, created.recipe.id);
+
+            await expect(recipes.detail(user.id, created.recipe.id)).rejects.toBeInstanceOf(NotFoundException);
+
+            const orphans = await ctx.db.select().from(schema.recipeIngredients);
+            expect(orphans).toHaveLength(0);
+        });
+
+        it('will not remove a catalogue recipe', async () => {
+            const id = await seedRecipe({ title: 'Каталожна' });
+
+            await expect(recipes.remove(user.id, id)).rejects.toBeInstanceOf(NotFoundException);
+        });
+
+        it('will not remove somebody else’s own dish', async () => {
+            const stranger = await register(OTHER_EMAIL);
+            const theirs = await recipes.create(stranger.id, {
+                title: 'Чужа страва',
+                ingredients: [{ productId: await productIdByName('Морква'), amountG: 100 }],
+            });
+
+            await expect(recipes.remove(user.id, theirs.recipe.id)).rejects.toBeInstanceOf(NotFoundException);
         });
     });
 });
