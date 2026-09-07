@@ -16,3 +16,23 @@ export enum RecipeTab {
     Favorite = 'favorite',
     Own = 'own',
 }
+
+/**
+ * How a line got onto the shopping list.
+ *
+ * A manual line is a stored row; a plan line is a sum over the meal plan,
+ * computed fresh on every read. The distinction is visible to the client
+ * because only one of them can be deleted, and because the same product may
+ * stand on the list once as each.
+ */
+export enum ShoppingItemOrigin {
+    Manual = 'manual',
+    Plan = 'plan',
+}
+
+/** How a quantity is entered before the server converts it to grams (add-product FR-005). */
+export enum ShoppingUnit {
+    Serving = 'serving',
+    Piece = 'piece',
+    Gram = 'gram',
+}

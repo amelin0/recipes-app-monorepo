@@ -92,7 +92,24 @@ export class ReferenceRepository extends BaseRepository {
         return rows.map(ReferenceEntity.from);
     }
 
+    /**
+     * The groups the recipe filter offers — six of them, in the order that
+     * screen wants (recipe-filters FR-002).
+     *
+     * The table holds more than six: the shopping list needs flour and grains
+     * as aisles, and nobody filters a recipe by «flour». `isRecipeFilter` is
+     * what keeps one taxonomy serving two screens without either being wrong.
+     */
     async productGroups(language: string): Promise<ReferenceEntity[]> {
+        return this.groups(language, { filterOnly: true });
+    }
+
+    /** Every group, in the order the shopping list wants — which starts with meat. */
+    async shoppingGroups(language: string): Promise<ReferenceEntity[]> {
+        return this.groups(language, { filterOnly: false });
+    }
+
+    private async groups(language: string, options: { filterOnly: boolean }): Promise<ReferenceEntity[]> {
         const preferred = alias(productGroupTranslations, 'preferred_group_name');
         const fallback = alias(productGroupTranslations, 'fallback_group_name');
 
@@ -101,13 +118,14 @@ export class ReferenceRepository extends BaseRepository {
                 id: productGroups.id,
                 slug: productGroups.slug,
                 emoji: productGroups.emoji,
-                sortOrder: productGroups.sortOrder,
+                sortOrder: options.filterOnly ? productGroups.sortOrder : productGroups.shoppingSortOrder,
                 name: sql<string>`coalesce(${preferred.name}, ${fallback.name}, ${productGroups.slug})`,
             })
             .from(productGroups)
             .leftJoin(preferred, and(eq(preferred.groupId, productGroups.id), eq(preferred.language, language)))
             .leftJoin(fallback, and(eq(fallback.groupId, productGroups.id), eq(fallback.language, DEFAULT_LANGUAGE)))
-            .orderBy(productGroups.sortOrder);
+            .where(options.filterOnly ? eq(productGroups.isRecipeFilter, true) : undefined)
+            .orderBy(options.filterOnly ? productGroups.sortOrder : productGroups.shoppingSortOrder);
 
         return rows.map(ReferenceEntity.from);
     }
