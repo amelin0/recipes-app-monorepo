@@ -10,6 +10,14 @@
 #   docker network create dns-net
 #
 # ─────────────────────────────────────────────────────────────────────────
+# PORTS
+#
+# CLIENT_API_PORT and ADMIN_API_PORT in .env.prod are the whole story: the
+# same number is what the app binds inside the container and what is
+# published on 127.0.0.1. Changing one of them means changing it in exactly
+# one more place — ../prometheus/prometheus.yml, which cannot read env vars
+# (see the comment there) — plus the nginx proxy_pass.
+# ─────────────────────────────────────────────────────────────────────────
 # WHAT THIS STACK DOES NOT OWN
 #
 # Postgres runs OUTSIDE Docker and is never created, migrated away or removed
@@ -50,7 +58,7 @@ x-api-common: &api-common
     logging: *default-logging
 
 services:
-    # ⚠️ The service name is load-bearing. Prometheus scrapes `client-api:3000`
+    # ⚠️ The service name is load-bearing. Prometheus scrapes `client-api`
     # by this name, and Promtail derives the Loki `service` label from the same
     # compose service name — renaming it silently breaks the join between a
     # latency spike and the logs that explain it.
@@ -60,18 +68,23 @@ services:
         container_name: dns-client-api
         environment:
             NODE_ENV: production
-            CLIENT_API_PORT: '3000'
+            # CLIENT_API_PORT deliberately NOT set here. Anything in this block
+            # OVERRIDES env_file, so hardcoding it would silently ignore the
+            # value in .env.prod and the app would listen on a port the
+            # mapping below does not publish.
         ports:
+            # Same number on both sides, and the same one .env.prod hands the
+            # app — one port per service, nothing to keep in sync mentally.
             # Loopback only: nginx terminates TLS and proxies here. Published
             # on all interfaces this would expose /metrics to the whole LAN.
-            - '127.0.0.1:3000:3000'
+            - '127.0.0.1:${CLIENT_API_PORT:-3000}:${CLIENT_API_PORT:-3000}'
         healthcheck:
             test:
                 [
                     'CMD',
                     'node',
                     '-e',
-                    "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                    "fetch('http://127.0.0.1:'+(process.env.CLIENT_API_PORT||3000)+'/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
                 ]
             interval: 30s
             timeout: 5s
@@ -86,16 +99,18 @@ services:
         container_name: dns-admin-api
         environment:
             NODE_ENV: production
-            ADMIN_API_PORT: '3001'
+            # See the note on client-api: ADMIN_API_PORT comes from .env.prod.
         ports:
-            - '127.0.0.1:3001:3001'
+            - '127.0.0.1:${ADMIN_API_PORT:-3001}:${ADMIN_API_PORT:-3001}'
         healthcheck:
+            # /health, not /health/ready — admin-api has no readiness route
+            # yet, which is why the image's own HEALTHCHECK is overridden here.
             test:
                 [
                     'CMD',
                     'node',
                     '-e',
-                    "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                    "fetch('http://127.0.0.1:'+(process.env.ADMIN_API_PORT||3001)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
                 ]
             interval: 30s
             timeout: 5s

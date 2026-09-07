@@ -3,6 +3,13 @@
 # Loki answers «what happened». This answers «how is it doing»: event loop
 # lag, heap growth, request latency by route, and whether the box itself is
 # in trouble.
+#
+# ⚠️ PORTS ARE HARDCODED BELOW and must match CLIENT_API_PORT / ADMIN_API_PORT
+# in ../.env.prod. Prometheus does NOT expand environment variables in
+# static_configs — `${VAR}` would be scraped literally — so this is the one
+# file a port change has to be repeated in. Getting it wrong is quiet: the
+# target simply reads DOWN, and `dns-api-unscrapeable` fires two minutes
+# later as if the service had crashed.
 
 global:
     scrape_interval: 15s
@@ -25,7 +32,7 @@ scrape_configs:
     - job_name: client-api
       metrics_path: /metrics
       static_configs:
-          - targets: ['client-api:3000']
+          - targets: ['client-api:3028']
             labels:
                 service: client-api
 
@@ -38,7 +45,7 @@ scrape_configs:
       params:
           module: [http_ready]
       static_configs:
-          - targets: ['http://client-api:3000/api/v1/health/ready']
+          - targets: ['http://client-api:3028/api/v1/health/ready']
       relabel_configs:
           - source_labels: [__address__]
             target_label: __param_target
@@ -59,7 +66,7 @@ scrape_configs:
       params:
           module: [http_2xx]
       static_configs:
-          - targets: ['http://admin-api:3001/api/v1/health']
+          - targets: ['http://admin-api:3029/api/v1/health']
       relabel_configs:
           - source_labels: [__address__]
             target_label: __param_target
