@@ -6,4 +6,5 @@ export * from './nutrition.schemas';
 export * from './onboarding.schemas';
 export * from './progress.schemas';
 export * from './shopping-list.schemas';
+export * from './subscription.schemas';
 export * from './user.schemas';

@@ -17,6 +17,8 @@ export class ProfileEntity {
     readonly targetWeightKg: number | null;
     readonly onboardingStep: number;
     readonly onboardingCompletedAt: Date | null;
+    /** When the paywall was last offered; set, it stops opening by itself. */
+    readonly paywallSeenAt: Date | null;
     readonly createdAt: Date;
     readonly updatedAt: Date;
 
@@ -35,6 +37,7 @@ export class ProfileEntity {
         this.targetWeightKg = row.targetWeightKg === null ? null : Number(row.targetWeightKg);
         this.onboardingStep = row.onboardingStep;
         this.onboardingCompletedAt = row.onboardingCompletedAt;
+        this.paywallSeenAt = row.paywallSeenAt;
         this.createdAt = row.createdAt;
         this.updatedAt = row.updatedAt;
     }

@@ -69,6 +69,16 @@ export const profiles = pgTable('profiles', {
     // phone does not ask the same sixteen questions again (FR-001).
     onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
 
+    /**
+     * When the paywall was last put in front of this person.
+     *
+     * Here rather than in the subscription domain because it is the next step
+     * of the funnel this row already tracks — and because somebody who
+     * skipped has no subscription for it to hang off. Set, the paywall stops
+     * opening by itself (paywall FR-007).
+     */
+    paywallSeenAt: timestamp('paywall_seen_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

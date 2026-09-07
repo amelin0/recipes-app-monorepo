@@ -19,3 +19,4 @@ export * from './meal-plan';
 export * from './shopping-list';
 export * from './notification';
 export * from './faq';
+export * from './subscription';

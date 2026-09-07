@@ -29,3 +29,4 @@ export * from './meal-plan-items.schema';
 export * from './shopping-list.schema';
 export * from './notifications.schema';
 export * from './faq.schema';
+export * from './subscriptions.schema';

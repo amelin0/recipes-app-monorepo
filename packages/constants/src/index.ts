@@ -6,4 +6,5 @@ export * from './nutrition';
 export * from './nutrition-formulas';
 export * from './nutrition-policy';
 export * from './shopping-list';
+export * from './subscription';
 export * from './user-defaults';

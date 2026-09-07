@@ -9,7 +9,8 @@
         "./email": "./src/email/index.ts",
         "./otp": "./src/otp/index.ts",
         "./oauth": "./src/oauth/index.ts",
-        "./storage": "./src/storage/index.ts"
+        "./storage": "./src/storage/index.ts",
+        "./purchases": "./src/purchases/index.ts"
     },
     "scripts": {
         "typecheck": "tsc --noEmit",

@@ -16,3 +16,4 @@ export { RecipeEntity, RecipeIngredientEntity, RecipeStepEntity } from './recipe
 export { MealPlanItemEntity } from './meal-plan.entity';
 export { NotificationEntity } from './notification.entity';
 export { FaqQuestionEntity, FaqTopicEntity } from './faq.entity';
+export { SubscriptionEntity, SubscriptionPlanEntity } from './subscription.entity';

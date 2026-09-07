@@ -22,6 +22,7 @@ type UpdateProfile = Partial<
         | 'targetWeightKg'
         | 'onboardingStep'
         | 'onboardingCompletedAt'
+        | 'paywallSeenAt'
     >
 >;
 
