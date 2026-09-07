@@ -17,6 +17,20 @@
 # Publishing is `infra/prod/publish-web.sh`, which builds and swaps the
 # directory atomically.
 
+# ⚠️ `add_header` does not accumulate: a location that declares one **replaces**
+# every header inherited from the server block. Cache-Control therefore cannot
+# live in its own location — doing that silently stripped HSTS and the
+# clickjacking headers from exactly the responses that need them most, the
+# HTML and the JavaScript, while a plain file like /favicon.ico kept them.
+#
+# So the value is computed here and added once, next to the others.
+# Only /_next/static is content-hashed; everything else must not be cached,
+# because a stale HTML points at chunk names the new build no longer has.
+map $uri $dns_admin_cache {
+    default             "no-store";
+    ~^/_next/static/    "public, max-age=31536000, immutable";
+}
+
 server {
     listen 80;
     listen [::]:80;
@@ -47,24 +61,18 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Cache-Control $dns_admin_cache always;
 
     # The symlink `publish-web.sh` flips. Swapping the link rather than the
     # files means a deploy is atomic: nobody is served half a build.
     root /var/www/dns-admin/current;
     index index.html;
 
-    # Content-hashed under /_next/static, so it can be cached forever. Getting
-    # this wrong the other way — caching the HTML — is what serves a stale
-    # panel that loads chunks the new build no longer has.
+    # No `add_header` here on purpose — see the note above the map. The only
+    # thing this location changes is the noise: asset requests would otherwise
+    # drown the access log.
     location /_next/static/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
         access_log off;
-    }
-
-    # HTML must never be cached: it is what points at the current chunk names.
-    location ~* \.html$ {
-        add_header Cache-Control "no-store";
     }
 
     location / {
