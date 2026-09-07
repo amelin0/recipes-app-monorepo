@@ -7,7 +7,7 @@ import { Queries } from '@/shared/services'
 export const useGetRecipeFull = (id: string | null) => {
   const { data, isLoading } = useQuery({
     queryKey: [Queries.RECIPE_FULL, id],
-    queryFn: () => RecipeApi.getByIdFull(id!),
+    queryFn: () => RecipeApi.getById(id!),
     enabled: !!id,
   })
 

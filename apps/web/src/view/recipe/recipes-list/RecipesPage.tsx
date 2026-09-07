@@ -11,8 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/components/select'
 import { Sheet, SheetContent } from '@/shared/ui/components/sheet'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/ui/components/dialog'
-import { Search, Plus, Upload, X, ChevronLeft, ChevronRight, Clock, Heart, Trash2, Tag } from 'lucide-react'
-import { useState } from 'react'
+import { Search, Plus, Upload, X, ChevronLeft, ChevronRight, Clock, Heart, Trash2 } from 'lucide-react'
 
 export function RecipesPage() {
   const {
@@ -27,12 +26,7 @@ export function RecipesPage() {
     setPage,
     selectedIds, handleToggleSelect, handleToggleSelectAll, handleClearSelection,
     isDeleteDialogOpen, setIsDeleteDialogOpen, handleDeleteSelected, isDeleting,
-    allTags, isAssignDialogOpen, setIsAssignDialogOpen, isRemoveDialogOpen, setIsRemoveDialogOpen,
-    assignTags, removeTags, isAssigning, isRemoving,
   } = useRecipesPage()
-
-  // Tag selection state for assign/remove dialogs
-  const [checkedTagIds, setCheckedTagIds] = useState<Set<string>>(new Set())
 
   const hasFilters = search || tagFilter
   const hasSelection = selectedIds.size > 0
@@ -52,12 +46,10 @@ export function RecipesPage() {
               <Button variant="ghost" size="sm" onClick={handleClearSelection}>
                 <X size={14} className="mr-1" /> Cancel
               </Button>
-              <Button variant="outline" onClick={() => { setCheckedTagIds(new Set()); setIsAssignDialogOpen(true) }}>
-                <Tag size={16} className="mr-1.5" /> Assign Tags
-              </Button>
-              <Button variant="outline" onClick={() => { setCheckedTagIds(new Set()); setIsRemoveDialogOpen(true) }}>
-                <Tag size={16} className="mr-1.5" /> Remove Tags
-              </Button>
+              {/* No bulk tag actions: a dish's taxonomy is one category, one
+                  cuisine and its diets, all set on the dish itself. Assigning
+                  a bag of tags to many recipes at once cannot express «one
+                  cuisine», which is why the endpoint does not exist. */}
               <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
                 <Trash2 size={16} className="mr-1.5" /> Delete ({selectedIds.size})
               </Button>
@@ -141,8 +133,8 @@ export function RecipesPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    {recipe.photo_url ? (
-                      <img src={recipe.photo_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    {recipe.photoUrl ? (
+                      <img src={recipe.photoUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-primary-subtle flex items-center justify-center text-xs text-primary-on-subtle">
                         {recipe.title?.[0] ?? '?'}
@@ -151,26 +143,34 @@ export function RecipesPage() {
                   </TableCell>
                   <TableCell className="font-medium">{recipe.title}</TableCell>
                   <TableCell>{recipe.calories} kcal</TableCell>
-                  <TableCell>{recipe.proteins_g}g</TableCell>
+                  <TableCell>{recipe.proteinG}g</TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1 text-text-secondary">
-                      <Clock size={14} /> {recipe.cooking_time_minutes}m
+                      <Clock size={14} /> {recipe.cookTimeMinutes === null ? '—' : `${recipe.cookTimeMinutes}m`}
                     </span>
                   </TableCell>
                   <TableCell>
+                    {/* The list row carries flat slugs for category and cuisine
+                        only. Diets can be thirteen, and pulling them into every
+                        row would mean a query per row for a column the table
+                        does not have. */}
                     <div className="flex flex-wrap gap-1">
-                      {recipe.tags.slice(0, 3).map((t) => (
-                        <Badge key={t.id} variant="outline" className="text-xs">{t.name}</Badge>
-                      ))}
+                      {[recipe.categorySlug, recipe.cuisineSlug]
+                        .filter((slug): slug is string => slug !== null)
+                        .map((slug) => (
+                          <Badge key={slug} variant="outline" className="text-xs">
+                            {slug}
+                          </Badge>
+                        ))}
                     </div>
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1 text-text-secondary">
-                      <Heart size={14} /> {recipe.favorites_count ?? 0}
+                      <Heart size={14} /> {recipe.favoritesCount}
                     </span>
                   </TableCell>
                   <TableCell className="text-text-secondary text-sm">
-                    {new Date(recipe.created_at).toLocaleDateString()}
+                    {new Date(recipe.updatedAt).toLocaleDateString()}
                   </TableCell>
                 </TableRow>
               ))
@@ -224,113 +224,8 @@ export function RecipesPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Assign Tags Dialog */}
-      <TagPickerDialog
-        open={isAssignDialogOpen}
-        onOpenChange={setIsAssignDialogOpen}
-        title={`Assign Tags to ${selectedIds.size} recipe${selectedIds.size !== 1 ? 's' : ''}`}
-        description="Select tags to add to the selected recipes."
-        tags={allTags}
-        checkedIds={checkedTagIds}
-        setCheckedIds={setCheckedTagIds}
-        actionLabel="Assign"
-        isPending={isAssigning}
-        onSubmit={async () => {
-          await assignTags({ recipe_ids: Array.from(selectedIds), tag_ids: Array.from(checkedTagIds) })
-          setIsAssignDialogOpen(false)
-          handleClearSelection()
-        }}
-      />
-
-      {/* Remove Tags Dialog */}
-      <TagPickerDialog
-        open={isRemoveDialogOpen}
-        onOpenChange={setIsRemoveDialogOpen}
-        title={`Remove Tags from ${selectedIds.size} recipe${selectedIds.size !== 1 ? 's' : ''}`}
-        description="Select tags to remove from the selected recipes."
-        tags={allTags}
-        checkedIds={checkedTagIds}
-        setCheckedIds={setCheckedTagIds}
-        actionLabel="Remove"
-        variant="destructive"
-        isPending={isRemoving}
-        onSubmit={async () => {
-          await removeTags({ recipe_ids: Array.from(selectedIds), tag_ids: Array.from(checkedTagIds) })
-          setIsRemoveDialogOpen(false)
-          handleClearSelection()
-        }}
-      />
-
       {/* Import Dialog */}
       <ImportCsvDialog open={isImportOpen} onOpenChange={setIsImportOpen} onImport={handleImport} isImporting={isImporting} />
     </div>
-  )
-}
-
-function TagPickerDialog({ open, onOpenChange, title, description, tags, checkedIds, setCheckedIds, actionLabel, variant, isPending, onSubmit }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  description: string
-  tags: { id: string; tag_translations?: { language: string; name: string }[] }[]
-  checkedIds: Set<string>
-  setCheckedIds: React.Dispatch<React.SetStateAction<Set<string>>>
-  actionLabel: string
-  variant?: 'destructive'
-  isPending: boolean
-  onSubmit: () => void
-}) {
-  const [search, setSearch] = useState('')
-
-  const filtered = search
-    ? tags.filter((t) => {
-        const q = search.toLowerCase()
-        return t.tag_translations?.some((tr) => tr.name.toLowerCase().includes(q))
-      })
-    : tags
-
-  const toggle = (id: string) => {
-    setCheckedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) setSearch(''); onOpenChange(v) }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-icon-default" />
-          <Input placeholder="Search tags..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <div className="space-y-1 max-h-64 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <p className="text-text-tertiary text-sm text-center py-4">{tags.length === 0 ? 'No tags available.' : 'No tags match your search.'}</p>
-          ) : (
-            filtered.map((t) => {
-              const name = t.tag_translations?.find((tr) => tr.language === 'uk')?.name ?? t.tag_translations?.[0]?.name ?? '—'
-              return (
-                <label key={t.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-surface cursor-pointer">
-                  <Checkbox checked={checkedIds.has(t.id)} onCheckedChange={() => toggle(t.id)} />
-                  <span className="text-sm text-text-primary">{name}</span>
-                </label>
-              )
-            })
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
-          <Button variant={variant ?? 'default'} disabled={checkedIds.size === 0 || isPending} onClick={onSubmit}>
-            {isPending ? `${actionLabel}ing...` : `${actionLabel} ${checkedIds.size} tag${checkedIds.size !== 1 ? 's' : ''}`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }

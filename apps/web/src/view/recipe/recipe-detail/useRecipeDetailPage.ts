@@ -1,44 +1,67 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
+import { toSaveParams, type SaveRecipeParams } from '@/data'
 import { useGetRecipeFull, useUpdateRecipe, useUploadRecipeImage } from '@/state/domains/recipe'
-import { useGetLanguages } from '@/state/domains/language'
 
 export const useRecipeDetailPage = (id: string) => {
   const router = useRouter()
   const { recipe, isLoading } = useGetRecipeFull(id)
-  const { languages } = useGetLanguages()
   const { updateRecipe, isPending: isSaving } = useUpdateRecipe()
   const { uploadImage, isUploading } = useUploadRecipeImage()
-  const [activeTab, setActiveTab] = useState('en')
+  const [activeTab, setActiveTab] = useState('uk')
 
-  // Get languages that have translations for this recipe
-  const translatedLangs = recipe?.recipe_translations?.map((t) => t.language) ?? []
-  const availableLangs = languages.filter((l) => translatedLangs.includes(l.code))
+  /**
+   * The languages this dish is written in, taken from the dish itself.
+   *
+   * It used to come from `GET /admin/languages`, which has no server — so the
+   * tab strip rendered empty and no translation was ever selected. The recipe
+   * already carries the only list that matters here: the ones it has a title
+   * in.
+   */
+  const availableLangs = recipe?.translations.map(t => t.language) ?? []
 
   useEffect(() => {
-    if (availableLangs.length > 0 && !translatedLangs.includes(activeTab)) {
-      setActiveTab(availableLangs[0].code)
+    if (availableLangs.length > 0 && !availableLangs.includes(activeTab)) {
+      setActiveTab(availableLangs[0] as string)
     }
-  }, [availableLangs.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableLangs.join(',')])
 
-  const currentTranslation = recipe?.recipe_translations?.find((t) => t.language === activeTab)
+  const currentTranslation = recipe?.translations.find(t => t.language === activeTab)
+
+  /**
+   * Save one changed field without losing the rest.
+   *
+   * `PUT` replaces composition and steps wholesale, so every write has to
+   * carry the whole dish — sending `{ photoUrl }` alone would empty the
+   * ingredient list.
+   */
+  const save = (changes: Partial<SaveRecipeParams>) => {
+    if (!recipe) return Promise.resolve(undefined)
+    return updateRecipe({ id, data: toSaveParams(recipe, changes) })
+  }
 
   const handlePhotoUpload = async (file: File) => {
-    const { url } = await uploadImage(file)
-    await updateRecipe({ id, data: { photo_url: url } })
+    const publicUrl = await uploadImage(file)
+    await save({ photoUrl: publicUrl })
   }
 
   const handleBack = () => router.push('/recipes')
 
   return {
-    recipe, isLoading, isSaving, isUploading,
+    recipe,
+    isLoading,
+    isSaving,
+    isUploading,
     languages: availableLangs,
-    allLanguages: languages,
-    activeTab, setActiveTab,
+    activeTab,
+    setActiveTab,
     currentTranslation,
-    handlePhotoUpload, handleBack,
-    updateRecipe: (data: any) => updateRecipe({ id, data }),
+    handlePhotoUpload,
+    handleBack,
+    save,
   }
 }

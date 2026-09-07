@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm';
-import { index, integer, numeric, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { index, integer, numeric, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { cuisines } from './cuisines.schema';
 import { dishCategories } from './dish-categories.schema';
@@ -38,6 +38,18 @@ export const recipes = pgTable(
 
         photoUrl: text('photo_url'),
 
+        /**
+         * The key the author gives a dish in the import file, and the only
+         * thing that makes a re-import an update rather than a duplicate
+         * (admin recipe-catalogue FR-004).
+         *
+         * A recipe has no natural unique field: titles repeat, and the English
+         * title is a translation rather than an identity. Null for anything
+         * created by hand or by a user, and the unique index is partial for
+         * exactly that reason — NULLs must not collide with each other.
+         */
+        importKey: text('import_key'),
+
         cookTimeMinutes: integer('cook_time_minutes'),
 
         servings: integer('servings').notNull().default(1),
@@ -59,6 +71,9 @@ export const recipes = pgTable(
         index('recipes_source_creator_idx').on(table.source, table.createdBy),
         index('recipes_category_idx').on(table.categoryId),
         index('recipes_cuisine_idx').on(table.cuisineId),
+        uniqueIndex('recipes_import_key_unique')
+            .on(table.importKey)
+            .where(sql`${table.importKey} is not null`),
     ],
 );
 

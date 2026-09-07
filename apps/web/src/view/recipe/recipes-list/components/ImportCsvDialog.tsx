@@ -4,18 +4,18 @@ import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/components/dialog'
 import { Button } from '@/shared/ui/components/button'
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
-import type { ImportResult } from '@/data'
+import type { ImportReport } from '@/data'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (file: File) => Promise<ImportResult>
+  onImport: (file: File) => Promise<ImportReport>
   isImporting: boolean
 }
 
 export function ImportCsvDialog({ open, onOpenChange, onImport, isImporting }: Props) {
   const [file, setFile] = useState<File | null>(null)
-  const [result, setResult] = useState<ImportResult | null>(null)
+  const [result, setResult] = useState<ImportReport | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,20 +72,27 @@ export function ImportCsvDialog({ open, onOpenChange, onImport, isImporting }: P
             {isImporting ? 'Importing...' : 'Import'}
           </Button>
 
-          {/* Result */}
+          {/* Result. Partial success is the expected outcome, not a failure:
+              a bad row is rejected on its own and the rest of the file goes in. */}
           {result && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle size={16} className="text-success-default" />
-                <span className="text-text-primary font-medium">{result.imported} recipes imported</span>
+                <span className="text-text-primary font-medium">
+                  {result.created} created, {result.updated} updated
+                  {result.skipped > 0 ? `, ${result.skipped} skipped` : ''}
+                </span>
               </div>
               {result.errors.length > 0 && (
-                <div className="space-y-1">
-                  {result.errors.map((err, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {result.errors.map((err) => (
+                    <div key={`${err.row}-${err.importKey ?? ''}`} className="flex items-start gap-2 text-sm">
                       <AlertCircle size={14} className="text-error-default mt-0.5 shrink-0" />
                       <span className="text-text-secondary">
-                        <strong>{err.recipe_key}</strong>: {err.error}
+                        {/* The row number is the one the editor sees in Excel,
+                            so the fix is a click away in their own file. */}
+                        <strong>Row {err.row}</strong>
+                        {err.importKey ? ` (${err.importKey})` : ''}: {err.message}
                       </span>
                     </div>
                   ))}

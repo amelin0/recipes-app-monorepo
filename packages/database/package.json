@@ -14,11 +14,13 @@
         "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
         "db:migrate": "tsx src/migrate.ts",
         "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
-        "db:seed": "tsx src/seeds/seed.ts"
+        "db:seed": "tsx src/seeds/seed.ts",
+        "db:seed:admin": "tsx src/seeds/seed-admin.ts"
     },
     "dependencies": {
         "@dns/constants": "workspace:*",
         "@dns/shared-types": "workspace:*",
+        "bcryptjs": "^3.0.3",
         "drizzle-orm": "0.45.2",
         "postgres": "^3.4.0"
     },
@@ -26,6 +28,7 @@
         "@nestjs/common": "^11.0.0"
     },
     "devDependencies": {
+        "@types/bcryptjs": "^3.0.0",
         "@types/node": "^22.10.0",
         "dotenv": "^16.4.0",
         "drizzle-kit": "^0.31.10",

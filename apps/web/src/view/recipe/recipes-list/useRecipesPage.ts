@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useDeferredValue } from 'react'
-import { useGetRecipes, useGetTags, useImportRecipes, useGetRecipeFull, useDeleteRecipes } from '@/state/domains/recipe'
-import { useGetAllTags, useAssignTags, useRemoveTags } from '@/state/domains/tag'
+import { useGetRecipes, useImportRecipes, useGetRecipeFull, useDeleteRecipes } from '@/state/domains/recipe'
+import { useGetAllTags } from '@/state/domains/tag'
 import type { RecipeFilters } from '@/data'
 
 export const useRecipesPage = () => {
@@ -20,25 +20,29 @@ export const useRecipesPage = () => {
 
   const debouncedSearch = useDeferredValue(search)
 
+  const { tags } = useGetAllTags()
+
+  /**
+   * The chip row is flat, but the filter is not: a dish has one category, one
+   * cuisine and any number of diets, so the same selected id means a different
+   * query depending on which dictionary it came from. `kind` is what the flat
+   * façade carries it for.
+   */
+  const selectedTag = tags.find((tag) => tag.id === tagFilter)
+
   const filters: RecipeFilters = {
     search: debouncedSearch || undefined,
-    tags: tagFilter,
+    categoryId: selectedTag?.kind === 'category' ? selectedTag.id : undefined,
+    cuisineId: selectedTag?.kind === 'cuisine' ? selectedTag.id : undefined,
+    dietIds: selectedTag?.kind === 'diet' ? selectedTag.id : undefined,
     page,
     limit: 20,
   }
 
   const { recipes, total, isLoading } = useGetRecipes(filters)
-  const { tags } = useGetTags()
   const { importRecipes, isPending: isImporting } = useImportRecipes()
   const { recipe: selectedRecipe, isLoading: isDetailLoading } = useGetRecipeFull(selectedId ?? '')
   const { deleteRecipes, isPending: isDeleting } = useDeleteRecipes()
-  const { tags: allTags } = useGetAllTags()
-  const { assignTags, isPending: isAssigning } = useAssignTags()
-  const { removeTags, isPending: isRemoving } = useRemoveTags()
-
-  // Tag assign/remove dialogs
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
 
   const totalPages = Math.ceil(total / 20)
 
@@ -114,8 +118,5 @@ export const useRecipesPage = () => {
     // Selection & actions
     selectedIds, handleToggleSelect, handleToggleSelectAll, handleClearSelection,
     isDeleteDialogOpen, setIsDeleteDialogOpen, handleDeleteSelected, isDeleting,
-    // Tag assign/remove
-    allTags, isAssignDialogOpen, setIsAssignDialogOpen, isRemoveDialogOpen, setIsRemoveDialogOpen,
-    assignTags, removeTags, isAssigning, isRemoving,
   }
 }

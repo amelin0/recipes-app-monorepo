@@ -1,2 +1,2 @@
 export { TagApi } from './tag.api'
-export type { TagFull } from './tag.types'
+export type { Tag, TagKind } from './tag.types'

@@ -11,7 +11,10 @@ export const useLogin = () => {
   const { mutateAsync, isPending, isError, error } = useMutation({
     mutationFn: (data: LoginRequest) => AuthApi.login(data),
     onSuccess: (data) => {
-      HttpService.setAccessToken(data.access_token)
+      // Both tokens: the access one expires in fifteen minutes, and without
+      // the refresh token stored the panel would bounce the editor to the
+      // login screen a quarter of an hour into their afternoon.
+      HttpService.setSession(data.accessToken, data.refreshToken)
       switchAuthenticated(true)
     },
   })

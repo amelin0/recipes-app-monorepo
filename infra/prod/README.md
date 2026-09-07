@@ -145,6 +145,20 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 і `logs`: compose автоматично читає лише файл, який називається рівно `.env`,
 а `:?`-гварди в compose-файлах зупиняють інтерполяцію ще до запуску.
 
+### Перший адмін
+
+Панель не має реєстрації, тож на чистій базі є форма входу і нікого, хто міг
+би нею скористатися. Заповніть `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` у
+`.env.prod` і виконайте тим самим міграторним образом:
+
+```bash
+docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml   --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed-admin.ts
+```
+
+Ідемпотентно, і навмисно **не** перезаписує пароль наявного акаунта: повторний
+сід не має бути способом захопити чужий доступ. Після створення змінні можна
+прибрати з `.env.prod` — вони більше нікому не потрібні.
+
 ### Мок-рецепти
 
 Міграції засівають довідники, але не самі страви — у `recipes` після міграцій

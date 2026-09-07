@@ -30,3 +30,6 @@ export * from './shopping-list.schema';
 export * from './notifications.schema';
 export * from './faq.schema';
 export * from './subscriptions.schema';
+export * from './admins.schema';
+export * from './admin-refresh-tokens.schema';
+export * from './admin-login-attempts.schema';

@@ -1,11 +1,13 @@
 'use client'
 
 import { useRecipeDetailPage } from './useRecipeDetailPage'
+import type { RecipeDetail } from '@/data'
+import { useGetAllTags } from '@/state/domains/tag'
 import { Button } from '@/shared/ui/components/button'
 import { Badge } from '@/shared/ui/components/badge'
 import { Separator } from '@/shared/ui/components/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/components/tabs'
-import { ArrowLeft, Upload, ImageIcon } from 'lucide-react'
+import { ArrowLeft, ImageIcon } from 'lucide-react'
 import { useRef } from 'react'
 
 export function RecipeDetailPage({ id }: { id: string }) {
@@ -15,7 +17,9 @@ export function RecipeDetailPage({ id }: { id: string }) {
     currentTranslation,
     handlePhotoUpload, handleBack,
   } = useRecipeDetailPage(id)
+  const { tags } = useGetAllTags()
   const fileRef = useRef<HTMLInputElement>(null)
+  const tagName = (id: string) => tags.find((tag) => tag.id === id)?.name ?? id
 
   if (isLoading || !recipe) {
     return <div className="py-12 text-center text-text-tertiary">Loading...</div>
@@ -38,8 +42,8 @@ export function RecipeDetailPage({ id }: { id: string }) {
             className="w-48 h-48 rounded-xl border-2 border-dashed border-border-default flex items-center justify-center cursor-pointer hover:border-primary-default transition-colors overflow-hidden"
           >
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])} />
-            {recipe.photo_url ? (
-              <img src={recipe.photo_url} alt="" className="w-full h-full object-cover" />
+            {recipe.photoUrl ? (
+              <img src={recipe.photoUrl} alt="" className="w-full h-full object-cover" />
             ) : (
               <div className="text-center text-text-tertiary">
                 <ImageIcon size={32} className="mx-auto mb-1" />
@@ -60,20 +64,19 @@ export function RecipeDetailPage({ id }: { id: string }) {
 
           <div className="flex flex-wrap gap-3">
             <NutritionBadge label="Calories" value={`${recipe.calories}`} unit="kcal" />
-            <NutritionBadge label="Protein" value={`${recipe.proteins_g}`} unit="g" />
-            <NutritionBadge label="Carbs" value={`${recipe.carbs_g}`} unit="g" />
-            <NutritionBadge label="Fats" value={`${recipe.fats_g}`} unit="g" />
+            <NutritionBadge label="Protein" value={`${recipe.proteinG}`} unit="g" />
+            <NutritionBadge label="Carbs" value={`${recipe.carbsG}`} unit="g" />
+            <NutritionBadge label="Fats" value={`${recipe.fatsG}`} unit="g" />
             <NutritionBadge label="Servings" value={`${recipe.servings}`} unit="" />
-            <NutritionBadge label="Time" value={`${recipe.cooking_time_minutes}`} unit="min" />
+            <NutritionBadge label="Time" value={recipe.cookTimeMinutes === null ? '-' : `${recipe.cookTimeMinutes}`} unit="min" />
           </div>
 
-          {/* Tags */}
+          {/* Category, cuisine and diets as one chip row — names come from
+              /tags, because ids alone would be unreadable. */}
           <div className="flex flex-wrap gap-1.5">
-            {recipe.recipe_tags?.map((rt) => (
-              <Badge key={rt.tag_id} variant="outline">
-                {rt.tags?.tag_translations?.find((t) => t.language === activeTab)?.name
-                  ?? rt.tags?.tag_translations?.[0]?.name
-                  ?? rt.tag_id}
+            {tagsOf(recipe).map((tagId) => (
+              <Badge key={tagId} variant="outline">
+                {tagName(tagId)}
               </Badge>
             ))}
           </div>
@@ -91,28 +94,38 @@ export function RecipeDetailPage({ id }: { id: string }) {
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex-wrap h-auto gap-1">
-              {languages.map((lang) => (
-                <TabsTrigger key={lang.code} value={lang.code} className="text-xs">
-                  {lang.native_name} ({lang.code})
+              {languages.map((language) => (
+                <TabsTrigger key={language} value={language} className="text-xs uppercase">
+                  {language}
                 </TabsTrigger>
               ))}
             </TabsList>
 
-            {languages.map((lang) => {
-              const translation = recipe.recipe_translations?.find((t) => t.language === lang.code)
+            {languages.map((language) => {
+              const translation = recipe.translations.find((t) => t.language === language)
               return (
-                <TabsContent key={lang.code} value={lang.code} className="mt-4 space-y-4" dir={lang.is_rtl ? 'rtl' : 'ltr'}>
+                <TabsContent key={language} value={language} className="mt-4 space-y-4">
                   <div>
                     <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Title</label>
                     <p className="text-text-primary text-lg mt-1">{translation?.title ?? '—'}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Cooking Instructions</label>
+                    <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Steps</label>
                     <ol className="list-decimal list-inside mt-2 space-y-1.5">
-                      {(translation?.cooking_instructions ?? []).map((step, i) => (
-                        <li key={i} className="text-sm text-text-primary">{step}</li>
-                      ))}
+                      {recipe.steps.map((step) => {
+                        const text = step.translations.find((t) => t.language === language)
+                        return (
+                          <li key={step.id} className="text-sm text-text-primary">
+                            {text?.title ?? '—'}
+                            {step.durationMinutes !== null && (
+                              <span className="text-text-tertiary"> · {step.durationMinutes} min</span>
+                            )}
+                            {text?.description && <p className="ml-5 text-text-secondary">{text.description}</p>}
+                          </li>
+                        )
+                      })}
                     </ol>
+                    {recipe.steps.length === 0 && <p className="text-text-tertiary text-sm mt-2">No steps</p>}
                   </div>
                 </TabsContent>
               )
@@ -127,25 +140,23 @@ export function RecipeDetailPage({ id }: { id: string }) {
       <div>
         <h2 className="font-[family-name:var(--font-heading)] text-lg font-semibold text-text-primary mb-3">Ingredients</h2>
         <div className="space-y-2">
-          {recipe.recipe_ingredients?.map((ri, i) => (
-            <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-bg-surface text-sm">
-              <span className="text-text-primary">
-                {ri.ingredients?.ingredient_translations?.find((t) => t.language === activeTab)?.name
-                  ?? ri.ingredients?.ingredient_translations?.[0]?.name
-                  ?? 'Unknown'}
-              </span>
-              <span className="text-text-secondary font-medium">
-                {ri.amount} {ri.unit}
-              </span>
+          {recipe.ingredients.map((line) => (
+            <div key={line.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-bg-surface text-sm">
+              <span className="text-text-primary">{line.productName}</span>
+              {/* Grams, always: the model has no other unit. */}
+              <span className="text-text-secondary font-medium">{line.amountG} g</span>
             </div>
           ))}
-          {(!recipe.recipe_ingredients || recipe.recipe_ingredients.length === 0) && (
-            <p className="text-text-tertiary text-sm">No ingredients</p>
-          )}
+          {recipe.ingredients.length === 0 && <p className="text-text-tertiary text-sm">No ingredients</p>}
         </div>
       </div>
     </div>
   )
+}
+
+/** Category, cuisine and diets flattened into one list for the chip row. */
+function tagsOf(recipe: RecipeDetail): string[] {
+  return [recipe.categoryId, recipe.cuisineId, ...recipe.dietIds].filter((id): id is string => id !== null)
 }
 
 function NutritionBadge({ label, value, unit }: { label: string; value: string; unit: string }) {

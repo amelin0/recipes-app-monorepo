@@ -1,53 +1,86 @@
-import { HttpService } from '@/shared/services'
-import type { Recipe, RecipeFilters, RecipeFull, CreateRecipeParams, Tag, Ingredient, ImportResult, PaginatedRecipes } from './recipe.types'
+import { HttpService, type Paginated } from '@/shared/services'
+
+import type {
+  ImportReport,
+  Product,
+  Recipe,
+  RecipeDetail,
+  RecipeFilters,
+  SaveRecipeParams,
+  UploadGrant,
+} from './recipe.types'
 
 function buildQuery(params: Record<string, string | number | undefined>): string {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
   if (entries.length === 0) return ''
-  return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()
+  return '?' + new URLSearchParams(entries.map(([key, value]) => [key, String(value)])).toString()
 }
 
 export const RecipeApi = {
   getAll: (filters?: RecipeFilters) => {
     const query = buildQuery({
       search: filters?.search,
-      tags: filters?.tags,
+      categoryId: filters?.categoryId,
+      cuisineId: filters?.cuisineId,
+      dietIds: filters?.dietIds,
+      language: filters?.language,
       page: filters?.page,
       limit: filters?.limit,
     })
-    return HttpService.get<PaginatedRecipes>(`/admin/recipes${query}`)
+
+    // getPaginated, not get: the table needs `meta.total` for its pager, and
+    // unwrapping to `data` would throw it away.
+    return HttpService.getPaginated<Recipe>(`/recipes${query}`)
   },
 
-  getById: (id: string) =>
-    HttpService.get<Recipe>(`/admin/recipes/${id}`),
+  /** One representation, not a light one plus a `/full` one — two nearly
+   * identical shapes drift, and this screen opens a recipe at a time. */
+  getById: (id: string) => HttpService.get<RecipeDetail>(`/recipes/${id}`),
 
-  getByIdFull: (id: string) =>
-    HttpService.get<RecipeFull>(`/admin/recipes/${id}/full`),
+  create: (data: SaveRecipeParams) => HttpService.post<RecipeDetail>('/recipes', data),
 
-  create: (data: CreateRecipeParams) =>
-    HttpService.post<Recipe>('/admin/recipes', data),
+  /**
+   * `PUT`, not `PATCH`: composition and steps are replaced whole, so the form
+   * sends the entire dish. Omitting `ingredients` does not leave them alone —
+   * there is no request that leaves them alone.
+   */
+  update: (id: string, data: SaveRecipeParams) => HttpService.put<RecipeDetail>(`/recipes/${id}`, data),
 
-  update: (id: string, data: Partial<CreateRecipeParams>) =>
-    HttpService.put<Recipe>(`/admin/recipes/${id}`, data),
+  deleteMany: (ids: string[]) => HttpService.post<{ deleted: number }>('/recipes/bulk-delete', { ids }),
 
-  deleteMany: (ids: string[]) =>
-    HttpService.post<{ deleted: number }>('/admin/recipes/delete', { ids }),
+  /** Products for the composition editor. A dish can only be built from what
+   * the catalogue already holds — there is no «create product» here. */
+  searchProducts: (search?: string, language = 'uk') =>
+    HttpService.getPaginated<Product>(`/products${buildQuery({ search, language, limit: 50 })}`),
 
-  getTags: () =>
-    HttpService.get<Tag[]>('/admin/recipes/tags/all'),
-
-  getIngredients: () =>
-    HttpService.get<Ingredient[]>('/admin/recipes/ingredients/all'),
-
+  /** The one place a file really travels through the API: a CSV has to be read
+   * rather than stored, and at five hundred rows it is about 200 KB. */
   importCsv: (file: File) => {
     const formData = new FormData()
     formData.append('file', file)
-    return HttpService.upload<ImportResult>('/admin/recipes/import', formData)
+    return HttpService.upload<ImportReport>('/recipes/import', formData)
   },
 
-  uploadImage: (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return HttpService.upload<{ url: string }>('/admin/upload/recipe-image', formData)
+  /**
+   * Photos do NOT go through the API — the server signs a URL and the browser
+   * PUTs the bytes straight to storage. That is what keeps nginx in front of
+   * the API at a 2 MB body limit and a 25 MB photo out of the worker's memory.
+   */
+  createImageUpload: (file: File) =>
+    HttpService.post<UploadGrant>('/uploads/recipe-image', {
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    }),
+
+  uploadImage: async (file: File): Promise<string> => {
+    const grant = await RecipeApi.createImageUpload(file)
+
+    const res = await fetch(grant.uploadUrl, { method: 'PUT', headers: grant.headers, body: file })
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+
+    return grant.publicUrl
   },
 }
+
+export type { Paginated }

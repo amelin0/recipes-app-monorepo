@@ -19,9 +19,12 @@
             "@dns/api-common": ["../../packages/api-common/src"],
             "@dns/constants": ["../../packages/constants/src"],
             "@dns/database": ["../../packages/database/src"],
-            "@dns/shared-types": ["../../packages/shared-types/src"]
+            "@dns/shared-types": ["../../packages/shared-types/src"],
+            "@dns/validation": ["../../packages/validation/src"],
+            "@dns/api-infrastructure": ["../../packages/api-infrastructure/src"],
+            "@dns/api-infrastructure/*": ["../../packages/api-infrastructure/src/*"]
         }
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "test/**/*", "jest.db.config.ts"],
     "exclude": ["node_modules", "dist"]
 }

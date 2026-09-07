@@ -28,7 +28,8 @@
         "db:migrate": "pnpm --filter @dns/database db:migrate",
         "db:studio": "pnpm --filter @dns/database db:studio",
         "db:seed": "pnpm --filter @dns/database db:seed",
-        "clean": "rm -rf node_modules && pnpm -r exec rm -rf dist node_modules .turbo"
+        "clean": "rm -rf node_modules && pnpm -r exec rm -rf dist node_modules .turbo",
+        "db:seed:admin": "pnpm --filter @dns/database db:seed:admin"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",

@@ -17,8 +17,7 @@ export enum Queries {
   RECIPE = 'recipe',
   RECIPE_FULL = 'recipe-full',
   TAGS = 'tags',
-  TAGS_FULL = 'tags-full',
-  INGREDIENTS = 'ingredients',
+  PRODUCTS_SEARCH = 'products-search',
   LANGUAGES = 'languages',
 
   // ─── Products ────────────────────────────────────────

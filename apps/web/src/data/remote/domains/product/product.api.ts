@@ -7,6 +7,14 @@ function buildQuery(params: Record<string, string | number | undefined>): string
   return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()
 }
 
+/**
+ * ⚠️ NONE of this has a server yet — the admin product domain is its own
+ * slice. Left in its V1 shape deliberately; see `../../README.md`.
+ *
+ * The recipe form does not use this: it picks ingredients through
+ * `RecipeApi.searchProducts()`, which hits the one product endpoint that does
+ * exist.
+ */
 export const ProductApi = {
   getAll: (filters?: ProductFilters) => {
     const query = buildQuery({
