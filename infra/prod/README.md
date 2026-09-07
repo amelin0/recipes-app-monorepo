@@ -25,10 +25,13 @@ nginx стоїть **на хості**, не в контейнері, тож у�
 
 | Що | Змінна | У нас | Де ще згадується |
 | --- | --- | --- | --- |
-| client-api | `CLIENT_API_PORT` (`.env.prod`) | 3028 | `prometheus/prometheus.yml`, `nginx/client-api.conf.example` |
-| admin-api | `ADMIN_API_PORT` (`.env.prod`) | 3029 | `prometheus/prometheus.yml` |
-| Grafana | `GRAFANA_HTTP_PORT` (`.env.obs`) | 3030 | `nginx/grafana.conf.example` |
+| client-api | `CLIENT_API_PORT` (`.env.prod`) | 3028 | `prometheus/prometheus.yml`, `nginx/dev.api.client.rationfit.com` |
+| admin-api | `ADMIN_API_PORT` (`.env.prod`) | 3029 | `prometheus/prometheus.yml`, `nginx/dev.api.admin.rationfit.com` |
+| Grafana | `GRAFANA_HTTP_PORT` (`.env.obs`) | 3030 | `nginx/dev.grafana.rationfit.com` |
 | Prometheus | `PROMETHEUS_HTTP_PORT` (`.env.obs`) | 3031 | — |
+
+Адмінки (`@dns/web`) тут немає: вона на Vercel, і `dev.admin.rationfit.com`
+налаштовується CNAME'ом там, а не на цьому сервері.
 
 У API **одне число на сервіс**: воно ж усередині контейнера, воно ж на хості.
 Тому в compose немає `CLIENT_API_PORT: '3000'` у блоці `environment` — цей блок
@@ -102,14 +105,26 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 
 ## nginx
 
-Шаблони в `nginx/`. Один піддомен на API і один на Grafana.
+Готові vhost'и під dev-сервер лежать у `nginx/`, названі за хостами — див.
+`nginx/README.md` (порядок із certbot і чим вони відрізняються від конфігів
+11am).
+
+| Хост | Куди |
+| --- | --- |
+| `dev.api.client.rationfit.com` | client-api `127.0.0.1:3028` |
+| `dev.api.admin.rationfit.com` | admin-api `127.0.0.1:3029` |
+| `dev.grafana.rationfit.com` | Grafana `127.0.0.1:3030` |
+
+Ставляться одним запуском — `sudo infra/prod/nginx/install.sh <email>`: він
+робить bootstrap під ACME, бере сертифікати, підміняє на справжні файли й
+перезавантажує nginx.
 
 **`/metrics` мусить бути закритий назовні.** У застосунку його ніщо не
 охороняє — Prometheus ходить внутрішньою мережею. Відкритий публічно, він
-публікує імена маршрутів, обсяги трафіку і внутрішній стан процесу.
-`client-api.conf.example` повертає на нього 404.
+публікує імена маршрутів, обсяги трафіку і внутрішній стан процесу. Обидва
+API-vhost'и повертають на нього 404.
 
-Grafana слухає лише `127.0.0.1:$GRAFANA_HTTP_PORT`; nginx — єдиний шлях до неї.
+Усі контейнери слухають лише `127.0.0.1`; nginx на хості — єдиний шлях до них.
 
 ## Що з чим зʼєднано
 
