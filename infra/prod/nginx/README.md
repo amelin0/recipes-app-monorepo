@@ -11,11 +11,13 @@ nginx стоїть **на хості**, не в контейнері. Конте
 | `dev.api.client.rationfit.com` | client-api | 3028 | `CLIENT_API_PORT` у `../.env.prod` |
 | `dev.api.admin.rationfit.com` | admin-api | 3029 | `ADMIN_API_PORT` у `../.env.prod` |
 | `dev.grafana.rationfit.com` | Grafana | 3030 | `GRAFANA_HTTP_PORT` у `../.env.obs` |
+| `dev.admin.rationfit.com` | адмінка (`@dns/web`) | — | статика з `/var/www/dns-admin/current` |
 
-**`dev.admin.rationfit.com` тут немає свідомо** — адмінка (`@dns/web`) живе на
-Vercel. Піддомен налаштовується CNAME'ом у Vercel, nginx до нього не
-дотичний; єдине, що треба не забути — `NEXT_PUBLIC_API_URL` у змінних проєкту
-Vercel має вказувати на `https://dev.api.admin.rationfit.com`.
+Адмінка **не проксіюється** — це каталог файлів. `next build` іде з
+`output: 'export'`, бо SSR тут не використовується взагалі: жодної
+`async`-сторінки, жодних server actions, сесія в `localStorage`, усі дані по
+HTTP. Публікує `../publish-web.sh`; шлях у vhost — симлінк, який той скрипт
+перемикає, тож викладка атомарна.
 
 Для Prometheus vhost теж немає **свідомо**: у нього нуль автентифікації, а
 admin-API вміє видаляти серії. Доступ — `ssh -L 9090:127.0.0.1:3031 <host>`
@@ -23,7 +25,7 @@ admin-API вміє видаляти серії. Доступ — `ssh -L 9090:12
 
 ## Встановлення
 
-A-записи всіх трьох хостів мають вказувати на сервер **до** запуску —
+A-записи всіх чотирьох хостів мають вказувати на сервер **до** запуску —
 HTTP-01 інакше не пройде, а Let's Encrypt обмежує кількість невдалих спроб.
 
 ```bash
@@ -32,12 +34,24 @@ git clone <repo> && cd <repo>      # або scp усієї теки nginx/
 sudo infra/prod/nginx/install.sh oleh.cherednik@gmail.com
 ```
 
-Скрипт ідемпотентний: повторний запуск не перевидає наявні сертифікати, тож
-ним же зручно розкочувати правки у vhost'ах.
+Скрипт ідемпотентний і **безпечний на сервері, який уже обслуговує**:
+сертифікат, що існує, не перевидається, а ACME-bootstrap пишеться **лише для
+хостів без сертифіката**. Раніше він називав усі — і оскільки `sites-enabled`
+читається за абеткою, `00-acme-bootstrap` вигравав збіг `server_name` і
+забирав `:80` у робочих vhost'ів на час прогону.
+
+Додати один піддомен до сервера, де решта вже працює:
+
+```bash
+sudo infra/prod/nginx/install.sh <email> --host dev.admin.rationfit.com
+```
+
+`--host` можна повторювати. У кроці 4 скрипт друкує `unchanged` / `updated` на
+кожен файл, тож видно рівно те, що змінилося.
 
 Що він робить:
 
-1. Кладе тимчасовий `:80`-only блок на всі три імені. **Це не зайвий крок:**
+1. Кладе тимчасовий `:80`-only блок на всі чотири імені. **Це не зайвий крок:**
    справжні файли посилаються на сертифікати, яких ще немає, і `nginx -t`
    впав би на них до того, як certbot встиг би щось видати.
 2. `certbot certonly --webroot` — окремий сертифікат на хост, бо кожен vhost
@@ -99,7 +113,13 @@ curl -sI https://dev.api.client.rationfit.com/api/v1/health | head -1   # 200
 curl -sI https://dev.api.client.rationfit.com/metrics       | head -1   # 404
 curl -sI https://dev.api.admin.rationfit.com/api/v1/health  | head -1   # 200
 curl -sI https://dev.grafana.rationfit.com/login            | head -1   # 200
+curl -sI https://dev.admin.rationfit.com/recipes/           | head -1   # 200
+curl -sI https://dev.admin.rationfit.com/nope/              | head -1   # 404
 ```
+
+Останній рядок навмисний: у експорті є справжня сторінка на кожен маршрут, і
+SPA-фолбек на `index.html` ховав би зламані посилання за панеллю, яка виглядає
+робочою.
 
 `/metrics` мусить давати саме **404**. У застосунку його ніщо не охороняє —
 Prometheus ходить внутрішньою мережею; відкритий назовні, він публікує імена

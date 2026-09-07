@@ -30,8 +30,8 @@ nginx стоїть **на хості**, не в контейнері, тож у�
 | Grafana | `GRAFANA_HTTP_PORT` (`.env.obs`) | 3030 | `nginx/dev.grafana.rationfit.com` |
 | Prometheus | `PROMETHEUS_HTTP_PORT` (`.env.obs`) | 3031 | — |
 
-Адмінки (`@dns/web`) тут немає: вона на Vercel, і `dev.admin.rationfit.com`
-налаштовується CNAME'ом там, а не на цьому сервері.
+Адмінка порту не має взагалі: це статика, яку nginx віддає з диска. Див.
+«Адмінка» нижче.
 
 У API **одне число на сервіс**: воно ж усередині контейнера, воно ж на хості.
 Тому в compose немає `CLIENT_API_PORT: '3000'` у блоці `environment` — цей блок
@@ -232,6 +232,7 @@ docker images | grep dns/      # лишити 2-3 теги для відкату
 | `dev.api.client.rationfit.com` | client-api `127.0.0.1:3028` |
 | `dev.api.admin.rationfit.com` | admin-api `127.0.0.1:3029` |
 | `dev.grafana.rationfit.com` | Grafana `127.0.0.1:3030` |
+| `dev.admin.rationfit.com` | статика з `/var/www/dns-admin/current` |
 
 Ставляться одним запуском — `sudo infra/prod/nginx/install.sh <email>`: він
 робить bootstrap під ACME, бере сертифікати, підміняє на справжні файли й
@@ -243,6 +244,38 @@ docker images | grep dns/      # лишити 2-3 теги для відкату
 API-vhost'и повертають на нього 404.
 
 Усі контейнери слухають лише `127.0.0.1`; nginx на хості — єдиний шлях до них.
+
+## Адмінка
+
+Панель — **статичні файли**, не процес. `next build` іде з
+`output: 'export'`, бо SSR у ній не використовується: жодної `async`-сторінки,
+жодних server actions, сесія в `localStorage`, усі дані по HTTP від admin-api.
+Node-процес, який віддавав би HTML, що його JavaScript одразу замінює, був би
+ще однією річчю, яку треба тримати запущеною і рестартувати на деплої.
+
+```bash
+sudo ./infra/prod/publish-web.sh
+```
+
+Збирає, кладе реліз у `/var/www/dns-admin/releases/<дата>-<sha>` і перемикає
+симлінк `current`. Викладка атомарна: ніхто не отримає `index.html`, який
+посилається на чанки, ще не скопійовані. Відкат — без перезбірки:
+
+```bash
+ln -sfn /var/www/dns-admin/releases/<назва> /var/www/dns-admin/current
+```
+
+⚠️ **`NEXT_PUBLIC_API_URL` вшивається під час збірки.** Скрипт читає його з
+`.env.prod`. Перенацілити панель на інший API — це перезбірка, а не
+перезапуск: перезапускати нічого.
+
+Кешування розведене навмисно: `/_next/static/` — рік і `immutable` (імена
+містять хеш), HTML — `no-store`. Навпаки було б гірше: закешований HTML
+посилається на чанки, яких у новій збірці вже немає.
+
+Останній `try_files` дає **404**, а не `index.html`. У експорті є справжня
+сторінка на кожен маршрут, і SPA-фолбек ховав би зламані посилання за
+панеллю, яка виглядає робочою.
 
 ## Що з чим зʼєднано
 
