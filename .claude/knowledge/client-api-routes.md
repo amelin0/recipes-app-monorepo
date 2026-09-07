@@ -145,20 +145,32 @@ AND між групами. Причина — в ADR-0006.
 Коди помилок: `meal-plan.recipe-not-found`, `meal-plan.item-not-found`,
 `meal-plan.nothing-to-copy`, `meal-plan.source-among-targets`.
 
-## shopping-list ○
+## shopping-list ✅
 
-| Method | Path                        | Що                                             |
-| ------ | --------------------------- | ---------------------------------------------- |
-| GET    | `/shopping-list`            | список, згрупований по категоріях              |
-| POST   | `/shopping-list/items`      | додати вручну **або** з плану — джерело в тілі |
-| PATCH  | `/shopping-list/items/{id}` | `{ purchased, quantity }`                      |
-| DELETE | `/shopping-list/items/{id}` | прибрати позицію                               |
-| DELETE | `/shopping-list/items`      | очистити список                                |
-| PATCH  | `/shopping-list`            | `{ importFromPlan: bool }`                     |
+| Method | Path                                                  | Що                                                       |
+| ------ | ----------------------------------------------------- | -------------------------------------------------------- |
+| GET    | `/shopping-list?from=&to=`                            | список полицями; вікно те саме, що у плану               |
+| POST   | `/shopping-list/items`                                | додати вручну: `{ productId, unit, value }`              |
+| DELETE | `/shopping-list/items/{productId}`                    | прибрати вручну додану позицію                           |
+| PUT    | `/shopping-list/items/{origin}/{productId}/purchased` | відмітити куплене — 204, ідемпотентно                    |
+| DELETE | `/shopping-list/items/{origin}/{productId}/purchased` | зняти відмітку                                           |
+| DELETE | `/shopping-list`                                      | очистити список                                          |
+| PUT    | `/shopping-list/plan-import`                          | увімкнути «Додати з плану»                               |
+| DELETE | `/shopping-list/plan-import`                          | вимкнути; відмітки лишаються                             |
 
-Імпорт із плану — це створення позицій, тож `POST /shopping-list/items` із
-посиланням на джерело, а не `POST /meal-plan/days/{day}/to-shopping-list`:
-ресурс, що змінюється, — список покупок.
+**Імпорту як дії не існує.** Позиції з плану не створюються, а **виводяться**
+сумою складу запланованих страв на кожному читанні — тож
+`POST /shopping-list/items` приймає лише ручне додавання, а правила
+синхронізації з планом писати не доведеться.
+
+**`origin` у шляху відмітки** (`manual` | `plan`), бо той самий продукт може
+стояти в списку двічі й купівля одного не є купівлею іншого.
+
+**Кількість приходить одиницею й числом** (`serving` | `piece` | `gram`), а не
+грамами: «порція — 250 г» лишається фактом сервера, який можна змінити без
+релізу застосунку.
+
+Коди помилок: `shopping-list.product-not-found`, `shopping-list.item-not-found`.
 
 ## progress ✅
 

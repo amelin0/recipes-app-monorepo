@@ -17,11 +17,11 @@ UI екранів уже реалізовано в мобільному заст
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Weekly list (Список продуктів)](./weekly-list/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Add product (Додати продукт)](./add-product/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Weekly list (Список продуктів)](./weekly-list/spec.md) | Implemented | @amelin0 | 2026-09-07 |
+| [Add product (Додати продукт)](./add-product/spec.md) | Implemented | @amelin0 | 2026-09-07 |
 
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/shopping-list/`
-- Код (майбутній API): `apps/client-api/src/`
+- Код (API): `apps/client-api/src/modules/shopping-list/`
 - Knowledge (контракти V1, референс): [`.claude/knowledge/shopping-list/`](../../../../.claude/knowledge/shopping-list)
