@@ -30,5 +30,8 @@ import { RecipeService } from './recipe.service';
     ],
     controllers: [RecipeController, ProductController],
     providers: [RecipeService, ProductService, ReaderLanguageService],
+    // The meal plan renders catalogue cards, so it reads in the same language
+    // by the same rules — one definition of «which language», not two.
+    exports: [ReaderLanguageService],
 })
 export class CatalogModule {}
