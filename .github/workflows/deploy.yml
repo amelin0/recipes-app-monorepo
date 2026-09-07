@@ -1,0 +1,88 @@
+# Deploy to the dev server — runs on the SELF-HOSTED runner on that server.
+#
+# The job body is deliberately one line: every deploy decision lives in
+# infra/prod/deploy.sh, so running it by hand over SSH and running it from here
+# execute the identical code path. A second implementation in YAML is how the
+# two silently drift apart, and the drift only shows up during an incident.
+#
+# ── Self-hosted runner on a private repo ─────────────────────────────────
+# Supported on the Free plan, and self-hosted minutes do not count against the
+# GitHub-hosted allowance. GitHub's warning against self-hosted runners applies
+# to PUBLIC repositories, where a fork's pull request could run arbitrary code
+# on your hardware; this repository is private.
+#
+# Registering the runner is a procedure, not a comment — see
+# docs/runbooks/register-actions-runner.md. Until it is done, this job sits on
+# "Waiting for a runner to pick up this job" forever rather than failing.
+#
+# The runner needs no Actions secrets: .env.prod already lives on the server
+# and never leaves it. It does need git read access to this repository, which
+# the Actions token does NOT provide to a self-hosted runner working outside
+# its own workspace — the runbook covers the deploy key.
+
+name: deploy
+
+# `development` is the branch the dev server tracks. `production` is the
+# default branch and is NOT what this deploys.
+on:
+    push:
+        branches: [development]
+    workflow_dispatch:
+        inputs:
+            ref:
+                description: 'Branch to deploy'
+                required: false
+                default: 'development'
+
+# Two deploys at once would race on the image tag, the migrations and the
+# container swap. Never cancel a running one — it may be mid-migration, and a
+# half-applied migration is worse than a slow queue.
+concurrency:
+    group: deploy-dev
+    cancel-in-progress: false
+
+jobs:
+    deploy:
+        runs-on: [self-hosted]
+        timeout-minutes: 30
+
+        # Belt and braces: `on.push.branches` already restricts this, but an
+        # explicit guard means a mis-scoped trigger cannot reach the server.
+        if: github.ref == 'refs/heads/development' || github.event_name == 'workflow_dispatch'
+
+        env:
+            # The canonical checkout on the server — NOT the runner workspace.
+            # That directory holds infra/prod/.env.prod and the local image
+            # history the rollback depends on, neither of which exists in a
+            # fresh workspace. Set it once:
+            #   Settings → Secrets and variables → Actions → Variables
+            #   PROD_REPO = /home/<user>/recipes-app-monorepo
+            PROD_REPO: ${{ vars.PROD_REPO }}
+            REF: ${{ github.event.inputs.ref || 'development' }}
+
+        steps:
+            # No actions/checkout on purpose. deploy.sh does its own fetch
+            # inside PROD_REPO; checking out into the runner workspace and
+            # deploying from there would lose .env.prod and every previous
+            # image, which is to say it would lose the ability to roll back.
+            - name: Deploy
+              run: |
+                  if [ -z "$PROD_REPO" ]; then
+                    echo "::error::repository variable PROD_REPO is not set — see docs/runbooks/register-actions-runner.md"
+                    exit 1
+                  fi
+                  if [ ! -d "$PROD_REPO/.git" ]; then
+                    echo "::error::$PROD_REPO is not a git checkout"
+                    exit 1
+                  fi
+                  cd "$PROD_REPO"
+                  bash infra/prod/deploy.sh --ref "$REF"
+
+            # Runs even when the deploy failed and rolled back, so the run page
+            # shows what is actually serving rather than only what went wrong.
+            - name: Status
+              if: always()
+              run: |
+                  cd "$PROD_REPO"
+                  docker compose -p dns-prod --env-file infra/prod/.env.prod \
+                    -f infra/prod/docker-compose.prod.yml ps

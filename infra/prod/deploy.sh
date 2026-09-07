@@ -7,6 +7,9 @@
 #   ./infra/prod/deploy.sh --no-pull       # deploy the working tree as it is
 #   ./infra/prod/deploy.sh --no-cache      # rebuild ignoring the layer cache
 #   ./infra/prod/deploy.sh --tag a1b2c3d   # deploy an already-built tag (rollback)
+#   ./infra/prod/deploy.sh --ref development
+#                                          # fetch and deploy that branch —
+#                                          # what the Actions workflow calls
 #
 # Run it from anywhere in the repo: it finds the root itself, because the
 # docker build context has to be the root and nothing else works.
@@ -26,11 +29,20 @@ set -euo pipefail
 PULL=1
 NO_CACHE=''
 EXPLICIT_TAG=''
+REF=''
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --no-pull) PULL=0 ;;
         --no-cache) NO_CACHE='--no-cache --pull' ;;
+        --ref)
+            REF="${2:-}"
+            [ -n "$REF" ] || {
+                echo "--ref needs a value" >&2
+                exit 1
+            }
+            shift
+            ;;
         --tag)
             EXPLICIT_TAG="${2:-}"
             [ -n "$EXPLICIT_TAG" ] || {
@@ -40,7 +52,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -h | --help)
-            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
@@ -111,8 +123,17 @@ else
             echo "working tree is dirty — commit, stash, or use --no-pull deliberately" >&2
             exit 1
         fi
-        echo "── 1/6  git pull"
-        git pull --ff-only
+        if [ -n "$REF" ]; then
+            # `checkout -B` rather than `pull`: CI names the branch it wants,
+            # and the box may be sitting on a different one — or on a commit
+            # somebody reset by hand. This lands exactly on what origin has.
+            echo "── 1/6  fetch $REF"
+            git fetch origin "$REF"
+            git checkout -B "$REF" FETCH_HEAD
+        else
+            echo "── 1/6  git pull"
+            git pull --ff-only
+        fi
     fi
 
     TAG="$(git rev-parse --short HEAD)"
