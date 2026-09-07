@@ -1,0 +1,15 @@
+apiVersion: 1
+
+providers:
+    - name: dns
+      orgId: 1
+      folder: DNS
+      type: file
+      # Edits made in the UI are overwritten on restart. That is deliberate:
+      # a dashboard that only exists in somebody's browser is a dashboard
+      # nobody else has.
+      disableDeletion: false
+      allowUiUpdates: false
+      options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false

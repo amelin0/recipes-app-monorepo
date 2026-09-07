@@ -54,3 +54,7 @@ temp/
 
 # NestJS build output
 apps/*/dist
+
+# Deployment secrets — the compose stacks read these, they never go in git.
+infra/prod/.env.prod
+infra/prod/.env.obs

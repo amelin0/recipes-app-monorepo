@@ -1,0 +1,29 @@
+# Blackbox exporter — probes an HTTP endpoint and reports probe_success.
+#
+# It exists because a metrics scrape cannot tell you the API is unusable: the
+# process answers /metrics perfectly well while Postgres is unreachable.
+
+modules:
+    # /health/ready answers 200 only when every dependency responded, and 503
+    # when one did not — so the status code alone is the verdict.
+    http_ready:
+        prober: http
+        # Longer than the 2s the readiness probe budgets per dependency, so a
+        # slow database reads as «slow», not as «the probe timed out».
+        timeout: 8s
+        http:
+            method: GET
+            valid_status_codes: [200]
+            valid_http_versions: ['HTTP/1.1', 'HTTP/2.0']
+            preferred_ip_protocol: ip4
+            fail_if_body_not_matches_regexp:
+                - '"status"\s*:\s*"ready"'
+
+    # Plain liveness, for a service with no readiness route of its own.
+    http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+            method: GET
+            valid_status_codes: [200]
+            preferred_ip_protocol: ip4

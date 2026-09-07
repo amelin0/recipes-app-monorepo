@@ -1,0 +1,132 @@
+# DNS application stack.
+#
+#   docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml up -d
+#
+# --env-file is NOT optional on any command against this stack, `ps` and
+# `logs` included: compose auto-loads only a file literally named `.env`, and
+# the `:?` guards below abort interpolation before the command runs.
+#
+# Prerequisite, once:
+#   docker network create dns-net
+#
+# ─────────────────────────────────────────────────────────────────────────
+# WHAT THIS STACK DOES NOT OWN
+#
+# Postgres runs OUTSIDE Docker and is never created, migrated away or removed
+# by this file. Point DATABASE_URL at wherever it lives:
+#
+#   • on the same host   → host.docker.internal:5432 (the extra_hosts entry
+#                          below is what makes that name resolve on Linux)
+#   • managed / remote   → its own hostname, and drop extra_hosts
+#
+# The same goes for object storage: S3_* points at whatever serves the
+# bucket. Nothing here starts MinIO.
+#
+# Redis is absent on purpose — no code reads it. The throttler keeps its
+# counters in process memory, which is fine for one replica and is the thing
+# to fix before there are two.
+# ─────────────────────────────────────────────────────────────────────────
+
+name: dns-prod
+
+x-logging: &default-logging
+    driver: json-file
+    options:
+        # Promtail tails these files. Uncapped they grow until the disk is
+        # full, and on a box that also hosts Postgres, Postgres dies first.
+        max-size: '10m'
+        max-file: '3'
+
+x-api-common: &api-common
+    restart: unless-stopped
+    env_file:
+        - .env.prod
+    # Lets the container reach a Postgres running on the host. Harmless when
+    # DATABASE_URL points somewhere else.
+    extra_hosts:
+        - 'host.docker.internal:host-gateway'
+    networks:
+        - obs
+    logging: *default-logging
+
+services:
+    # ⚠️ The service name is load-bearing. Prometheus scrapes `client-api:3000`
+    # by this name, and Promtail derives the Loki `service` label from the same
+    # compose service name — renaming it silently breaks the join between a
+    # latency spike and the logs that explain it.
+    client-api:
+        <<: *api-common
+        image: ${IMAGE_REPO:-dns/client-api}:${IMAGE_TAG:?IMAGE_TAG is required — set it to the git sha}
+        container_name: dns-client-api
+        environment:
+            NODE_ENV: production
+            CLIENT_API_PORT: '3000'
+        ports:
+            # Loopback only: nginx terminates TLS and proxies here. Published
+            # on all interfaces this would expose /metrics to the whole LAN.
+            - '127.0.0.1:3000:3000'
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'node',
+                    '-e',
+                    "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
+
+    # Has exactly two routes so far — /health and /docs. It is here so the
+    # subdomain and the deploy path exist before the domain modules do.
+    admin-api:
+        <<: *api-common
+        image: ${ADMIN_IMAGE_REPO:-dns/admin-api}:${IMAGE_TAG:?IMAGE_TAG is required}
+        container_name: dns-admin-api
+        environment:
+            NODE_ENV: production
+            ADMIN_API_PORT: '3001'
+        ports:
+            - '127.0.0.1:3001:3001'
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'node',
+                    '-e',
+                    "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
+
+    # One-shot, run explicitly BEFORE the API is swapped:
+    #   docker compose -p dns-prod --env-file .env.prod \
+    #     -f docker-compose.prod.yml --profile migrate run --rm migrator
+    #
+    # A failure here must stop the deploy with the old container still
+    # serving. Its own image, because packages/database ships raw TypeScript
+    # and its runner needs tsx — neither is in the slim runtime image.
+    migrator:
+        image: ${IMAGE_REPO:-dns/client-api}-migrator:${IMAGE_TAG:?IMAGE_TAG is required}
+        profiles: ['migrate']
+        restart: 'no'
+        env_file:
+            - .env.prod
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        working_dir: /app/packages/database
+        command: ['pnpm', 'db:migrate']
+        networks:
+            - obs
+        logging: *default-logging
+
+networks:
+    # Shared with docker-compose.obs.yml so Prometheus reaches the APIs
+    # directly instead of going out through nginx.
+    #   docker network create dns-net
+    obs:
+        external: true
+        name: dns-net

@@ -1,0 +1,58 @@
+# Build context for the API images. Keep it tight: apps/mobile alone is
+# gigabytes of Expo and native build output, and it would dominate the upload
+# to the server.
+
+# --- dependencies & build output (re-created inside the image) ---
+node_modules/
+**/node_modules/
+.pnpm-store/
+dist/
+**/dist/
+.next/
+**/.next/
+*.tsbuildinfo
+
+# --- VCS & tooling ---
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+.claude/
+**/.claude/
+.worktrees/
+
+# --- docs & scratch ---
+docs/
+*.md
+!packages/*/README.md
+HANDOFF.md
+
+# --- secrets: env values come from the runtime environment, never baked in ---
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+
+# --- tests & coverage ---
+coverage/
+**/coverage/
+**/*.spec.ts
+**/*.db-spec.ts
+**/*.test.ts
+**/jest.*.config.ts
+
+# --- infra: the compose files and configs are copied to the server directly,
+#     never into an image ---
+infra/prod/
+infra/docker/
+
+# --- client apps: dropped wholesale, then their manifests are re-included ---
+# pnpm validates every workspace importer in pnpm-lock.yaml against what is on
+# disk. Without these manifests `pnpm install --frozen-lockfile` fails with
+# "lockfile is not up to date", even though --filter never installs them.
+apps/mobile/**
+apps/web/**
+!apps/mobile/package.json
+!apps/web/package.json

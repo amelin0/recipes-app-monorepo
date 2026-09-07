@@ -1,0 +1,109 @@
+# Promtail — ships Docker container logs to Loki.
+#
+# ⚠️ Promtail is end-of-life; Grafana's supported successor is Alloy. It still
+# works and is far simpler to run, which is why it is here — but this file is
+# the first thing to migrate when something breaks.
+#
+# Discovery is the Docker API rather than globbing
+# /var/lib/docker/containers/*/*-json.log: the API hands over compose service
+# names and labels, so containers get meaningful labels instead of 64-char ids.
+
+server:
+    http_listen_port: 9080
+    grpc_listen_port: 0
+    log_level: warn
+
+positions:
+    # On a volume, so a restart does not re-ship the entire retained history
+    # and duplicate it in Loki.
+    filename: /var/lib/promtail/positions.yaml
+
+clients:
+    - url: http://loki:3100/loki/api/v1/push
+      # A reboot or a Loki restart should not lose the buffer instantly.
+      backoff_config:
+          min_period: 500ms
+          max_period: 5m
+          max_retries: 10
+
+scrape_configs:
+    - job_name: docker
+      docker_sd_configs:
+          - host: unix:///var/run/docker.sock
+            refresh_interval: 15s
+
+      relabel_configs:
+          # ── ALLOWLIST — must stay first ──────────────────────────────
+          # docker_sd discovers EVERY container on the host. Left open, an
+          # unrelated project's logs land in this Loki and consume the same
+          # 14-day retention. Regexes are fully anchored; add a container by
+          # extending the alternation.
+          - source_labels: ['__meta_docker_container_name']
+            regex: '/(dns-.*)'
+            action: keep
+
+          # LABELS ARE THE LOKI INDEX. Only low-cardinality values belong
+          # here: service, container, level, env. Anything per-request — the
+          # request id, a user id, a path — stays in the JSON body and is
+          # queried with `| json | userId="…"`. Promoting those to labels
+          # creates one stream per value and is the classic way to kill Loki.
+          - source_labels: ['__meta_docker_container_name']
+            regex: '/(.*)'
+            target_label: 'container'
+
+          - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+            target_label: 'service'
+
+          - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+            target_label: 'project'
+
+          - target_label: 'env'
+            replacement: 'production'
+
+          # A container opts out by setting this label to "false".
+          - source_labels: ['__meta_docker_container_label_logging']
+            regex: 'false'
+            action: 'drop'
+
+      pipeline_stages:
+          # Both APIs emit pino JSON. Non-JSON lines fall through untouched —
+          # the json stage is best-effort.
+          - json:
+                expressions:
+                    level: level
+                    time: time
+                    msg: msg
+
+          # pino writes level as a NUMBER (30 = info, 50 = error). Left raw,
+          # the Grafana filter reads `level="50"`, which nobody wants to write
+          # or read. Map it to a name before it becomes a label.
+          - template:
+                source: level
+                template: >-
+                    {{ if eq .Value "10" }}trace{{ else if eq .Value "20" }}debug{{ else if eq .Value "30" }}info{{
+                    else if eq .Value "40" }}warn{{ else if eq .Value "50" }}error{{ else if eq .Value "60" }}fatal{{
+                    else }}unknown{{ end }}
+
+          - labels:
+                level:
+
+          # pino `time` is epoch milliseconds. Without this Loki timestamps by
+          # ingest time, so a backlog after a restart lands as one spike at
+          # "now" instead of spread across when it actually happened.
+          - timestamp:
+                source: time
+                format: UnixMs
+                action_on_failure: fudge
+
+          # MUST come after the timestamp stage — it filters on what that
+          # stage produced.
+          #
+          # A fresh positions file makes promtail start each container's log
+          # at byte zero. Loki refuses anything older than
+          # reject_old_samples_max_age (168h), so without this a first run
+          # against long-lived containers replays months of history into
+          # hundreds of rejected batches and floods its own log with 400s.
+          # 24h leaves headroom for a retry backoff.
+          - drop:
+                older_than: 24h
+                drop_counter_reason: entry_older_than_24h

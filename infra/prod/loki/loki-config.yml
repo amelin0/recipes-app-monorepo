@@ -1,0 +1,63 @@
+# Loki 3.x — single binary, filesystem backend. Sized for one server, not a
+# cluster: no object storage, no ring, replication factor 1.
+
+auth_enabled: false
+
+server:
+    http_listen_port: 3100
+    grpc_listen_port: 9096
+    # Loki's own logs at info are chatty enough to become the dominant
+    # producer on a quiet system.
+    log_level: warn
+
+common:
+    instance_addr: 127.0.0.1
+    path_prefix: /loki
+    storage:
+        filesystem:
+            chunks_directory: /loki/chunks
+            rules_directory: /loki/rules
+    replication_factor: 1
+    ring:
+        kvstore:
+            store: inmemory
+
+schema_config:
+    configs:
+        # v13 + tsdb is the current schema. `from` must be a past date, and it
+        # must never be edited in place — add a new entry with a future date
+        # instead, or existing chunks become unreadable.
+        - from: 2024-04-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+              prefix: index_
+              period: 24h
+
+limits_config:
+    # 14 days. The single most important setting here — without it the disk
+    # fills silently, and on a box that also hosts Postgres, Postgres dies
+    # first.
+    retention_period: 336h
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+    # A log loop in one container must not starve the others.
+    ingestion_rate_mb: 4
+    ingestion_burst_size_mb: 8
+    max_streams_per_user: 1000
+    # Guard against a bad relabel rule causing a stream explosion.
+    max_label_names_per_series: 15
+
+compactor:
+    working_directory: /loki/compactor
+    # `retention_period` above is INERT without these: the compactor is what
+    # actually deletes expired chunks, and Loki 3 additionally requires
+    # delete_request_store to be set for retention to run at all.
+    retention_enabled: true
+    delete_request_store: filesystem
+    compaction_interval: 10m
+    retention_delete_delay: 2h
+
+analytics:
+    reporting_enabled: false
