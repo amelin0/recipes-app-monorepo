@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
+import { recipeIngredients } from './recipe-ingredients.schema';
 import { recipes } from './recipes.schema';
 
 /**
@@ -9,11 +10,6 @@ import { recipes } from './recipes.schema';
  * The step's own text is translated; its number and duration are not, so they
  * stay here and the words go next door — the same split every other content
  * table in this domain uses.
- *
- * There is no per-step ingredient list yet: the current detail design prints
- * the dish's ingredients once above the steps. The create-dish editor does
- * offer per-step chips, and that is what will add the join table — building it
- * now would mean shipping a table nothing reads.
  */
 export const recipeSteps = pgTable(
     'recipe_steps',
@@ -46,9 +42,43 @@ export const recipeStepTranslations = pgTable(
     table => [primaryKey({ columns: [table.stepId, table.language] })],
 );
 
+/**
+ * Which of the dish's ingredients a step needs — the chips in the step editor
+ * (create-dish FR-007).
+ *
+ * It points at `recipe_ingredients`, not at `products`: the chip means «the
+ * 200 g of carrot from this dish», and pointing at the product would lose the
+ * amount and quietly survive the ingredient being removed from the dish.
+ */
+export const recipeStepIngredients = pgTable(
+    'recipe_step_ingredients',
+    {
+        stepId: uuid('step_id')
+            .notNull()
+            .references(() => recipeSteps.id, { onDelete: 'cascade' }),
+
+        recipeIngredientId: uuid('ingredient_id')
+            .notNull()
+            .references(() => recipeIngredients.id, { onDelete: 'cascade' }),
+    },
+    table => [
+        primaryKey({ columns: [table.stepId, table.recipeIngredientId] }),
+        index('recipe_step_ingredients_ingredient_idx').on(table.recipeIngredientId),
+    ],
+);
+
 export const recipeStepsRelations = relations(recipeSteps, ({ one, many }) => ({
     recipe: one(recipes, { fields: [recipeSteps.recipeId], references: [recipes.id] }),
     translations: many(recipeStepTranslations),
+    ingredients: many(recipeStepIngredients),
+}));
+
+export const recipeStepIngredientsRelations = relations(recipeStepIngredients, ({ one }) => ({
+    step: one(recipeSteps, { fields: [recipeStepIngredients.stepId], references: [recipeSteps.id] }),
+    ingredient: one(recipeIngredients, {
+        fields: [recipeStepIngredients.recipeIngredientId],
+        references: [recipeIngredients.id],
+    }),
 }));
 
 export const recipeStepTranslationsRelations = relations(recipeStepTranslations, ({ one }) => ({

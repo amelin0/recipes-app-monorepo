@@ -125,6 +125,7 @@ export class RecipeIngredientEntity {
 export interface RecipeStepRowWithText extends RecipeStepRow {
     title: string;
     description: string | null;
+    ingredientIds?: string[];
 }
 
 export class RecipeStepEntity {
@@ -134,12 +135,16 @@ export class RecipeStepEntity {
     readonly title: string;
     readonly description: string | null;
 
+    /** Ids from this dish's own composition — the chips the step editor set (create-dish FR-007). */
+    readonly ingredientIds: string[];
+
     private constructor(row: RecipeStepRowWithText) {
         this.id = row.id;
         this.stepNumber = row.stepNumber;
         this.durationMinutes = row.durationMinutes;
         this.title = row.title;
         this.description = row.description;
+        this.ingredientIds = row.ingredientIds ?? [];
     }
 
     static from(row: RecipeStepRowWithText): RecipeStepEntity {

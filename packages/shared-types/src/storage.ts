@@ -6,6 +6,7 @@
 export enum StorageScope {
     ProfilePhoto = 'profile-photo',
     Feedback = 'feedback',
+    RecipePhoto = 'recipe-photo',
 }
 
 /** What the client needs to put the bytes somewhere and then tell us where. */
