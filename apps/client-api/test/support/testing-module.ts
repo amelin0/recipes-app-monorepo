@@ -21,7 +21,9 @@ import {
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
 import { CatalogModule } from '../../src/modules/catalog';
+import { FaqModule } from '../../src/modules/faq';
 import { MealPlanModule } from '../../src/modules/meal-plan';
+import { NotificationsModule } from '../../src/modules/notifications';
 import { NutritionModule } from '../../src/modules/nutrition';
 import { ProgressModule } from '../../src/modules/progress';
 import { ShoppingListModule } from '../../src/modules/shopping-list';
@@ -119,6 +121,8 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             CatalogModule,
             MealPlanModule,
             ShoppingListModule,
+            NotificationsModule,
+            FaqModule,
         ],
     })
         .overrideProvider(OAuthService)
