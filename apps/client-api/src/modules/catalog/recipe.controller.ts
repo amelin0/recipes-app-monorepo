@@ -1,6 +1,20 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Put, Query, UseGuards } from '@nestjs/common';
 import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+    Put,
+    Query,
+    UseGuards,
+} from '@nestjs/common';
+import {
+    ApiBadRequestResponse,
     ApiBearerAuth,
+    ApiCreatedResponse,
     ApiNoContentResponse,
     ApiNotFoundResponse,
     ApiOkResponse,
@@ -16,7 +30,14 @@ import { UserEntity } from '@dns/database';
 import { CurrentUser } from '../auth/decorators';
 import { JwtGuard } from '../auth/guards';
 
-import { RecipeCardView, RecipeDetailView, RecipeFiltersView, RecipeIdParam, RecipeListQuery } from './dto';
+import {
+    CreateRecipeInboundDto,
+    RecipeCardView,
+    RecipeDetailView,
+    RecipeFiltersView,
+    RecipeIdParam,
+    RecipeListQuery,
+} from './dto';
 import { RecipeService } from './recipe.service';
 
 @ApiTags('recipes')
@@ -68,6 +89,29 @@ export class RecipeController {
     async detail(@CurrentUser() user: UserEntity, @Param() params: RecipeIdParam): Promise<RecipeDetailView> {
         const detail = await this.recipeService.detail(user.id, params.id);
         return RecipeDetailView.fromDetail(detail);
+    }
+
+    /**
+     * A dish the user entered themselves. Answers with the finished dish, so
+     * the success screen has its calories without a second round trip.
+     */
+    @Post()
+    @HttpCode(HttpStatus.CREATED)
+    @ApiCreatedResponse({ type: RecipeDetailView })
+    @ApiBadRequestResponse({ description: 'Unknown cuisine, unknown product, or a step chip pointing nowhere.' })
+    async create(@CurrentUser() user: UserEntity, @Body() body: CreateRecipeInboundDto): Promise<RecipeDetailView> {
+        const detail = await this.recipeService.create(user.id, body);
+        return RecipeDetailView.fromDetail(detail);
+    }
+
+    /** Only a dish this account made; a catalogue recipe answers 404 like any other. */
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiParam({ name: 'id', format: 'uuid' })
+    @ApiNoContentResponse({ description: 'Removed. Meals already logged from it keep their own figures.' })
+    @ApiNotFoundResponse({ description: 'No such dish of this account’s own.' })
+    async remove(@CurrentUser() user: UserEntity, @Param() params: RecipeIdParam): Promise<void> {
+        await this.recipeService.remove(user.id, params.id);
     }
 
     /** A sub-resource rather than a toggle, so a retry cannot flip the heart back (ADR-0004). */

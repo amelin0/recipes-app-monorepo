@@ -123,12 +123,19 @@ export class RecipeStepView {
     @ApiProperty({ nullable: true }) readonly description: string | null;
     @ApiProperty({ nullable: true }) readonly durationMinutes: number | null;
 
+    @ApiProperty({
+        type: [String],
+        description: 'Ids from this dish’s own `ingredients` — the chips the step needs (create-dish FR-007).',
+    })
+    readonly ingredientIds: string[];
+
     private constructor(step: RecipeStepEntity) {
         this.id = step.id;
         this.stepNumber = step.stepNumber;
         this.title = step.title;
         this.description = step.description;
         this.durationMinutes = step.durationMinutes;
+        this.ingredientIds = step.ingredientIds;
     }
 
     static from(step: RecipeStepEntity): RecipeStepView {
