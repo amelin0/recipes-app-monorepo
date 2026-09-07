@@ -29,9 +29,11 @@ server {
 }
 
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    # `listen ... http2` and NOT `http2 on;` — the latter is nginx 1.25.1+
+    # and is an "unknown directive" that fails nginx -t outright on anything
+    # older, taking every other vhost on the box down with it.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name dev.api.client.rationfit.com;
     server_tokens off;
 
