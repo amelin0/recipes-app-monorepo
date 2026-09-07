@@ -117,8 +117,10 @@ services:
             - .env.prod
         extra_hosts:
             - 'host.docker.internal:host-gateway'
-        working_dir: /app/packages/database
-        command: ['pnpm', 'db:migrate']
+        # No command override: the image already sets the working directory
+        # migrate.ts needs and invokes tsx directly. It carries no pnpm — the
+        # migrator is `pnpm deploy`-ed too, which is what keeps it at ~700 MB
+        # instead of the ~2.6 GB a full build layer would weigh.
         networks:
             - obs
         logging: *default-logging

@@ -78,16 +78,29 @@ RUN pnpm --filter "${APP_PKG}" build \
     && test -f "${APP_DIR}/dist/main.js"
 
 # ───────────────────────────── migrator ─────────────────────────────
-# Keeps the whole build layer on purpose: packages/database ships raw
-# TypeScript ("main": "./src/index.ts") and its runner is executed with tsx,
-# so migrations cannot run from the slim runtime image.
+# Its own image because packages/database ships raw TypeScript
+# ("main": "./src/index.ts") and its runner needs tsx — neither is in the
+# runtime image, which carries only a bundled main.js.
 #
-# migrate.ts resolves its SQL as the relative path './src/migrations', which
-# makes the working directory load-bearing. It reads DATABASE_URL from the
-# environment — its dotenv call for ../../.env is a no-op here.
-FROM build AS migrator
+# Note the missing --prod: tsx and drizzle-kit are devDependencies of
+# @dns/database, and the migration runner is one of them. `pnpm deploy` is
+# still what keeps this small — `FROM build` would drag the hoisted
+# node_modules for the entire lockfile, Expo and Next included, and measure
+# in gigabytes.
+FROM build AS migrator-deps
+RUN pnpm --filter @dns/database deploy --ignore-scripts /out-migrator \
+    && test -f /out-migrator/node_modules/.bin/tsx \
+    && test -d /out-migrator/src/migrations
+
+FROM ${NODE_IMAGE} AS migrator
+ENV NODE_ENV=production
+# migrate.ts resolves its SQL as the relative path './src/migrations', so the
+# working directory is load-bearing. DATABASE_URL comes from the environment —
+# its dotenv call for ../../.env is a no-op here.
 WORKDIR /app/packages/database
-CMD ["pnpm", "db:migrate"]
+COPY --from=migrator-deps /out-migrator/ ./
+USER node
+CMD ["node_modules/.bin/tsx", "src/migrate.ts"]
 
 # ────────────────────────────── prune ───────────────────────────────
 # `pnpm install --prod` is NOT enough. This repo sets node-linker=hoisted and
