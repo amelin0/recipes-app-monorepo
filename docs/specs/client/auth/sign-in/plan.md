@@ -1,4 +1,4 @@
-фсдф---
+---
 spec: ./spec.md
 status: Implemented
 owner: '@amelin0'
@@ -6,7 +6,6 @@ created: 2026-09-06
 updated: 2026-09-06
 related-adrs: [ADR-0003]
 related-runbooks: []
-
 ---
 
 # Plan: Sign-in (Вхід)
