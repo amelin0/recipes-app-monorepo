@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+build
+coverage
+pnpm-lock.yaml
+
+# Written by drizzle-kit on every `db:generate`. Formatting them makes the
+# generator and the formatter overwrite each other's work, and the diff of a
+# migration then hides which lines actually changed.
+packages/database/src/migrations/
