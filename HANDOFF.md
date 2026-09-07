@@ -932,6 +932,15 @@ refresh-токен як Bearer 401.
 `/login/`, `/recipes/`, `/tags/`, `/recipes/detail/?id=…` дають 200, `/nope/`
 дає 404, чанк повертає `public, immutable` з роком, HTML — `no-store`.
 
+**`publish-web.sh` не можна запускати під sudo цілком.** `pnpm` живе в PATH
+користувача, а root його не бачить — саме так це і падає: «pnpm: command not
+found» через три секунди після старту. Глибша причина та сама: збірка під
+root'ом лишила б root-owned `.next`, `out` і записи в сторі, які наступна
+звичайна збірка не перезапише. Тепер збірка йде від `$SUDO_USER` через
+`bash -lc` (pnpm зазвичай приходить із login-профілю: corepack, nvm, volta), а
+escalate лише три кроки, що чіпають `/var/www` і nginx. Перевірено в
+контейнері: root-PATH дає ту саму помилку, `sudo -u dev -H bash -lc` — версію.
+
 **Знайшов ваду у власному `install.sh`.** Bootstrap-блок називав усі чотири
 хости, а `sites-enabled` читається за абеткою — тож `00-acme-bootstrap`
 вигравав збіг `server_name` і на час прогону забирав `:80` у трьох робочих
