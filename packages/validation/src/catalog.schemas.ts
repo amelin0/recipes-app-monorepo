@@ -7,6 +7,7 @@ import {
     PRODUCT_NAME_MAX_LENGTH,
     PRODUCT_SERVING_LABEL_MAX_LENGTH,
     RECIPE_CALORIE_FILTER,
+    RECIPE_INPUT_LIMITS,
 } from '@dns/constants';
 import { RecipeTab } from '@dns/shared-types';
 
@@ -79,6 +80,58 @@ export const createProductSchema = z.object({
     servingWeightG: z.number().positive('A serving weighs something').max(5000).nullable().optional(),
 });
 
+const recipeIngredientSchema = z.object({
+    productId: z.string().uuid(),
+    amountG: z
+        .number()
+        .min(RECIPE_INPUT_LIMITS.amountG.min, 'An ingredient has to weigh something')
+        .max(RECIPE_INPUT_LIMITS.amountG.max),
+});
+
+/**
+ * A step of the method.
+ *
+ * Both texts are optional, and a step with neither is legal: the editor treats
+ * a step as filled once it has *anything* — words, chips or a timer — and the
+ * number and the duration live on the step itself, not in its words
+ * (create-dish FR-007 and its assumptions).
+ *
+ * The chips name positions in the dish's own ingredient list, because the
+ * client is creating those rows in this very request and cannot know their ids.
+ */
+const recipeStepSchema = z.object({
+    title: z.string().trim().min(1).max(RECIPE_INPUT_LIMITS.stepTitle.max).nullable().optional(),
+    description: z.string().trim().min(1).max(RECIPE_INPUT_LIMITS.stepDescription.max).nullable().optional(),
+    durationMinutes: z
+        .number()
+        .int()
+        .min(RECIPE_INPUT_LIMITS.stepDurationMinutes.min, 'A step lasts at least a minute')
+        .max(RECIPE_INPUT_LIMITS.stepDurationMinutes.max)
+        .nullable()
+        .optional(),
+    ingredientIndexes: z.array(z.number().int().min(0)).max(RECIPE_INPUT_LIMITS.ingredients.max).optional(),
+});
+
+/**
+ * A dish somebody enters by hand (create-dish FR-001, FR-004, FR-007).
+ *
+ * Neither servings nor cooking time is here, because the form asks for
+ * neither: one serving, the weight of what went in, and the sum of the step
+ * timers are all derived on the server. An optional field for a number no
+ * screen collects would be a second source for it.
+ */
+export const createRecipeSchema = z.object({
+    title: z.string().trim().min(1, 'Введіть назву страви').max(RECIPE_INPUT_LIMITS.title.max),
+    cuisineId: z.string().uuid().nullable().optional(),
+    photoUrl: z.string().url().nullable().optional(),
+    ingredients: z
+        .array(recipeIngredientSchema)
+        .min(RECIPE_INPUT_LIMITS.ingredients.min, 'Додайте хоча б один інгредієнт')
+        .max(RECIPE_INPUT_LIMITS.ingredients.max),
+    steps: z.array(recipeStepSchema).max(RECIPE_INPUT_LIMITS.steps.max).optional(),
+});
+
 export type ProductSearchQuery = z.infer<typeof productSearchQuerySchema>;
 export type RecipeListQuery = z.infer<typeof recipeListQuerySchema>;
 export type CreateProductInputDto = z.infer<typeof createProductSchema>;
+export type CreateRecipeInputDto = z.infer<typeof createRecipeSchema>;

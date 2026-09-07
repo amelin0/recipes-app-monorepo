@@ -32,3 +32,23 @@ export const PRODUCT_CALORIES_MAX_PER_100G = 900;
 
 export const PRODUCT_NAME_MAX_LENGTH = 120;
 export const PRODUCT_SERVING_LABEL_MAX_LENGTH = 40;
+
+/**
+ * Bounds for a dish somebody enters by hand.
+ *
+ * `ingredients.min` is 1 rather than 0: a dish with no composition has no
+ * macros either, and it would go into the meal log crediting zero calories
+ * for a meal the person actually ate. Refusing the save is the honest answer;
+ * a silent zero in the day's total is not.
+ */
+export const RECIPE_INPUT_LIMITS = Object.freeze({
+    title: { max: 120 },
+    ingredients: { min: 1, max: 60 },
+    /** Grams of one ingredient — 10 kg is already far past a household pot. */
+    amountG: { min: 0.1, max: 10_000 },
+    steps: { max: 40 },
+    stepTitle: { max: 120 },
+    stepDescription: { max: 2000 },
+    /** A step measured in minutes; a day is the outer edge of a slow braise. */
+    stepDurationMinutes: { min: 1, max: 1440 },
+});

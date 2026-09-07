@@ -1,10 +1,20 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { CATALOG_PAGE_SIZE, PRODUCT_MACRO_MAX_PER_100G, RECIPE_CALORIE_FILTER } from '@dns/constants';
+import {
+    CATALOG_PAGE_SIZE,
+    PRODUCT_MACRO_MAX_PER_100G,
+    RECIPE_CALORIE_FILTER,
+    RECIPE_INPUT_LIMITS,
+} from '@dns/constants';
 import { RecipeTab } from '@dns/shared-types';
 
-import { createProductSchema, productSearchQuerySchema, recipeListQuerySchema } from './catalog.schemas';
+import {
+    createProductSchema,
+    createRecipeSchema,
+    productSearchQuerySchema,
+    recipeListQuerySchema,
+} from './catalog.schemas';
 
 const ID_A = '11111111-1111-4111-8111-111111111111';
 const ID_B = '22222222-2222-4222-8222-222222222222';
@@ -66,4 +76,47 @@ test('rejects a macro above 100 g per 100 g', () => {
 
 test('rejects a serving that weighs nothing', () => {
     assert.equal(createProductSchema.safeParse({ ...product, servingWeightG: 0 }).success, false);
+});
+
+const dish = {
+    title: 'Морквяний салат',
+    ingredients: [{ productId: ID_A, amountG: 200 }],
+};
+
+test('accepts a dish with one ingredient and no steps', () => {
+    const parsed = createRecipeSchema.parse(dish);
+    assert.equal(parsed.steps, undefined);
+    assert.equal(parsed.cuisineId, undefined);
+});
+
+test('rejects a dish with no composition — it would credit zero calories', () => {
+    assert.equal(createRecipeSchema.safeParse({ ...dish, ingredients: [] }).success, false);
+});
+
+test('rejects a nameless dish and a weightless ingredient', () => {
+    assert.equal(createRecipeSchema.safeParse({ ...dish, title: '  ' }).success, false);
+    assert.equal(
+        createRecipeSchema.safeParse({ ...dish, ingredients: [{ productId: ID_A, amountG: 0 }] }).success,
+        false,
+    );
+});
+
+test('a step may carry only chips and a timer, with no words at all', () => {
+    const parsed = createRecipeSchema.parse({
+        ...dish,
+        steps: [{ durationMinutes: 5, ingredientIndexes: [0] }],
+    });
+
+    assert.equal(parsed.steps?.[0]?.title, undefined);
+    assert.deepEqual(parsed.steps?.[0]?.ingredientIndexes, [0]);
+});
+
+test('a step shorter than a minute is refused', () => {
+    assert.equal(
+        createRecipeSchema.safeParse({
+            ...dish,
+            steps: [{ title: 'Швидко', durationMinutes: RECIPE_INPUT_LIMITS.stepDurationMinutes.min - 1 }],
+        }).success,
+        false,
+    );
 });
