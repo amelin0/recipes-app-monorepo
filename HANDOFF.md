@@ -562,8 +562,10 @@ Docker. Сім штук, три критичні: `dns-readiness-failing` (`/hea
 `parse_mode` свідомо не заданий: лог-рядок із `<`, `>` чи `_` інакше змусив би
 Telegram відхилити все сповіщення як зламану розмітку.
 
-Що треба руками на сервері: `TELEGRAM_BOT_TOKEN` у `.env.obs` і chat id
-замість `REPLACE_WITH_CHAT_ID`. Кроки — в `infra/prod/README.md`.
+Chat id групи (`-1003784473088`, та сама, що в 11am) закомічено в
+`contact-points.yml` — без токена він марний, і бот усе одно мусить бути
+учасником групи. Тож на сервері лишається одне: `TELEGRAM_BOT_TOKEN` у
+`.env.obs`. Кроки — в `infra/prod/README.md`.
 
 ---
 

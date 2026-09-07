@@ -11,11 +11,13 @@
 # The bot token comes from Grafana's environment, set in
 # docker-compose.obs.yml from infra/prod/.env.obs. It is never committed.
 #
-# Getting the two values, once:
-#   1. Talk to @BotFather → /newbot → it hands you the token.
-#   2. Add the bot to the group, send any message there, then:
-#        curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
-#      and read message.chat.id (negative for a group).
+# The chat id below is already the alert group. Only the token is missing on
+# a fresh server: @BotFather → /newbot, and add that bot to the group —
+# Telegram answers "403 bot is not a member" otherwise.
+#
+# To point this at a DIFFERENT group: add the bot there, send any message,
+# then curl "https://api.telegram.org/bot<TOKEN>/getUpdates" and read
+# message.chat.id (negative for a group).
 #
 # Use a bot dedicated to alerting rather than one already running elsewhere:
 # Grafana only sends, so a shared token would not clash, but the getUpdates
@@ -53,7 +55,7 @@ contactPoints:
                 # token, and the bot must already be a member of the group. If
                 # the group is later upgraded to a supergroup the id changes
                 # (Telegram answers with migrate_to_chat_id); update it here.
-                chatid: 'REPLACE_WITH_CHAT_ID'
+                chatid: '-1003784473088'
 
                 # Deliberately plain text: parse_mode is left unset, so a log
                 # line or an error containing <, > or _ cannot make Telegram
