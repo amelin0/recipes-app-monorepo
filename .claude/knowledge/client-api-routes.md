@@ -211,14 +211,33 @@ AND між групами. Причина — в ADR-0006.
 
 **Джерел сповіщень ще немає** — клієнтський API їх лише читає.
 
-## subscription ○
+## subscription ✅
 
-| Method | Path                          | Що                                       |
-| ------ | ----------------------------- | ---------------------------------------- |
-| GET    | `/subscription/plans`         | тарифи: період, ціна, базова ціна, тріал |
-| GET    | `/subscription`               | поточний стан підписки                   |
-| POST   | `/subscription/receipt`       | валідація чека App Store / Google Play   |
-| POST   | `/subscription/referral-code` | застосувати реферальний код              |
+| Method | Path                                    | Що                                                       |
+| ------ | --------------------------------------- | -------------------------------------------------------- |
+| GET    | `/subscription/plans`                   | плани + перелік можливостей; бейдж економії рахується     |
+| GET    | `/subscription`                         | стан підписки + `paywallPending`                          |
+| PUT    | `/subscription/paywall/seen`            | «Пропустити» — 204                                        |
+| POST   | `/subscription/receipt`                 | чек магазину → підписка                                   |
+| GET    | `/subscription/referral-codes/{code}`   | що дає код, не витрачаючи його                            |
+| POST   | `/subscription/redemptions`             | погасити код → підписка на місяць                         |
+| GET    | `/profile/referral`                     | власний код і статистика (домен user)                     |
+
+**План визначає `productId` з магазину, а не тіло запиту** — інакше можна
+було б заплатити за місяць і попросити рік.
+
+**`POST /subscription/referral-code` розділено надвоє:** перевірка — це
+читання (`GET …/referral-codes/{code}`), погашення — створення підписки
+(`POST …/redemptions`). Одна дія робила б і те, і те.
+
+**Перевірку чека проти Apple і Google не побудовано** — є шов
+(`PurchasesService`) і stub, який бере чек на віру, коли ключів немає. Та
+сама домовленість, що й з OAuth.
+
+Коди помилок: `subscription.receipt-already-used`,
+`subscription.unknown-product`, `subscription.unknown-referral-code`,
+`subscription.own-referral-code`, `subscription.already-redeemed`,
+`subscription.already-subscribed`.
 
 ## content ✅
 

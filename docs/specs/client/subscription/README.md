@@ -16,7 +16,7 @@ RF-mobile-app) на макетних цінах — реальні плани, �
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Paywall (Оформлення підписки)](./paywall/spec.md) | Draft | @amelin0 | 2026-08-19 |
+| [Paywall (Оформлення підписки)](./paywall/spec.md) | Approved | @amelin0 | 2026-09-07 |
 
 ## Related
 

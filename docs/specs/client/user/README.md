@@ -26,7 +26,7 @@ UI екрана вже реалізовано в мобільному засто
 | [FAQ (Часті питання)](./faq/spec.md)                                     | Implemented | [plan](./faq/plan.md)              | @amelin0 | 2026-09-07 |
 | [Feedback (Зворотній звʼязок)](./feedback/spec.md)                       | Draft       | —                                  | @amelin0 | 2026-08-19 |
 | [Account deletion (Видалення й відновлення)](./account-deletion/spec.md) | Approved    | [plan](./account-deletion/plan.md) | @amelin0 | 2026-09-06 |
-| [Referral program (Реферальна програма)](./referral/spec.md)             | Draft       | —                                  | @amelin0 | 2026-08-20 |
+| [Referral program (Реферальна програма)](./referral/spec.md)             | Approved    | [plan](./referral/plan.md)         | @amelin0 | 2026-09-07 |
 
 `Approved` означає, що серверна частина реалізована не повністю — деталі в
 розділі «Що ще не побудовано» відповідного `plan.md`.
