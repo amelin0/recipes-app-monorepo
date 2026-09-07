@@ -25,8 +25,10 @@ import {
 } from './common/config';
 import { AuthModule } from './modules/auth';
 import { CatalogModule } from './modules/catalog';
+import { FaqModule } from './modules/faq';
 import { HealthModule } from './modules/health';
 import { MealPlanModule } from './modules/meal-plan';
+import { NotificationsModule } from './modules/notifications';
 import { NutritionModule } from './modules/nutrition';
 import { ProgressModule } from './modules/progress';
 import { ShoppingListModule } from './modules/shopping-list';
@@ -112,6 +114,8 @@ import { UserModule } from './modules/user';
         CatalogModule,
         MealPlanModule,
         ShoppingListModule,
+        NotificationsModule,
+        FaqModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
