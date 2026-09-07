@@ -29,6 +29,7 @@ import { HealthModule } from './modules/health';
 import { MealPlanModule } from './modules/meal-plan';
 import { NutritionModule } from './modules/nutrition';
 import { ProgressModule } from './modules/progress';
+import { ShoppingListModule } from './modules/shopping-list';
 import { UploadsModule } from './modules/uploads';
 import { UserModule } from './modules/user';
 
@@ -110,6 +111,7 @@ import { UserModule } from './modules/user';
         ProgressModule,
         CatalogModule,
         MealPlanModule,
+        ShoppingListModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
