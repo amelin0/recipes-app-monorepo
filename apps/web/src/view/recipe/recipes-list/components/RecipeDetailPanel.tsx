@@ -9,13 +9,8 @@ import { Button } from '@/shared/ui/components/button'
 import { Input } from '@/shared/ui/components/input'
 import { Separator } from '@/shared/ui/components/separator'
 import { SheetHeader, SheetTitle } from '@/shared/ui/components/sheet'
-import {
-  useCreateRecipe,
-  useGetTags,
-  useSearchProducts,
-  useUpdateRecipe,
-  useUploadRecipeImage,
-} from '@/state/domains/recipe'
+import { useCreateRecipe, useSearchProducts, useUpdateRecipe, useUploadRecipeImage } from '@/state/domains/recipe'
+import { useGetAllTags } from '@/state/domains/tag'
 
 /**
  * Two languages, and only two, because that is what the product ships.
@@ -66,7 +61,7 @@ export function RecipeCreatePanel({ onCreated, onCancel }: { onCreated: () => vo
 function ViewMode({ recipe, onEdit }: { recipe: RecipeDetail; onEdit: () => void }) {
   const { uploadImage, isUploading } = useUploadRecipeImage()
   const { updateRecipe } = useUpdateRecipe()
-  const { tags } = useGetTags()
+  const { tags } = useGetAllTags()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const title = recipe.translations.find(t => t.language === 'uk')?.title ?? recipe.translations[0]?.title
@@ -224,7 +219,7 @@ function RecipeForm({
   onDone: () => void
   onCancel: () => void
 }) {
-  const { tags } = useGetTags()
+  const { tags } = useGetAllTags()
   const { createRecipe, isPending: isCreating } = useCreateRecipe()
   const { updateRecipe, isPending: isUpdating } = useUpdateRecipe()
 

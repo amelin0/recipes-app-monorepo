@@ -2,12 +2,12 @@
 
 import { useRecipeDetailPage } from './useRecipeDetailPage'
 import type { RecipeDetail } from '@/data'
-import { useGetTags } from '@/state/domains/recipe'
+import { useGetAllTags } from '@/state/domains/tag'
 import { Button } from '@/shared/ui/components/button'
 import { Badge } from '@/shared/ui/components/badge'
 import { Separator } from '@/shared/ui/components/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/components/tabs'
-import { ArrowLeft, Upload, ImageIcon } from 'lucide-react'
+import { ArrowLeft, ImageIcon } from 'lucide-react'
 import { useRef } from 'react'
 
 export function RecipeDetailPage({ id }: { id: string }) {
@@ -17,7 +17,7 @@ export function RecipeDetailPage({ id }: { id: string }) {
     currentTranslation,
     handlePhotoUpload, handleBack,
   } = useRecipeDetailPage(id)
-  const { tags } = useGetTags()
+  const { tags } = useGetAllTags()
   const fileRef = useRef<HTMLInputElement>(null)
   const tagName = (id: string) => tags.find((tag) => tag.id === id)?.name ?? id
 

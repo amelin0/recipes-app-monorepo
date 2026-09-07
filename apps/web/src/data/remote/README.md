@@ -8,15 +8,15 @@ the honest state, so nobody assumes a screen works because its client compiles.
 | --- | --- | --- |
 | `auth` | ✅ | `/auth/login`, `/refresh`, `/logout`, `/me` |
 | `recipe` | ✅ | CRUD, CSV import, presigned photo upload |
-| `tag` | ❌ | The page's CRUD has no server and, under ADR-0006, is not planned. Reading them for the recipe form goes through `RecipeApi.getTags()`. |
-| `product` | ❌ | The admin product domain is a later slice. The recipe form picks ingredients through `RecipeApi.searchProducts()`. |
+| `tag` | ✅ read-only | `GET /tags` — the flat façade over categories, cuisines and diets. There is no write side and, under ADR-0006, none is planned. |
+| `product` | ❌ | The admin product domain is a later slice. The recipe form picks ingredients through `RecipeApi.searchProducts()`, which hits the one product endpoint that exists. |
 | `user` | ❌ | No endpoints. Screens will 404. |
 | `notifications` | ❌ | " |
 | `language` | ❌ | " |
 | `dashboard` | ❌ | " |
 | `support` | ❌ | " |
 
-The seven without a server are left in their V1 shape on purpose: rewriting a
+The six without a server are left in their V1 shape on purpose: rewriting a
 client against an endpoint nobody has designed yet produces a contract that
 drifts before it is ever called. They keep their `/admin/...` paths, which is
 also a useful marker — anything still carrying that prefix has no backend.

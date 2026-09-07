@@ -7,7 +7,6 @@ import type {
   RecipeDetail,
   RecipeFilters,
   SaveRecipeParams,
-  Tag,
   UploadGrant,
 } from './recipe.types'
 
@@ -48,9 +47,6 @@ export const RecipeApi = {
   update: (id: string, data: SaveRecipeParams) => HttpService.put<RecipeDetail>(`/recipes/${id}`, data),
 
   deleteMany: (ids: string[]) => HttpService.post<{ deleted: number }>('/recipes/bulk-delete', { ids }),
-
-  /** The three dictionaries as one flat list, each labelled with its `kind`. */
-  getTags: () => HttpService.get<Tag[]>('/tags'),
 
   /** Products for the composition editor. A dish can only be built from what
    * the catalogue already holds — there is no «create product» here. */
