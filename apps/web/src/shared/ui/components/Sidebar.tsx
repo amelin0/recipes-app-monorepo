@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { normalisePath } from "@/shared/utils/utils"
 import { useState } from "react"
 import {
   LayoutDashboard,
@@ -71,7 +72,9 @@ const bottomNav: NavItem[] = [
 ]
 
 export function Sidebar() {
-  const pathname = usePathname()
+  // Normalised: with `trailingSlash: true` the raw value is `/recipes/`
+  // while every href below says `/recipes`, so a raw compare never matches.
+  const pathname = normalisePath(usePathname())
   const [collapsed, setCollapsed] = useState(false)
   const { logout } = useLogout()
   const { unreadCount } = useUnreadCount()
