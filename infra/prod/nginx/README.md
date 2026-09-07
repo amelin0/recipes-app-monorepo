@@ -29,7 +29,7 @@ HTTP-01 інакше не пройде, а Let's Encrypt обмежує кіль
 ```bash
 apt install nginx certbot          # якщо ще немає
 git clone <repo> && cd <repo>      # або scp усієї теки nginx/
-sudo infra/prod/nginx/install.sh <email>   # контакт для Let's Encrypt
+sudo infra/prod/nginx/install.sh oleh.cherednik@gmail.com
 ```
 
 Скрипт ідемпотентний: повторний запуск не перевидає наявні сертифікати, тож
@@ -80,7 +80,7 @@ nginx -t && systemctl reload nginx
 
 # 2. сертифікати — по одному на хост
 for h in dev.api.client.rationfit.com dev.api.admin.rationfit.com dev.grafana.rationfit.com; do
-  certbot certonly --webroot -w /var/www/html -d $h --agree-tos -m <email> -n
+  certbot certonly --webroot -w /var/www/html -d $h --agree-tos -m oleh.cherednik@gmail.com -n
 done
 
 # 3. справжні файли

@@ -4,7 +4,7 @@
 # re-run after editing a vhost, and it will not re-issue a certificate that
 # already exists.
 #
-#   sudo ./install.sh ops@example.com
+#   sudo ./install.sh oleh.cherednik@gmail.com
 #
 # The address goes to Let's Encrypt as the account contact — it is where
 # expiry warnings land, so use a mailbox somebody reads.
