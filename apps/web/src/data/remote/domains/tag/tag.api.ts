@@ -1,6 +1,22 @@
 import { HttpService } from '@/shared/services'
 import type { TagFull } from './tag.types'
 
+/**
+ * ⚠️ NONE of this has a server. Left in its V1 shape deliberately — see
+ * `../../README.md`.
+ *
+ * What the panel calls a tag is, in the current model, one of three seeded
+ * dictionaries: categories, cuisines and diets (ADR-0006). They ship with
+ * migrations because the mobile filter screen is built around exactly those
+ * chips, so there is no create, update, delete or assign — a dish's taxonomy
+ * is set on the dish, through `categoryId` / `cuisineId` / `dietIds`.
+ *
+ * For **reading** them, the recipe form uses `RecipeApi.getTags()`, which
+ * returns the flat façade the API really serves. Whether this management page
+ * becomes a read-only reference list or a real editable fourth entity is a
+ * product decision, not a technical one.
+ */
+
 export const TagApi = {
   getAll: () =>
     HttpService.get<TagFull[]>('/admin/tags'),

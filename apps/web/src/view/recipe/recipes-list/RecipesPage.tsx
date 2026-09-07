@@ -141,8 +141,8 @@ export function RecipesPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    {recipe.photo_url ? (
-                      <img src={recipe.photo_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    {recipe.photoUrl ? (
+                      <img src={recipe.photoUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-primary-subtle flex items-center justify-center text-xs text-primary-on-subtle">
                         {recipe.title?.[0] ?? '?'}
@@ -151,26 +151,34 @@ export function RecipesPage() {
                   </TableCell>
                   <TableCell className="font-medium">{recipe.title}</TableCell>
                   <TableCell>{recipe.calories} kcal</TableCell>
-                  <TableCell>{recipe.proteins_g}g</TableCell>
+                  <TableCell>{recipe.proteinG}g</TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1 text-text-secondary">
-                      <Clock size={14} /> {recipe.cooking_time_minutes}m
+                      <Clock size={14} /> {recipe.cookTimeMinutes === null ? '—' : `${recipe.cookTimeMinutes}m`}
                     </span>
                   </TableCell>
                   <TableCell>
+                    {/* The list row carries flat slugs for category and cuisine
+                        only. Diets can be thirteen, and pulling them into every
+                        row would mean a query per row for a column the table
+                        does not have. */}
                     <div className="flex flex-wrap gap-1">
-                      {recipe.tags.slice(0, 3).map((t) => (
-                        <Badge key={t.id} variant="outline" className="text-xs">{t.name}</Badge>
-                      ))}
+                      {[recipe.categorySlug, recipe.cuisineSlug]
+                        .filter((slug): slug is string => slug !== null)
+                        .map((slug) => (
+                          <Badge key={slug} variant="outline" className="text-xs">
+                            {slug}
+                          </Badge>
+                        ))}
                     </div>
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1 text-text-secondary">
-                      <Heart size={14} /> {recipe.favorites_count ?? 0}
+                      <Heart size={14} /> {recipe.favoritesCount}
                     </span>
                   </TableCell>
                   <TableCell className="text-text-secondary text-sm">
-                    {new Date(recipe.created_at).toLocaleDateString()}
+                    {new Date(recipe.updatedAt).toLocaleDateString()}
                   </TableCell>
                 </TableRow>
               ))

@@ -14,8 +14,9 @@ export const useGetRecipes = (filters: RecipeFilters) => {
 
   return {
     recipes: data?.data ?? [],
-    total: data?.total ?? 0,
-    page: data?.page ?? 1,
+    total: data?.meta.total ?? 0,
+    page: data?.meta.page ?? 1,
+    totalPages: data?.meta.totalPages ?? 1,
     isLoading,
     refetch,
   }

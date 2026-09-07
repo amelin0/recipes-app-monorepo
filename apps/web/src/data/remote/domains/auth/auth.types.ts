@@ -3,15 +3,20 @@ export interface LoginRequest {
   password: string
 }
 
-export interface AuthUser {
+export type AdminRole = 'admin' | 'super_admin'
+
+/** Who is signed in. Renamed from `user`: an admin is a separate account from
+ * an app user, in a separate table, and calling both «user» is how the two get
+ * confused (ADR-0003). */
+export interface AdminProfile {
   id: string
   email: string
-  full_name: string
-  role: string
+  fullName: string
+  role: AdminRole
 }
 
 export interface AuthResponse {
-  access_token: string
-  refresh_token: string
-  user: AuthUser
+  accessToken: string
+  refreshToken: string
+  admin: AdminProfile
 }
