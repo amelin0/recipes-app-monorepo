@@ -49,7 +49,7 @@ export const useRecipeDetailPage = (id: string) => {
     await save({ photoUrl: publicUrl })
   }
 
-  const handleBack = () => router.push('/recipes')
+  const handleBack = () => router.push('/recipes/')
 
   return {
     recipe,

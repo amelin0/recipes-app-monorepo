@@ -10,7 +10,7 @@
 # expiry warnings land, so use a mailbox somebody reads.
 #
 # Prerequisites:
-#   • the A records for all three hosts already point at this machine
+#   • the A records for all four hosts already point at this machine
 #     (HTTP-01 validation fails otherwise, and Let's Encrypt rate-limits
 #     repeated failures)
 #   • nginx and certbot installed:  apt install nginx certbot
@@ -32,7 +32,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-HOSTS="dev.api.client.rationfit.com dev.api.admin.rationfit.com dev.grafana.rationfit.com"
+HOSTS="dev.api.client.rationfit.com dev.api.admin.rationfit.com dev.admin.rationfit.com dev.grafana.rationfit.com"
 WEBROOT=/var/www/html
 SA=/etc/nginx/sites-available
 SE=/etc/nginx/sites-enabled
@@ -100,6 +100,16 @@ fi
 if [ ! -f /etc/letsencrypt/ssl-dhparams.pem ]; then
     echo "    generating ssl-dhparams.pem (2048 bit, takes a minute)"
     openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048 2>/dev/null
+fi
+
+# The panel's vhost serves files rather than proxying, and nginx -t fails on a
+# missing root. Created empty so the first publish has somewhere to land.
+mkdir -p /var/www/dns-admin/releases
+if [ ! -e /var/www/dns-admin/current ]; then
+    mkdir -p /var/www/dns-admin/releases/placeholder
+    printf '<!doctype html><title>Not published yet</title><p>Run infra/prod/publish-web.sh
+'         > /var/www/dns-admin/releases/placeholder/index.html
+    ln -sfn /var/www/dns-admin/releases/placeholder /var/www/dns-admin/current
 fi
 
 echo "── 4/5  real vhosts"

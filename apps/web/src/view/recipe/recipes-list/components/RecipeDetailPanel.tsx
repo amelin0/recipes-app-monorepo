@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
-import { ImageIcon, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ExternalLink, ImageIcon, Pencil, Plus, Trash2, X } from 'lucide-react'
 
 import { toSaveParams, type Product, type RecipeDetail, type SaveRecipeParams, type Tag } from '@/data'
 import { Badge } from '@/shared/ui/components/badge'
@@ -59,6 +60,7 @@ export function RecipeCreatePanel({ onCreated, onCancel }: { onCreated: () => vo
 // ─── View mode ───
 
 function ViewMode({ recipe, onEdit }: { recipe: RecipeDetail; onEdit: () => void }) {
+  const router = useRouter()
   const { uploadImage, isUploading } = useUploadRecipeImage()
   const { updateRecipe } = useUpdateRecipe()
   const { tags } = useGetAllTags()
@@ -88,9 +90,17 @@ function ViewMode({ recipe, onEdit }: { recipe: RecipeDetail; onEdit: () => void
               </Badge>
             ))}
           </div>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Pencil size={14} className="mr-1.5" /> Edit
-          </Button>
+          <div className="flex gap-2">
+            {/* The sheet is a preview; the full page shows every translation
+                and every step. Nothing linked to it before, so it was
+                reachable only by typing the URL. */}
+            <Button variant="ghost" size="sm" onClick={() => router.push(`/recipes/detail/?id=${recipe.id}`)}>
+              <ExternalLink size={14} className="mr-1.5" /> Open
+            </Button>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              <Pencil size={14} className="mr-1.5" /> Edit
+            </Button>
+          </div>
         </div>
         <SheetTitle className="text-lg font-semibold text-text-primary">{title ?? 'Untitled'}</SheetTitle>
         {recipe.importKey && (
