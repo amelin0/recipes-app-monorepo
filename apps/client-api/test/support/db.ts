@@ -17,7 +17,8 @@ export async function truncateAuthTables(db: DrizzleDB): Promise<void> {
     // Dishes first: `recipe_ingredients` points at products with RESTRICT, so a
     // custom product cannot go until the dishes built from it have.
     await db.execute(
-        sql`TRUNCATE TABLE meal_plan_items, recipe_favorites, recipe_diets, recipe_step_ingredients,
+        sql`TRUNCATE TABLE shopping_list_items, shopping_list_marks, shopping_list_settings,
+            meal_plan_items, recipe_favorites, recipe_diets, recipe_step_ingredients,
             recipe_step_translations, recipe_steps, recipe_ingredients, recipe_translations, recipes`,
     );
     await db.execute(sql`DELETE FROM products WHERE source = 'custom'`);
