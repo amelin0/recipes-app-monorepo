@@ -29,12 +29,9 @@ nginx стоїть **на хості**, не в контейнері, тож у�
 | admin-api | `ADMIN_API_PORT` (`.env.prod`) | 3029 | `prometheus/prometheus.yml`, `nginx/dev.api.admin.rationfit.com` |
 | Grafana | `GRAFANA_HTTP_PORT` (`.env.obs`) | 3030 | `nginx/dev.grafana.rationfit.com` |
 | Prometheus | `PROMETHEUS_HTTP_PORT` (`.env.obs`) | 3031 | — |
-| адмінка (`@dns/web`) | — | 3032 | `nginx/dev.admin.rationfit.com` |
 
-Останній рядок — **зарезервований, а не робочий**: compose-стек вебу не
-піднімає, і `pnpm deploy:web` досі відправляє його у Vercel. Поки на 3032
-ніхто не слухає, `dev.admin.rationfit.com` відповідатиме 502. Варіанти — у
-шапці того файлу.
+Адмінки (`@dns/web`) тут немає: вона на Vercel, і `dev.admin.rationfit.com`
+налаштовується CNAME'ом там, а не на цьому сервері.
 
 У API **одне число на сервіс**: воно ж усередині контейнера, воно ж на хості.
 Тому в compose немає `CLIENT_API_PORT: '3000'` у блоці `environment` — цей блок
@@ -117,7 +114,10 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 | `dev.api.client.rationfit.com` | client-api `127.0.0.1:3028` |
 | `dev.api.admin.rationfit.com` | admin-api `127.0.0.1:3029` |
 | `dev.grafana.rationfit.com` | Grafana `127.0.0.1:3030` |
-| `dev.admin.rationfit.com` | адмінка `127.0.0.1:3032` — **ще ніщо не слухає** |
+
+Ставляться одним запуском — `sudo infra/prod/nginx/install.sh <email>`: він
+робить bootstrap під ACME, бере сертифікати, підміняє на справжні файли й
+перезавантажує nginx.
 
 **`/metrics` мусить бути закритий назовні.** У застосунку його ніщо не
 охороняє — Prometheus ходить внутрішньою мережею. Відкритий публічно, він
