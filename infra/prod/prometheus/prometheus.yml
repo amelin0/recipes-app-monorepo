@@ -1,0 +1,88 @@
+# Prometheus — how the API behaves, which logs cannot express.
+#
+# Loki answers «what happened». This answers «how is it doing»: event loop
+# lag, heap growth, request latency by route, and whether the box itself is
+# in trouble.
+
+global:
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    evaluation_interval: 30s
+    external_labels:
+        env: production
+
+scrape_configs:
+    # client-api exposes /metrics OUTSIDE the /api/v1 prefix, reached over the
+    # shared compose network and never through nginx — the public vhost must
+    # deny /metrics (see ../nginx/client-api.conf.example).
+    #
+    # ⚠️ The compose service MUST be named `client-api`, both for this DNS
+    # name and so the `service` label matches on both sides: Promtail derives
+    # its Loki `service` label from the compose service name, so a service
+    # called `api` would log as service="api" while metrics said
+    # service="client-api" — and correlating a latency spike with its logs
+    # would silently return nothing.
+    - job_name: client-api
+      metrics_path: /metrics
+      static_configs:
+          - targets: ['client-api:3000']
+            labels:
+                service: client-api
+
+    # Readiness, which /metrics cannot express. `up` above only proves the
+    # process answered a scrape — it answers happily with a dead database.
+    # The scraped target is the blackbox exporter; the URL under test travels
+    # as the `target` parameter, which is what the relabel dance sets up.
+    - job_name: blackbox-ready
+      metrics_path: /probe
+      params:
+          module: [http_ready]
+      static_configs:
+          - targets: ['http://client-api:3000/api/v1/health/ready']
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: blackbox-exporter:9115
+          # Same `service` label as the other jobs, so an alert about
+          # readiness sits next to that service's logs in Grafana.
+          - target_label: service
+            replacement: client-api
+
+    # admin-api has only /health so far and exposes no metrics; it is probed
+    # for liveness alone. Remove the `module` override once it grows a
+    # readiness route of its own.
+    - job_name: blackbox-admin
+      metrics_path: /probe
+      params:
+          module: [http_2xx]
+      static_configs:
+          - targets: ['http://admin-api:3001/api/v1/health']
+      relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: blackbox-exporter:9115
+          - target_label: service
+            replacement: admin-api
+
+    # The box itself. Disk filling up and CPU steal show up in the app as
+    # «the API got slow for no reason», and only node-exporter can say that is
+    # what happened.
+    - job_name: node
+      static_configs:
+          - targets: ['node-exporter:9100']
+            labels:
+                service: host
+
+    - job_name: prometheus
+      static_configs:
+          - targets: ['localhost:9090']
+
+# Alerting rules live in Grafana unified alerting, so rules and notification
+# channels stay in one place — provisioned from
+# ../grafana/provisioning/alerting/, not clicked together in the UI.

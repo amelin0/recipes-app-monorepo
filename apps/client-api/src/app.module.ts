@@ -30,6 +30,7 @@ import { CatalogModule } from './modules/catalog';
 import { FaqModule } from './modules/faq';
 import { HealthModule } from './modules/health';
 import { MealPlanModule } from './modules/meal-plan';
+import { MetricsModule } from './modules/metrics';
 import { NotificationsModule } from './modules/notifications';
 import { NutritionModule } from './modules/nutrition';
 import { ProgressModule } from './modules/progress';
@@ -116,6 +117,7 @@ import { UserModule } from './modules/user';
             useFactory: (configService: ConfigService<AllConfig>) =>
                 configService.getOrThrow('storage', { infer: true }),
         }),
+        MetricsModule,
         AuthModule,
         HealthModule,
         UserModule,

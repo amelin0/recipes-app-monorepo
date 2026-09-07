@@ -1,0 +1,39 @@
+# Routing: which alert reaches which contact point, and how often it repeats.
+#
+# ⚠️ Provisioning a policy REPLACES Grafana's default notification policy —
+# the one pointing at grafana-default-email, which is not configured here and
+# would silently swallow every alert. It also makes routing read-only in the
+# UI; edit this file and restart Grafana instead.
+
+apiVersion: 1
+
+policies:
+    - orgId: 1
+      receiver: telegram
+
+      # Group by rule, not by instance. Without alertname in the key a disk
+      # alert and a latency alert would arrive in one message; with more than
+      # alertname in it, one message per filesystem.
+      group_by: ['grafana_folder', 'alertname']
+
+      # Let a burst settle before the first message: a reboot trips readiness,
+      # the scrape target and the database probe within seconds of each other,
+      # and one message about three things beats three messages.
+      group_wait: 30s
+      group_interval: 5m
+
+      # A still-firing alert re-pings every 4h. Long on purpose — a phone
+      # buzzing every five minutes about a problem already known is how people
+      # mute the channel entirely.
+      repeat_interval: 4h
+
+      routes:
+          # Critical means «the API is not serving» or «the disk is about to
+          # fill». Same channel, but it should not sit in a 30s batch window,
+          # and it is worth repeating more often than a warning.
+          - receiver: telegram
+            object_matchers:
+                - ['severity', '=', 'critical']
+            group_wait: 10s
+            group_interval: 5m
+            repeat_interval: 1h

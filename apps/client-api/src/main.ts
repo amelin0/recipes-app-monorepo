@@ -17,7 +17,9 @@ async function bootstrap(): Promise<void> {
     // never closed and the container has to be killed rather than stopped.
     app.enableShutdownHooks();
 
-    app.setGlobalPrefix('api/v1');
+    // `/metrics` sits outside the prefix: that is where Prometheus looks by
+    // default, and a scrape config is not the place to encode our versioning.
+    app.setGlobalPrefix('api/v1', { exclude: ['metrics'] });
     app.enableCors();
     app.useGlobalPipes(new ZodValidationPipe());
 

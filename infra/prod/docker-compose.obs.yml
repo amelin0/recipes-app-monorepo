@@ -1,0 +1,176 @@
+# Observability: Loki + Promtail (logs), Prometheus + node-exporter
+# (metrics), Grafana (the one place both are read).
+#
+# A SEPARATE compose file from the application stack on purpose, so it can be
+# restarted, upgraded or taken down without touching the API — and so a broken
+# monitoring change can never take the API down with it.
+#
+#   cd infra/prod
+#   docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
+#
+# --env-file is NOT optional on any command against this stack, `ps` and
+# `logs` included: compose auto-loads only a file literally named `.env`, and
+# the `:?` guards below abort interpolation before the command runs.
+#
+# Prerequisite, once:
+#   docker network create dns-net
+# The application stack joins that network and names its API service
+# `client-api` — Prometheus scrapes it by that DNS name, and Promtail derives
+# the Loki `service` label from the same compose service name, which is what
+# keeps logs and metrics joinable on one label.
+
+name: dns-obs
+
+x-logging: &default-logging
+    driver: json-file
+    options:
+        max-size: '10m'
+        max-file: '3'
+
+services:
+    loki:
+        image: grafana/loki:3.4.2
+        restart: unless-stopped
+        command: -config.file=/etc/loki/loki-config.yml
+        volumes:
+            - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+            - loki_data:/loki
+        # No host port: only Grafana and Promtail talk to Loki, both on this
+        # network. Publishing 3100 would expose an unauthenticated log API.
+        expose:
+            - '3100'
+        networks: [obs]
+        logging: *default-logging
+        healthcheck:
+            test: ['CMD-SHELL', 'wget -q -O- http://localhost:3100/ready | grep -q ready || exit 1']
+            interval: 15s
+            timeout: 5s
+            retries: 10
+            start_period: 40s
+
+    promtail:
+        image: grafana/promtail:3.4.2
+        restart: unless-stopped
+        command: -config.file=/etc/promtail/promtail-config.yml
+        depends_on:
+            loki:
+                condition: service_healthy
+        volumes:
+            - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+            # Read-only socket: discovery and log streaming only. Note this is
+            # still effectively root on the host — Promtail is trusted here.
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - promtail_positions:/var/lib/promtail
+        networks: [obs]
+        logging: *default-logging
+
+    prometheus:
+        image: prom/prometheus:v3.1.0
+        restart: unless-stopped
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            # Bound both ways so the disk cannot be surprised by a scrape
+            # target that suddenly grows a lot of series.
+            - --storage.tsdb.retention.time=15d
+            - --storage.tsdb.retention.size=2GB
+            - --web.enable-lifecycle
+        volumes:
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - prometheus_data:/prometheus
+        expose:
+            - '9090'
+        networks: [obs]
+        logging: *default-logging
+        healthcheck:
+            test: ['CMD', 'wget', '-q', '-O-', 'http://localhost:9090/-/healthy']
+            interval: 15s
+            timeout: 5s
+            retries: 10
+            start_period: 30s
+
+    # Probes /api/v1/health/ready and exposes the result as probe_success.
+    # `up` from the metrics scrape only proves the process answers — it
+    # answers happily with a dead database, which is the case worth alerting
+    # on.
+    blackbox-exporter:
+        image: prom/blackbox-exporter:v0.25.0
+        restart: unless-stopped
+        command:
+            - --config.file=/etc/blackbox/blackbox.yml
+        volumes:
+            - ./blackbox/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+        expose:
+            - '9115'
+        networks: [obs]
+        logging: *default-logging
+
+    node-exporter:
+        image: prom/node-exporter:v1.9.0
+        restart: unless-stopped
+        command:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+            - --path.rootfs=/rootfs
+            - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker)($$|/)
+        pid: host
+        volumes:
+            - /proc:/host/proc:ro
+            - /sys:/host/sys:ro
+            - /:/rootfs:ro
+        expose:
+            - '9100'
+        networks: [obs]
+        logging: *default-logging
+
+    grafana:
+        image: grafana/grafana:11.5.1
+        restart: unless-stopped
+        depends_on:
+            loki:
+                condition: service_healthy
+        environment:
+            GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?set GRAFANA_ROOT_URL in .env.obs}
+            GF_SERVER_HTTP_PORT: '3000'
+            # Nobody should be able to create an account on a reachable Grafana.
+            GF_USERS_ALLOW_SIGN_UP: 'false'
+            GF_AUTH_ANONYMOUS_ENABLED: 'false'
+            GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+            GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env.obs}
+            GF_SECURITY_COOKIE_SECURE: 'true'
+            GF_ANALYTICS_REPORTING_ENABLED: 'false'
+            GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+            # Read by provisioning/alerting/contact-points.yml at startup.
+            # It MUST be here and not only in .env.obs: --env-file feeds
+            # compose's own interpolation, while provisioning files expand
+            # $$VARs from GRAFANA'S process environment. Miss this and the
+            # contact point provisions with an empty bot token — Grafana
+            # starts clean and alerts fail only at send time, which is the
+            # worst possible moment to find out.
+            #
+            # Token only. The chat id is inline in contact-points.yml; passing
+            # it as an env var trips grafana/grafana#69950, where a negative
+            # number substituted into a provisioning file crashes startup.
+            TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in infra/prod/.env.obs}
+        volumes:
+            - ./grafana/provisioning:/etc/grafana/provisioning:ro
+            - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+            - grafana_data:/var/lib/grafana
+        # Loopback only — nginx terminates TLS and proxies here. Never 0.0.0.0.
+        ports:
+            - '127.0.0.1:3300:3000'
+        networks: [obs]
+        logging: *default-logging
+
+networks:
+    # Created out of band and shared with the application stack, so Prometheus
+    # can scrape client-api:3000 directly rather than through nginx.
+    obs:
+        external: true
+        name: dns-net
+
+volumes:
+    loki_data:
+    prometheus_data:
+    grafana_data:
+    promtail_positions:

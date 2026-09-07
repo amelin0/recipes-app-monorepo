@@ -1,0 +1,31 @@
+# Provisioned from this file rather than clicked together in the UI — the
+# point of this stack is that it is reproducible from the repo. Changes apply
+# on a Grafana restart.
+
+apiVersion: 1
+
+datasources:
+    - name: Loki
+      type: loki
+      access: proxy
+      uid: loki
+      url: http://loki:3100
+      isDefault: true
+      jsonData:
+          maxLines: 1000
+          # Lets a log line link straight to whatever else carries the same
+          # request id.
+          derivedFields:
+              - name: RequestId
+                matcherRegex: '"id":"([^"]+)"'
+                url: '$${__value.raw}'
+
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      uid: prometheus
+      url: http://prometheus:9090
+      jsonData:
+          # Must match global.scrape_interval in prometheus.yml, or rate()
+          # windows are computed against the wrong step.
+          timeInterval: 15s
