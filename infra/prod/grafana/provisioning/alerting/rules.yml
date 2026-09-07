@@ -1,0 +1,364 @@
+# Alert rules — the ones worth interrupting someone for, and nothing else.
+#
+# Every rule here is about a symptom a user would notice, or a resource about
+# to run out. Nothing fires on «CPU is high» or «memory grew»: an alert nobody
+# acts on is an alert nobody reads, and the first one people learn to ignore
+# is the one that trains them to ignore the rest.
+#
+# ⚠️ Provisioned rules are read-only in the UI. Edit here, then restart:
+#   docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
+#     up -d --force-recreate grafana
+#
+# Shape of each rule: refId A is an INSTANT Prometheus query, refId C is a
+# threshold on A. No reduce step between them — an instant query already
+# returns one sample per series, and a reducer over a single point is noise.
+# `condition: C` names the expression whose result decides the state.
+#
+# noDataState matters more than the threshold on a low-traffic service:
+#   Alerting — absent data IS the failure (the target is gone)
+#   OK       — absent data just means nobody used the app. histogram_quantile
+#              over an empty range returns no data at 04:00, and paging for
+#              that teaches everyone to mute the channel.
+
+apiVersion: 1
+
+groups:
+    - orgId: 1
+      name: client-api
+      # Matches the dashboards provider folder, so an alert and the dashboard
+      # it came from live in the same place.
+      folder: 'DNS'
+      interval: 1m
+      rules:
+          # ── availability ────────────────────────────────────────────────
+          - uid: dns-readiness-failing
+            title: client-api readiness failing
+            condition: C
+            for: 2m
+            noDataState: Alerting
+            execErrState: Alerting
+            labels:
+                severity: critical
+                service: client-api
+            annotations:
+                summary: '/api/v1/health/ready is not returning 200 — the API is running but cannot serve'
+                description: >-
+                    The readiness route asks Postgres directly, so this fires when the database
+                    is unreachable even though the process is perfectly healthy — /health would
+                    still answer ok. Postgres runs outside Docker here, so start there:
+                    `systemctl status postgresql`, then the container's own logs.
+                runbook_url: https://github.com/amelin0/recipes-app-monorepo/blob/development/infra/prod/README.md
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 300, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'probe_success{job="blackbox-ready"}'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+          - uid: dns-api-unscrapeable
+            title: client-api not responding to scrapes
+            condition: C
+            for: 2m
+            noDataState: Alerting
+            execErrState: Alerting
+            labels:
+                severity: critical
+                service: client-api
+            annotations:
+                summary: 'Prometheus cannot reach client-api:3000/metrics — the container is down or off the network'
+                description: >-
+                    Distinct from the readiness alert: the process itself is unreachable rather
+                    than a dependency having failed. A deploy that failed its health gate, a
+                    crash loop, or the dns-net network having been recreated without the
+                    application stack rejoining it.
+                runbook_url: https://github.com/amelin0/recipes-app-monorepo/blob/development/infra/prod/README.md
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 300, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'up{job="client-api"}'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+          # ── request health ──────────────────────────────────────────────
+          - uid: dns-5xx-rate
+            title: client-api 5xx rate above 5%
+            condition: C
+            for: 5m
+            # No traffic means no errors, not an incident.
+            noDataState: OK
+            execErrState: Alerting
+            labels:
+                severity: warning
+                service: client-api
+            annotations:
+                summary: 'More than 5% of responses are server errors over the last 5 minutes'
+                description: >-
+                    The same expression as the dashboard's «5xx share» stat. The denominator is
+                    clamped, so one error on an otherwise idle night does not read as 100%.
+                    4xx are excluded deliberately — a client sending bad input is not an outage.
+                    Start with the «Errors and warnings» log panel on the DNS · client-api
+                    dashboard.
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: >-
+                          sum(rate(http_request_duration_seconds_count{service="client-api",status=~"5.."}[5m]))
+                          / clamp_min(sum(rate(http_request_duration_seconds_count{service="client-api"}[5m])), 0.0001)
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: gt, params: [0.05] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+          - uid: dns-p95-latency
+            title: client-api p95 latency above 1s
+            condition: C
+            for: 10m
+            noDataState: OK
+            execErrState: Alerting
+            labels:
+                severity: warning
+                service: client-api
+            annotations:
+                summary: 'p95 request latency has been over 1s for 10 minutes'
+                description: >-
+                    Ten minutes, not five: a deploy or a migration produces a legitimate
+                    multi-minute spike, and paging for those is how the channel gets muted.
+                    Check «p95 latency by route» to see whether it is one endpoint or
+                    everything — the catalogue list does the most joins and is the usual
+                    first suspect.
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: >-
+                          histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{service="client-api"}[5m])))
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: gt, params: [1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+    - orgId: 1
+      name: admin-api
+      folder: 'DNS'
+      interval: 1m
+      rules:
+          # Warning, not critical: admin-api has two routes and no users yet.
+          # It is here so the alert exists before the domain modules do —
+          # promote it when the admin panel actually depends on it.
+          - uid: dns-admin-api-down
+            title: admin-api not answering
+            condition: C
+            for: 5m
+            noDataState: Alerting
+            execErrState: Alerting
+            labels:
+                severity: warning
+                service: admin-api
+            annotations:
+                summary: 'admin-api /api/v1/health is not returning 200'
+                description: >-
+                    It exposes no metrics of its own, so this is a plain liveness probe. The
+                    service currently has only /health and /docs — nothing depends on it yet,
+                    which is why this is a warning.
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'probe_success{job="blackbox-admin"}'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+    - orgId: 1
+      name: host
+      folder: 'DNS'
+      interval: 1m
+      rules:
+          # ── the box ─────────────────────────────────────────────────────
+          - uid: dns-disk-low
+            title: Disk below 15% free
+            condition: C
+            for: 15m
+            noDataState: Alerting
+            execErrState: Alerting
+            labels:
+                severity: critical
+                service: host
+            annotations:
+                summary: 'Less than 15% free on a real filesystem — Loki chunks and the Postgres data directory both live here'
+                description: >-
+                    This is the failure that takes the database down rather than the API:
+                    Postgres is what stops first when the disk fills. Loki caps at 14 days and
+                    container logs at 10MB x 3, so sustained growth usually means something
+                    else. Start with `docker system df` and `du -shx /var/lib/docker/*`.
+                runbook_url: https://github.com/amelin0/recipes-app-monorepo/blob/development/infra/prod/README.md
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 900, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: >-
+                          min(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+                          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"})
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [0.15] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+          - uid: dns-memory-low
+            title: Available memory below 10%
+            condition: C
+            for: 10m
+            noDataState: Alerting
+            execErrState: Alerting
+            labels:
+                severity: warning
+                service: host
+            annotations:
+                summary: 'Under 10% of RAM available — the OOM killer picks its victim by size, and Postgres is the biggest'
+                description: >-
+                    MemAvailable, not MemFree: page cache is reclaimable, and counting it as
+                    used would make this fire constantly. A docker build on this host is a
+                    legitimate transient cause.
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [0.1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200

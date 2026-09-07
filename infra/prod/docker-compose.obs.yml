@@ -140,6 +140,18 @@ services:
             GF_SECURITY_COOKIE_SECURE: 'true'
             GF_ANALYTICS_REPORTING_ENABLED: 'false'
             GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+            # Read by provisioning/alerting/contact-points.yml at startup.
+            # It MUST be here and not only in .env.obs: --env-file feeds
+            # compose's own interpolation, while provisioning files expand
+            # $$VARs from GRAFANA'S process environment. Miss this and the
+            # contact point provisions with an empty bot token — Grafana
+            # starts clean and alerts fail only at send time, which is the
+            # worst possible moment to find out.
+            #
+            # Token only. The chat id is inline in contact-points.yml; passing
+            # it as an env var trips grafana/grafana#69950, where a negative
+            # number substituted into a provisioning file crashes startup.
+            TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?set TELEGRAM_BOT_TOKEN in infra/prod/.env.obs}
         volumes:
             - ./grafana/provisioning:/etc/grafana/provisioning:ro
             - ./grafana/dashboards:/var/lib/grafana/dashboards:ro

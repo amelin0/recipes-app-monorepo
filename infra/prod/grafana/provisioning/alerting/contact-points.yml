@@ -1,0 +1,74 @@
+# Where alerts go. Provisioned from the repo, like everything else under
+# grafana/provisioning — a contact point clicked together in the UI is one
+# server reinstall away from being gone.
+#
+# ⚠️ Provisioned contact points are READ-ONLY in the Grafana UI. To change the
+# message or add a channel, edit this file and RESTART Grafana:
+#   docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
+#     up -d --force-recreate grafana
+# A plain `up -d` will not notice a file-only change.
+#
+# The bot token comes from Grafana's environment, set in
+# docker-compose.obs.yml from infra/prod/.env.obs. It is never committed.
+#
+# Getting the two values, once:
+#   1. Talk to @BotFather → /newbot → it hands you the token.
+#   2. Add the bot to the group, send any message there, then:
+#        curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
+#      and read message.chat.id (negative for a group).
+#
+# Use a bot dedicated to alerting rather than one already running elsewhere:
+# Grafana only sends, so a shared token would not clash, but the getUpdates
+# lookup is exclusive and would knock a running poller offline, and rotating
+# the other bot's token would take alerting down without a sound.
+
+apiVersion: 1
+
+contactPoints:
+    - orgId: 1
+      name: telegram
+      receivers:
+          - uid: telegram-ops
+            type: telegram
+            settings:
+                # The token is the actual secret, and it substitutes cleanly
+                # because it is not numeric.
+                bottoken: '$TELEGRAM_BOT_TOKEN'
+
+                # ⚠️ The chat id is INLINE on purpose — do NOT move it to an
+                # environment variable. Grafana expands $VARs in provisioning
+                # files AFTER parsing the YAML and then re-types the result, so
+                # a negative id comes back as a JSON number and validation dies
+                # with "cannot unmarshal number into Go struct field
+                # Config.chatid of type string". Quoting does not help: the
+                # quotes are gone by the time substitution happens. Open
+                # Grafana bug since 2023:
+                #   https://github.com/grafana/grafana/issues/69950
+                #
+                # Grafana fails its ENTIRE startup on a bad provisioning file,
+                # so this presents as a Grafana crash loop that takes the
+                # dashboards down with it, not as one broken alert.
+                #
+                # A chat id is not a credential — it is useless without the bot
+                # token, and the bot must already be a member of the group. If
+                # the group is later upgraded to a supergroup the id changes
+                # (Telegram answers with migrate_to_chat_id); update it here.
+                chatid: 'REPLACE_WITH_CHAT_ID'
+
+                # Deliberately plain text: parse_mode is left unset, so a log
+                # line or an error containing <, > or _ cannot make Telegram
+                # reject the whole notification as malformed markup. An alert
+                # that fails to send because of a stray underscore is a worse
+                # outcome than an unstyled one.
+                message: |-
+                  {{ len .Alerts.Firing }} firing / {{ len .Alerts.Resolved }} resolved
+
+                  {{ range .Alerts -}}
+                  [{{ .Status | toUpper }}] {{ .Labels.alertname }} ({{ .Labels.severity }})
+                  {{ .Annotations.summary }}
+                  {{ if .Annotations.runbook_url }}runbook: {{ .Annotations.runbook_url }}{{ end }}
+
+                  {{ end -}}
+            # A resolved notification is what tells you the server came back
+            # without having to go and look.
+            disableResolveMessage: false

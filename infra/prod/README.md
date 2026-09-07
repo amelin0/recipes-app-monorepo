@@ -117,12 +117,78 @@ Healthcheck контейнера і blackbox-проба дивляться на 
 пінгуватиме його частіше, почнуть прилітати 429 — тоді health треба винести
 з-під throttler'а.
 
+## Алерти в Telegram
+
+Усе під `grafana/provisioning/alerting/` — контактна точка, дерево
+маршрутизації і сім правил у теці `DNS`, тій самій, де дашборд.
+
+Налаштувати, один раз:
+
+1. `@BotFather` → `/newbot` → віддає токен.
+2. Додати бота в групу, написати туди будь-що, тоді
+   `curl "https://api.telegram.org/bot<TOKEN>/getUpdates"` і взяти
+   `message.chat.id` — для групи він відʼємний.
+3. Токен → `TELEGRAM_BOT_TOKEN` у `.env.obs`.
+4. **Chat id — рукою в `contact-points.yml`**, замість `REPLACE_WITH_CHAT_ID`.
+
+Крок 4 виглядає як недогляд, але це обхід
+[grafana/grafana#69950](https://github.com/grafana/grafana/issues/69950):
+Grafana підставляє `$VAR` у provisioning **після** парсингу YAML і перетипує
+результат, тож відʼємний id повертається числом і валідація падає. Лапки не
+рятують — їх на момент підстановки вже немає. А погана provisioning-конфігурація
+кладе **весь** старт Grafana, тобто це не «зламався алерт», а «немає
+моніторингу».
+
+Правила читаються лише при старті:
+
+```bash
+docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
+  up -d --force-recreate grafana
+```
+
+Звичайний `up -d` зміни у файлі не помітить. Провізіонені правила й контактні
+точки в UI **тільки для читання** — редагувати тут, не там.
+
+Перевірити, що все піднялося (7 правил, 1 контактна точка):
+
+```bash
+curl -su admin:$GRAFANA_ADMIN_PASSWORD \
+  http://localhost:3300/api/v1/provisioning/alert-rules | jq length
+curl -su admin:$GRAFANA_ADMIN_PASSWORD \
+  http://localhost:3300/api/v1/provisioning/contact-points | jq '.[].name'
+```
+
+Кнопка «Test» на контактній точці недоступна (вона read-only) — щоб перевірити
+доставку, простіше зупинити `client-api` на дві хвилини й дочекатися
+`dns-api-unscrapeable`.
+
+### Що саме дзвонить
+
+| Правило | Рівень | Умова |
+| --- | --- | --- |
+| `dns-readiness-failing` | critical | `/health/ready` не 200 — 2 хв |
+| `dns-api-unscrapeable` | critical | Prometheus не дістає `client-api:3000` — 2 хв |
+| `dns-disk-low` | critical | менш ніж 15% вільно — 15 хв |
+| `dns-5xx-rate` | warning | понад 5% відповідей 5xx — 5 хв |
+| `dns-p95-latency` | warning | p95 понад 1 с — 10 хв |
+| `dns-memory-low` | warning | MemAvailable під 10% — 10 хв |
+| `dns-admin-api-down` | warning | `admin-api /health` не 200 — 5 хв |
+
+`critical` йде окремим маршрутом: `group_wait` 10 с і повтор щогодини проти
+30 с і чотирьох годин у решти.
+
+`noDataState` тут важливіший за поріг. Для доступності відсутність даних —
+**це і є** відмова (`Alerting`). Для 5xx і затримки — ні (`OK`):
+`histogram_quantile` над порожнім діапазоном о 4:00 не повертає нічого, і алерт
+на це вчить усіх мутити канал.
+
+Нічого не спрацьовує на «високий CPU» чи «памʼять зросла» — свідомо. Алерт, на
+який ніхто не реагує, вчить ігнорувати наступний.
+
 ## Чого тут немає
 
 - **Скриптів деплою і відкату.** Кроки вище — рукою; автоматизувати варто
   разом із CI.
-- **Правил алертингу.** Датасорси й дашборд провізіоняться, алерти — ні:
-  канал сповіщень (Telegram, пошта) ще не обрано.
 - **Бекапів Postgres.** База поза Docker, тож і бекап поза цим стеком.
 - **Метрик в `admin-api`.** Модуль метрик є лише в `client-api`; admin-api
   поки має два маршрути й проба на нього — це просто `/health`.
