@@ -96,7 +96,8 @@ ADR-0004: запит або існує, або ні.
 | DELETE | `/recipes/{id}/favorite` | прибрати з улюблених — 204, ідемпотентно                                        |
 | GET    | `/products`              | `?q=`, `?groupId=` — каталог продуктів                                          |
 | POST   | `/products`              | власний продукт; калорійність виводиться з макросів                             |
-| POST   | `/recipes`               | ○ власна страва — наступний зріз (create-dish)                                  |
+| POST   | `/recipes`               | власна страва; КБЖВ рахує сервер зі складу                                      |
+| DELETE | `/recipes/{id}`          | видалити власну страву — 204; каталожну не можна                                |
 
 Вкладки — `?tab=`, а не `/recipes/favorites`: це та сама колекція, звужена
 фільтром (правило 5).
@@ -113,7 +114,13 @@ ADR-0004: запит або існує, або ні.
 «інгредієнтів» і «продуктів», OR усередині «категорій», «кухонь» і «дієт»,
 AND між групами. Причина — в ADR-0006.
 
-Коди помилок: `catalog.recipe-not-found`, `catalog.unknown-product-group`.
+Коди помилок: `catalog.recipe-not-found`, `catalog.unknown-product-group`,
+`catalog.unknown-cuisine`, `catalog.unknown-product`,
+`catalog.unknown-step-ingredient`.
+
+**`PATCH /recipes/{id}` не побудовано** — специфікація `create-dish` явно
+виносить редагування за межі. Кнопка «редагувати» в макеті деталі поки веде
+в нікуди.
 
 ## meal-plan ○
 

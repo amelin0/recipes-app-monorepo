@@ -6,7 +6,7 @@
 
 Реалізовано 2026-09-07. Плани:
 [`docs/specs/client/recipe/recipes-list/plan.md`](../../../docs/specs/client/recipe/recipes-list/plan.md)
-(схема), `recipe-filters`, `recipe-search`, `meal-details`.
+(схема), `recipe-filters`, `recipe-search`, `meal-details`, `create-dish`.
 
 ## Головна відмінність від V1
 
@@ -32,6 +32,7 @@ products              + product_translations            15 «швидких» з
 recipes               + recipe_translations
 recipe_ingredients    (recipe → product, amount_g)
 recipe_steps          + recipe_step_translations
+recipe_step_ingredients (крок → recipe_ingredients, чипси редактора)
 recipe_diets          (багато-до-багатьох)
 recipe_favorites      ((user_id, recipe_id) PK)
 ```
@@ -65,13 +66,17 @@ recipe_favorites      ((user_id, recipe_id) PK)
 | GET    | `/recipes/{id}`          | склад із порахованим внеском, кроки, `perServing` + `total` |
 | PUT    | `/recipes/{id}/favorite` | 204, ідемпотентно                                           |
 | DELETE | `/recipes/{id}/favorite` | 204, ідемпотентно                                           |
+| POST   | `/recipes`               | власна страва; одна транзакція, КБЖВ зі складу              |
+| DELETE | `/recipes/{id}`          | лише власна; записи журналу переживають                     |
 | GET    | `/products`              | `?q=`, `?groupId=`                                          |
 | POST   | `/products`              | власний продукт; калорійність виводиться з макросів         |
 
 Немає і не планується: `/recipes/count` (це `meta.total`), `/ingredients`
 (це `/products`), `/recipes/{id}/goal`-подібних фасадів.
 
-Коди помилок: `catalog.recipe-not-found`, `catalog.unknown-product-group`.
+Коди помилок: `catalog.recipe-not-found`, `catalog.unknown-product-group`,
+`catalog.unknown-cuisine`, `catalog.unknown-product`,
+`catalog.unknown-step-ingredient`.
 
 ## Мова відповіді
 
@@ -97,10 +102,23 @@ AND усередині «інгредієнтів» і «груп продукт
 серіалізує як `{ data, meta }` замість `{ data }`. Це єдиний виняток із
 конверта; доменний обʼєкт із полем `meta` серіалізацію не змінює.
 
+## Запис власної страви
+
+Порції, вага і час приготування **виводяться**, бо форма їх не питає: одна
+порція, вага = сума складу, час = сума таймерів кроків. КБЖВ рахується
+**один раз під час запису** — перерахунок на читанні переписував би вже
+записаний прийом їжі при першому ж виправленні даних продукту.
+
+Калорії беруться з власного числа продукту, не з Atwater по макросах: рядки
+складу на екрані показують саме його, тож підсумок дорівнює сумі рядків.
+
+Чипси кроку приходять як **позиції** у списку складу — клієнт створює ці
+рядки цим же запитом і їхніх id не знає.
+
 ## Чого ще немає
 
-- `POST /recipes` (create-dish) — наступний зріз. Фікстури тестів пишуть у
-  схему напряму, бо ендпоінта запису рецептів ще немає.
-- Таблиця «інгредієнти кроку» — зʼявиться з редактором кроків.
+- `PATCH /recipes/{id}` — редагування поза обсягом специфікації.
+- Категорія власної страви: форма її не питає, тож власні страви не
+  потрапляють під фільтр категорій.
 - Триграмний індекс під `ILIKE '%…%'`: зараз це скан.
 - Імпорт 272 продуктів USDA: у базі лише 15 «швидких» із міграції.
