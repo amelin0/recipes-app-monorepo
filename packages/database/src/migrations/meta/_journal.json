@@ -85,6 +85,13 @@
       "when": 1788772132331,
       "tag": "0011_milky_hammerhead",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788802127163,
+      "tag": "0012_hot_frog_thor",
+      "breakpoints": true
     }
   ]
 }

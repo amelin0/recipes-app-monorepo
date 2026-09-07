@@ -8,6 +8,7 @@ import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, Respon
 import { DatabaseConnectionModule } from '@dns/database';
 
 import { AllConfig, appConfig, AppEnv, authConfig, databaseConfig, throttlerConfig } from './common/config';
+import { AdminJwtGuard, AdminRolesGuard, AuthModule } from './modules/auth';
 import { HealthModule } from './modules/health';
 
 @Module({
@@ -44,12 +45,24 @@ import { HealthModule } from './modules/health';
                 url: configService.getOrThrow('database.url', { infer: true }),
             }),
         }),
+        AuthModule,
         HealthModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
         { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
         { provide: APP_GUARD, useClass: CustomThrottlerGuard },
+        // Deny-by-default (ADR-0003): every route needs a session unless it
+        // carries `@Public()`. The client API guards per controller instead —
+        // there a forgotten guard exposes one endpoint of one user's data;
+        // here it would expose the catalogue and every user record.
+        //
+        // Order is load-bearing. Nest runs global guards in registration
+        // order, and AdminRolesGuard reads the entity that AdminJwtGuard puts
+        // on the request: swap these two and every @Roles route throws 403 for
+        // everybody, including a SUPER_ADMIN.
+        { provide: APP_GUARD, useClass: AdminJwtGuard },
+        { provide: APP_GUARD, useClass: AdminRolesGuard },
     ],
 })
 export class AppModule {}

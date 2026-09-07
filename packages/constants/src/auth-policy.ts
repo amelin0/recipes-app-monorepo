@@ -39,3 +39,42 @@ export const AUTH_POLICY = Object.freeze({
         ttlMinutes: 10,
     },
 });
+
+/**
+ * Staff-side deviations from `AUTH_POLICY`.
+ *
+ * Only what actually differs lives here — email normalisation, password
+ * shape and bcrypt's 72-byte ceiling are the same rules, and duplicating
+ * them would create two numbers that drift.
+ */
+export const ADMIN_AUTH_POLICY = Object.freeze({
+    /**
+     * Higher than the client's cost, and this is the deliberate part: an admin
+     * credential opens every recipe and every user record, so a leaked hash is
+     * worth far more offline work than a single app account's. The price is
+     * paid on the login path only, by a handful of people, a few times a day.
+     */
+    bcryptRounds: 12,
+
+    /** bcrypt reads at most 72 bytes and ignores the rest silently. */
+    passwordMaxBytes: AUTH_POLICY.password.maxBytes,
+
+    /** Failed sign-ins per address before the door closes (sign-in FR-006). */
+    maxFailedAttempts: 5,
+
+    /** How long the door stays closed, and the window failures are counted over. */
+    lockoutWindowMinutes: 15,
+
+    /**
+     * A just-rotated refresh token stays acceptable for this long.
+     *
+     * Two browser tabs refreshing at the same instant both hold the same valid
+     * token; without the window, the loser looks exactly like a thief and the
+     * chain is revoked, signing the admin out mid-edit. Short enough that a
+     * stolen token is not usefully replayable.
+     */
+    refreshRotationGraceSeconds: 10,
+
+    /** How long the login journal is kept before pruning (sign-in FR-009). */
+    loginAttemptRetentionDays: 90,
+});

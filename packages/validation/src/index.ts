@@ -1,3 +1,4 @@
+export * from './admin-auth.schemas';
 export * from './auth.schemas';
 export * from './catalog.schemas';
 export * from './meal-plan.schemas';
