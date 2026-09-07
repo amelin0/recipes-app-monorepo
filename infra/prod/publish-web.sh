@@ -11,7 +11,9 @@
 # build cannot overwrite. Only the three steps that touch /var/www and nginx
 # escalate, and the script does that itself.
 #
-# `sudo ./publish-web.sh` still works: the build is dropped back to $SUDO_USER.
+# `sudo ./publish-web.sh` still works: the build is dropped back to $SUDO_USER
+# through a login shell. That path is best effort — if node came from nvm,
+# running the script without sudo is the reliable way.
 #
 # ⚠️ THE API URL IS BAKED IN AT BUILD TIME.
 #
@@ -67,14 +69,36 @@ else
     }
 fi
 
-# Build as the invoking user even when the script was started with sudo.
-# `bash -lc` because pnpm usually arrives through a login shell (corepack, nvm,
-# volta), and root's PATH has none of it — which is exactly how this fails:
-# «pnpm: command not found» three seconds into a deploy.
+# Where the build runs, and as whom.
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
-    run_build() { sudo -u "$SUDO_USER" -H bash -lc "cd '$ROOT' && $1"; }
+    # Started with sudo. Hand the build back to the user who owns the checkout,
+    # through their **login** shell — `-i` — because a node installed by nvm,
+    # corepack or volta is only on the PATH that a login sets up.
+    BUILD_AS="$SUDO_USER"
+    run_build() { sudo -u "$SUDO_USER" -i bash -c "cd '$ROOT' && $1"; }
 else
-    run_build() { bash -lc "cd '$ROOT' && $1"; }
+    # The normal case: run in the environment the caller already has.
+    #
+    # ⚠️ Do NOT wrap this in `bash -lc`. That does not add anything — it
+    # *replaces* the caller's PATH with a login shell's, and on Ubuntu a login
+    # shell sources ~/.bashrc, which returns on its second line when the shell
+    # is not interactive. Everything nvm and npm-prefix put there is therefore
+    # invisible, and the build dies on «pnpm: command not found» in a shell
+    # that had pnpm a moment earlier.
+    BUILD_AS="$(id -un)"
+    run_build() { (cd "$ROOT" && eval "$1"); }
+fi
+
+# Fail here rather than three steps in, and say what to do about it.
+if ! run_build "command -v pnpm >/dev/null 2>&1"; then
+    echo "pnpm is not on $BUILD_AS's PATH." >&2
+    if [ "$(id -u)" -eq 0 ]; then
+        echo "Run this as yourself instead of with sudo — it escalates the few steps that need it:" >&2
+        echo "    ./infra/prod/publish-web.sh" >&2
+    else
+        echo "Install it for this user:  npm install -g pnpm@9.15.0" >&2
+    fi
+    exit 1
 fi
 
 if [ -z "$API_URL" ] && [ -f "$ENV_FILE" ]; then
