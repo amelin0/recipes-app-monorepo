@@ -3,6 +3,7 @@ export * from './auth';
 export * from './catalog';
 export * from './feedback';
 export * from './i18n';
+export * from './notifications';
 export * from './nutrition';
 export * from './onboarding';
 export * from './progress';

@@ -27,3 +27,5 @@ export * from './recipe-diets.schema';
 export * from './recipe-favorites.schema';
 export * from './meal-plan-items.schema';
 export * from './shopping-list.schema';
+export * from './notifications.schema';
+export * from './faq.schema';

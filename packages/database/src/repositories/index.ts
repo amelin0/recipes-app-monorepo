@@ -17,3 +17,5 @@ export * from './product';
 export * from './recipe';
 export * from './meal-plan';
 export * from './shopping-list';
+export * from './notification';
+export * from './faq';
