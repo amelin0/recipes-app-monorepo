@@ -17,7 +17,7 @@ RF-mobile-app) — специфікації фіксують продуктов�
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Inbox (Сповіщення)](./inbox/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Inbox (Сповіщення)](./inbox/spec.md) | Approved | @amelin0 | 2026-09-07 |
 
 ## Related
 
