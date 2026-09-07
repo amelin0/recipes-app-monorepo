@@ -91,3 +91,9 @@ test('steps replace rather than accumulate, so zero is a legal report', () => {
     assert.equal(setStepsSchema.safeParse({ steps: 0 }).success, true);
     assert.equal(setStepsSchema.safeParse({ steps: -1 }).success, false);
 });
+
+test('rejects a day that does not exist, which lenient Date.parse would accept', () => {
+    // `Date.parse('2026-02-31')` gives the 3rd of March rather than NaN.
+    assert.equal(logDateSchema.safeParse('2026-02-31').success, false);
+    assert.equal(logDateSchema.safeParse('2026-13-01').success, false);
+});

@@ -13,3 +13,4 @@ export { BodyMeasurementEntity } from './body-measurement.entity';
 export { ReferenceEntity } from './catalog-reference.entity';
 export { ProductEntity } from './product.entity';
 export { RecipeEntity, RecipeIngredientEntity, RecipeStepEntity } from './recipe.entity';
+export { MealPlanItemEntity } from './meal-plan.entity';

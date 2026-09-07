@@ -224,6 +224,35 @@ export class RecipeRepository extends BaseRepository {
         });
     }
 
+    /**
+     * Several dishes at once, for a screen that already knows which — the meal
+     * plan, whose items are references. Visibility still applies: a plan item
+     * pointing at a dish this account may not see returns nothing rather than
+     * leaking its title.
+     */
+    async findByIds(ids: string[], userId: string, language: string): Promise<RecipeEntity[]> {
+        if (ids.length === 0) return [];
+
+        const preferred = alias(recipeTranslations, 'preferred_recipe_title');
+        const fallback = alias(recipeTranslations, 'fallback_recipe_title');
+        const title = sql<string>`coalesce(${preferred.title}, ${fallback.title})`;
+
+        const rows = await this.db
+            .select({ recipe: recipes, title, favoritedAt: recipeFavorites.createdAt })
+            .from(recipes)
+            .leftJoin(preferred, and(eq(preferred.recipeId, recipes.id), eq(preferred.language, language)))
+            .leftJoin(fallback, and(eq(fallback.recipeId, recipes.id), eq(fallback.language, DEFAULT_LANGUAGE)))
+            .leftJoin(
+                recipeFavorites,
+                and(eq(recipeFavorites.recipeId, recipes.id), eq(recipeFavorites.userId, userId)),
+            )
+            .where(and(inArray(recipes.id, ids), this.visibleTo(userId), sql`${title} is not null`));
+
+        return rows.map(row =>
+            RecipeEntity.from({ ...row.recipe, title: row.title, isFavorite: row.favoritedAt !== null }),
+        );
+    }
+
     async ingredientsOf(recipeId: string, language: string): Promise<RecipeIngredientEntity[]> {
         const preferred = alias(productTranslations, 'preferred_product_name');
         const fallback = alias(productTranslations, 'fallback_product_name');

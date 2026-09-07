@@ -10,18 +10,30 @@ const DAY_MS = 86_400_000;
  *
  * The server cannot derive it: a meal eaten at 01:00 belongs to the night
  * before for the person eating it, and only the device knows which day that
- * was. The window is a sanity bound against a device with a broken clock, wide
- * enough that crossing a date line never trips it.
+ * was. No window here — how far a date may reach is a question each domain
+ * answers differently, and the two answers are genuinely opposite (see
+ * `MEAL_PLAN_WINDOW_DAYS`).
  */
-export const logDateSchema = z
+export const calendarDateSchema = z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
-    .refine(value => !Number.isNaN(Date.parse(value)), 'Date is not a real calendar date')
+    // Round-tripped rather than merely parsed: `Date.parse` falls back to a
+    // lenient parser for a string the ISO grammar rejects, so `2026-02-31`
+    // comes back as the 3rd of March instead of NaN. Comparing the result to
+    // the input is what actually rejects a day that does not exist.
     .refine(value => {
-        const at = Date.parse(value);
-        const now = Date.now();
-        return at >= now - LOG_DATE_WINDOW_DAYS.past * DAY_MS && at <= now + LOG_DATE_WINDOW_DAYS.future * DAY_MS;
-    }, 'Date is outside the window a day may be logged for');
+        const at = new Date(`${value}T00:00:00Z`);
+        // `toISOString` throws on an invalid date, so the guard comes first —
+        // a refinement that throws is a 500, not a 422.
+        return !Number.isNaN(at.getTime()) && at.toISOString().slice(0, 10) === value;
+    }, 'Date is not a real calendar date');
+
+/** A day something may be logged for: a sanity bound against a device with a broken clock. */
+export const logDateSchema = calendarDateSchema.refine(value => {
+    const at = Date.parse(value);
+    const now = Date.now();
+    return at >= now - LOG_DATE_WINDOW_DAYS.past * DAY_MS && at <= now + LOG_DATE_WINDOW_DAYS.future * DAY_MS;
+}, 'Date is outside the window a day may be logged for');
 
 const bounded = (limits: { min: number; max: number }, label: string) =>
     z

@@ -25,3 +25,4 @@ export * from './recipe-ingredients.schema';
 export * from './recipe-steps.schema';
 export * from './recipe-diets.schema';
 export * from './recipe-favorites.schema';
+export * from './meal-plan-items.schema';

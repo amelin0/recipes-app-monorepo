@@ -15,3 +15,4 @@ export * from './body-measurement';
 export * from './reference';
 export * from './product';
 export * from './recipe';
+export * from './meal-plan';

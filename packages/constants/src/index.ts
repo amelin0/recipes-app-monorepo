@@ -1,6 +1,7 @@
 export * from './auth-policy';
 export * from './catalog';
 export * from './language';
+export * from './meal-plan';
 export * from './nutrition';
 export * from './nutrition-formulas';
 export * from './nutrition-policy';
