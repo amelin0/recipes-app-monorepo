@@ -19,14 +19,16 @@ UI всіх екранів уже реалізовано в мобільному
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Recipes list (Вкладка «Рецепти»)](./recipes-list/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Recipe filters (Фільтри)](./recipe-filters/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Recipe search (Пошук)](./recipe-search/spec.md) | Draft | @amelin0 | 2026-08-20 |
-| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Draft | @amelin0 | 2026-08-20 |
+| [Recipes list (Вкладка «Рецепти»)](./recipes-list/spec.md) | Implemented | @amelin0 | 2026-09-07 |
+| [Recipe filters (Фільтри)](./recipe-filters/spec.md) | Implemented | @amelin0 | 2026-09-07 |
+| [Recipe search (Пошук)](./recipe-search/spec.md) | Implemented | @amelin0 | 2026-09-07 |
+| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Approved | @amelin0 | 2026-09-07 |
 | [Create dish (Додати страву)](./create-dish/spec.md) | Draft | @amelin0 | 2026-08-20 |
 
 ## Related
 
 - Код (UI, мок-дані): `apps/mobile/src/view/recipe/`
-- Код (майбутній API): `apps/client-api/src/recipe/`
+- Код (API): `apps/client-api/src/modules/catalog/` — рецепти й продукти
+  один модуль, бо [ADR-0006](../../../adr/0006-products-absorb-ingredients.md)
+  зробив їх одним доменом
 - Knowledge (контракти V1, референс): [`.claude/knowledge/recipe/`](../../../../.claude/knowledge/recipe)
