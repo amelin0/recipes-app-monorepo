@@ -8,6 +8,7 @@ import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, Respon
 import { EmailModule } from '@dns/api-infrastructure/email';
 import { OAuthModule } from '@dns/api-infrastructure/oauth';
 import { OtpModule } from '@dns/api-infrastructure/otp';
+import { PurchasesModule } from '@dns/api-infrastructure/purchases';
 import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DatabaseConnectionModule } from '@dns/database';
 
@@ -20,6 +21,7 @@ import {
     emailConfig,
     oauthConfig,
     otpConfig,
+    purchasesConfig,
     storageConfig,
     throttlerConfig,
 } from './common/config';
@@ -32,6 +34,7 @@ import { NotificationsModule } from './modules/notifications';
 import { NutritionModule } from './modules/nutrition';
 import { ProgressModule } from './modules/progress';
 import { ShoppingListModule } from './modules/shopping-list';
+import { SubscriptionModule } from './modules/subscription';
 import { UploadsModule } from './modules/uploads';
 import { UserModule } from './modules/user';
 
@@ -49,6 +52,7 @@ import { UserModule } from './modules/user';
                 emailConfig,
                 oauthConfig,
                 otpConfig,
+                purchasesConfig,
                 storageConfig,
                 throttlerConfig,
             ],
@@ -98,6 +102,13 @@ import { UserModule } from './modules/user';
             inject: [ConfigService],
             useFactory: (configService: ConfigService<AllConfig>) => configService.getOrThrow('otp', { infer: true }),
         }),
+        PurchasesModule.forRootAsync({
+            isGlobal: true,
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<AllConfig>) =>
+                configService.getOrThrow('purchases', { infer: true }),
+        }),
         StorageModule.forRootAsync({
             isGlobal: true,
             imports: [ConfigModule],
@@ -116,6 +127,7 @@ import { UserModule } from './modules/user';
         ShoppingListModule,
         NotificationsModule,
         FaqModule,
+        SubscriptionModule,
     ],
     providers: [
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
