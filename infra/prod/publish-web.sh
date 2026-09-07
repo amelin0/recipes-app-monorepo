@@ -2,8 +2,16 @@
 #
 # Builds the admin panel and publishes it as static files.
 #
-#   sudo ./infra/prod/publish-web.sh
-#   sudo ./infra/prod/publish-web.sh --api-url https://dev.api.admin.rationfit.com/api/v1
+#   ./infra/prod/publish-web.sh
+#   ./infra/prod/publish-web.sh --api-url https://dev.api.admin.rationfit.com/api/v1
+#
+# Run it as **yourself**, not with sudo. The build has to happen as the user
+# who owns the checkout — pnpm lives on that user's PATH, and building as root
+# would leave root-owned .next, out and store entries that the next ordinary
+# build cannot overwrite. Only the three steps that touch /var/www and nginx
+# escalate, and the script does that itself.
+#
+# `sudo ./publish-web.sh` still works: the build is dropped back to $SUDO_USER.
 #
 # ⚠️ THE API URL IS BAKED IN AT BUILD TIME.
 #
@@ -31,7 +39,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -h | --help)
-            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
@@ -47,6 +55,28 @@ ENV_FILE="$ROOT/infra/prod/.env.prod"
 TARGET=/var/www/dns-admin
 KEEP=3
 
+# Escalate only where it is needed. Empty when already root, so the same lines
+# work under `sudo ./publish-web.sh` and under a plain run.
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=''
+else
+    SUDO='sudo'
+    command -v sudo >/dev/null || {
+        echo "not root and no sudo — cannot write to $TARGET" >&2
+        exit 1
+    }
+fi
+
+# Build as the invoking user even when the script was started with sudo.
+# `bash -lc` because pnpm usually arrives through a login shell (corepack, nvm,
+# volta), and root's PATH has none of it — which is exactly how this fails:
+# «pnpm: command not found» three seconds into a deploy.
+if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+    run_build() { sudo -u "$SUDO_USER" -H bash -lc "cd '$ROOT' && $1"; }
+else
+    run_build() { bash -lc "cd '$ROOT' && $1"; }
+fi
+
 if [ -z "$API_URL" ] && [ -f "$ENV_FILE" ]; then
     # `|| true`: the key is optional here, and under `set -e` a grep that finds
     # nothing would kill the script mid-assignment with no message.
@@ -61,11 +91,16 @@ fi
 
 cd "$ROOT"
 
+[ -d node_modules ] || {
+    echo "node_modules is missing — run pnpm install first" >&2
+    exit 1
+}
+
 echo "── 1/4  build (API: $API_URL)"
 # Clean, because `out/` is not emptied between builds and a route deleted from
 # the source would otherwise stay published forever.
-rm -rf apps/web/out apps/web/.next
-NEXT_PUBLIC_API_URL="$API_URL" pnpm --filter @dns/web build
+run_build "rm -rf apps/web/out apps/web/.next"
+run_build "NEXT_PUBLIC_API_URL='$API_URL' pnpm --filter @dns/web build"
 
 [ -f apps/web/out/index.html ] || {
     echo "build produced no out/index.html — did output: 'export' get removed from next.config.ts?" >&2
@@ -75,25 +110,25 @@ NEXT_PUBLIC_API_URL="$API_URL" pnpm --filter @dns/web build
 RELEASE="$TARGET/releases/$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
 
 echo "── 2/4  copy to $RELEASE"
-mkdir -p "$RELEASE"
-cp -r apps/web/out/. "$RELEASE/"
+$SUDO mkdir -p "$RELEASE"
+$SUDO cp -r apps/web/out/. "$RELEASE/"
 
 echo "── 3/4  switch"
 # -n so an existing `current` symlink is replaced rather than followed, which
 # would nest the new link inside the old target.
-ln -sfn "$RELEASE" "$TARGET/current"
+$SUDO ln -sfn "$RELEASE" "$TARGET/current"
 
 # nginx follows the symlink per request, so no reload is needed for the swap —
 # only for a change to the vhost itself.
-nginx -t
-systemctl reload nginx
+$SUDO nginx -t
+$SUDO systemctl reload nginx
 
 echo "── 4/4  prune"
 # Keeping a few makes a rollback `ln -sfn <release> /var/www/dns-admin/current`
 # with no rebuild.
-find "$TARGET/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n "+$((KEEP + 1))" | while read -r old; do
+$SUDO find "$TARGET/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n "+$((KEEP + 1))" | while read -r old; do
     echo "    removing $(basename "$old")"
-    rm -rf "$old"
+    $SUDO rm -rf "$old"
 done
 
 echo
