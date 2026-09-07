@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EmailModule } from '@dns/api-infrastructure/email';
 import { OAuthModule, OAuthService, OAuthUserPayload } from '@dns/api-infrastructure/oauth';
 import { OtpModule } from '@dns/api-infrastructure/otp';
+import { PurchasesModule } from '@dns/api-infrastructure/purchases';
 import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DATABASE_CONNECTION, DatabaseConnectionModule, DrizzleDB } from '@dns/database';
 import { OAuthProvider } from '@dns/shared-types';
@@ -16,6 +17,7 @@ import {
     emailConfig,
     oauthConfig,
     otpConfig,
+    purchasesConfig,
     storageConfig,
     throttlerConfig,
 } from '../../src/common/config';
@@ -27,6 +29,7 @@ import { NotificationsModule } from '../../src/modules/notifications';
 import { NutritionModule } from '../../src/modules/nutrition';
 import { ProgressModule } from '../../src/modules/progress';
 import { ShoppingListModule } from '../../src/modules/shopping-list';
+import { SubscriptionModule } from '../../src/modules/subscription';
 import { UserModule } from '../../src/modules/user';
 
 /**
@@ -69,6 +72,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
                     emailConfig,
                     oauthConfig,
                     otpConfig,
+                    purchasesConfig,
                     storageConfig,
                     throttlerConfig,
                 ],
@@ -107,6 +111,13 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             }),
             // Registered here because AppModule registers it globally, and
             // ProfileService and FeedbackService both take StorageService.
+            PurchasesModule.forRootAsync({
+                isGlobal: true,
+                imports: [ConfigModule],
+                inject: [ConfigService],
+                useFactory: (configService: ConfigService<AllConfig>) =>
+                    configService.getOrThrow('purchases', { infer: true }),
+            }),
             StorageModule.forRootAsync({
                 isGlobal: true,
                 imports: [ConfigModule],
@@ -123,6 +134,7 @@ export async function createAuthTestContext(): Promise<AuthTestContext> {
             ShoppingListModule,
             NotificationsModule,
             FaqModule,
+            SubscriptionModule,
         ],
     })
         .overrideProvider(OAuthService)
