@@ -12,7 +12,7 @@ import { Sheet, SheetContent } from '@/shared/ui/components/sheet'
 import { Search, X, ChevronLeft, ChevronRight, Inbox, Paperclip } from 'lucide-react'
 import type { TicketStatus, TicketType } from '@/data'
 
-export function SupportMessagesPage() {
+export function SupportMessagesPage({ initialStatus }: { initialStatus?: TicketStatus }) {
   const {
     search, handleSearchChange,
     status, handleStatusChange,
@@ -24,7 +24,7 @@ export function SupportMessagesPage() {
     selectedTicket, isDetailLoading, isDetailOpen, handleRowClick, handleCloseDetail,
     handleMove, isMoving,
     handleAddNote, isAddingNote,
-  } = useSupportMessagesPage()
+  } = useSupportMessagesPage(initialStatus)
 
   return (
     <div className="space-y-6">

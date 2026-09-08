@@ -1,13 +1,12 @@
-import { HttpService } from '@/shared/services'
-import type { RegistrationStats, TopFavoritedRecipe, PaginatedFavoriteStats } from './dashboard.types'
+import { HttpService, type Paginated } from '@/shared/services'
+
+import type { DashboardPeriod, FavoriteRecipe, Overview } from './dashboard.types'
 
 export const DashboardApi = {
-  getRegistrationStats: (days: number) =>
-    HttpService.get<RegistrationStats>(`/admin/users/stats?days=${days}`),
+  getOverview: (days: DashboardPeriod) => HttpService.get<Overview>(`/stats/overview?days=${days}`),
 
-  getTopFavorited: (limit = 5) =>
-    HttpService.get<TopFavoritedRecipe[]>(`/admin/favorites/top?limit=${limit}`),
-
-  getFavoriteStats: (page = 1, limit = 20) =>
-    HttpService.get<PaginatedFavoriteStats>(`/admin/favorites/stats?page=${page}&limit=${limit}`),
+  getFavorites: (page = 1, limit = 20) =>
+    HttpService.getPaginated<FavoriteRecipe>(`/stats/favorites?page=${page}&limit=${limit}`),
 }
+
+export type { Paginated }

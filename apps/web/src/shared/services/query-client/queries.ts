@@ -28,8 +28,7 @@ export enum Queries {
   SHOPPING_LIST = 'shopping-list',
 
   // ─── Dashboard ───────────────────────────────────────
-  REGISTRATION_STATS = 'registration-stats',
-  TOP_FAVORITED = 'top-favorited',
+  OVERVIEW = 'overview',
   FAVORITE_STATS = 'favorite-stats',
 
   // ─── Support ─────────────────────────────────────────

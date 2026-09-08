@@ -12,9 +12,10 @@ import type { TicketFilters, TicketStatus, TicketType } from '@/data'
 
 const PAGE_SIZE = 20
 
-export const useSupportMessagesPage = () => {
+export const useSupportMessagesPage = (initialStatus?: TicketStatus) => {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<TicketStatus | undefined>(undefined)
+  // Arrives from the dashboard's «N new tickets» card, already filtered.
+  const [status, setStatus] = useState<TicketStatus | undefined>(initialStatus)
   const [type, setType] = useState<TicketType | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)

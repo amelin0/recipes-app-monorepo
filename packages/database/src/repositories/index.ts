@@ -27,3 +27,4 @@ export * from './admin-recipe';
 export * from './admin-product';
 export * from './admin-user';
 export * from './admin-feedback';
+export * from './admin-stats';

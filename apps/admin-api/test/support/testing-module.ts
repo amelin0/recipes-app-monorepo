@@ -17,6 +17,7 @@ import { AuthModule } from '../../src/modules/auth';
 import { CatalogModule } from '../../src/modules/catalog';
 import { ProductModule } from '../../src/modules/product';
 import { RecipeModule } from '../../src/modules/recipe';
+import { StatsModule } from '../../src/modules/stats';
 import { SupportModule } from '../../src/modules/support';
 import { UserModule } from '../../src/modules/user';
 
@@ -62,6 +63,7 @@ export async function createAdminTestContext(): Promise<AdminTestContext> {
             CatalogModule,
             ProductModule,
             RecipeModule,
+            StatsModule,
             SupportModule,
             UserModule,
         ],

@@ -1,9 +1,2 @@
 export { DashboardApi } from './dashboard.api'
-export type {
-  RegistrationStats,
-  TopFavoritedRecipe,
-  FavoriteStatsRecipe,
-  FavoriteStatsUser,
-  PaginatedFavoriteStats,
-  Demographics,
-} from './dashboard.types'
+export type { DailyCount, DashboardPeriod, FavoriteRecipe, LanguageCount, Overview } from './dashboard.types'

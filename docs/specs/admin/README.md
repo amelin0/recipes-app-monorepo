@@ -16,6 +16,7 @@ roles — a separate auth model and a separate service from the client
 | [`recipe/`](./recipe) | Recipe CRUD, tags, ingredient editing, translations |
 | [`product/`](./product) | Product CRUD, translation editing |
 | [`support/`](./support) | Звернення з застосунку: черга, стан, нотатки |
+| [`dashboard/`](./dashboard) | Головна панелі: ріст, розмір каталогу, черги |
 
 Each domain folder has a `README.md` index and one folder per feature
 (`<feature>/spec.md` + `<feature>/plan.md`).

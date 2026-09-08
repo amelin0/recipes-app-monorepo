@@ -1,23 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { useRegistrationStats } from '@/state/domains/dashboard'
+import { useGetOverview } from '@/state/domains/dashboard'
+import type { DashboardPeriod } from '@/data'
 
-const PERIOD_OPTIONS = [
+const PERIOD_OPTIONS: { label: string; days: DashboardPeriod }[] = [
   { label: '7 days', days: 7 },
   { label: '1 month', days: 30 },
   { label: '3 months', days: 90 },
-] as const
+]
 
 export const useDashboardPage = () => {
-  const [days, setDays] = useState(7)
-  const { stats, isLoading } = useRegistrationStats(days)
+  const [days, setDays] = useState<DashboardPeriod>(7)
+  const { overview, isLoading } = useGetOverview(days)
 
-  return {
-    days,
-    setDays,
-    stats,
-    isLoading,
-    periodOptions: PERIOD_OPTIONS,
-  }
+  return { days, setDays, overview, isLoading, periodOptions: PERIOD_OPTIONS }
 }
