@@ -28,6 +28,24 @@ policies:
       repeat_interval: 4h
 
       routes:
+          # FIRST, and the order is the whole point: routes are matched top
+          # down and the first match wins. Grafana's own DatasourceError alerts
+          # carry the failing rule's labels, `severity: critical` included, so
+          # the route below would otherwise claim them and page every hour.
+          - receiver: telegram-rule-health
+            object_matchers:
+                - ['alertname', '=~', 'DatasourceError|DatasourceNoData']
+            group_by: ['grafana_folder', 'alertname']
+            # Five minutes of silence before the first word. A storage hiccup
+            # that clears inside that window never becomes a message at all —
+            # which is precisely the class of failure that was flooding the
+            # channel every minute.
+            group_wait: 5m
+            group_interval: 30m
+            # Half a day. A rule that stays broken is worth saying twice a day
+            # and no more; it is not an outage, and nobody fixes it at 03:00.
+            repeat_interval: 12h
+
           # Critical means «the API is not serving» or «the disk is about to
           # fill». Same channel, but it should not sit in a 30s batch window,
           # and it is worth repeating more often than a warning.

@@ -74,3 +74,39 @@ contactPoints:
             # A resolved notification is what tells you the server came back
             # without having to go and look.
             disableResolveMessage: false
+
+    # Rule health, not service health.
+    #
+    # Grafana raises these itself when a rule cannot be evaluated: it invents
+    # an alert named DatasourceError (or DatasourceNoData) carrying the failing
+    # rule's own labels — including `severity: critical`. Sent through the
+    # receiver above, such a message is indistinguishable from the API being
+    # down, which is exactly how the phantom alerts happened.
+    #
+    # Same chat, deliberately: a second channel nobody opens is not monitoring.
+    # The difference is in the words and in how often they arrive.
+    - orgId: 1
+      name: telegram-rule-health
+      receivers:
+          - uid: telegram-rule-health
+            type: telegram
+            settings:
+                bottoken: '$TELEGRAM_BOT_TOKEN'
+                # Inline for the same reason as above — grafana/grafana#69950.
+                chatid: '-1003784473088'
+                message: |-
+                  ПРАВИЛО НЕ ПОРАХУВАЛОСЬ ({{ len .Alerts.Firing }})
+
+                  {{ range .Alerts -}}
+                  {{ if .Labels.rulename }}{{ .Labels.rulename }}{{ else }}{{ .Labels.alertname }}{{ end }}
+                  причина: {{ .Labels.alertname }}{{ if .Labels.ref_id }} (вираз {{ .Labels.ref_id }}){{ end }}
+
+                  {{ end -}}
+                  Сервіс тут ні до чого: це збій обчислення правила —
+                  недоступний Prometheus, помилковий запит або блокування
+                  власної бази Grafana. Стан самих сервісів дивитися на
+                  дашборді.
+            # No «resolved» for these. A rule that started evaluating again
+            # simply stops repeating; a recovery ping would double the traffic
+            # of the very thing this receiver exists to quieten.
+            disableResolveMessage: true

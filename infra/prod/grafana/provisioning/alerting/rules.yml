@@ -19,6 +19,14 @@
 #   OK       — absent data just means nobody used the app. histogram_quantile
 #              over an empty range returns no data at 04:00, and paging for
 #              that teaches everyone to mute the channel.
+#
+# execErrState is a DIFFERENT question, and it used to be answered wrong here.
+# It fires when the rule itself cannot be evaluated — Prometheus unreachable,
+# a query that errors, or Grafana's own SQLite locking up. With `Alerting`
+# every such failure looked exactly like the service being down, and phantom
+# alerts flapped into Telegram while the service was fine. `Error` routes them
+# to their own contact point instead, where they read as what they are: a
+# broken rule, not a broken API. See policies.yml.
 
 apiVersion: 1
 
@@ -36,7 +44,7 @@ groups:
             condition: C
             for: 2m
             noDataState: Alerting
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: critical
                 service: client-api
@@ -81,7 +89,7 @@ groups:
             condition: C
             for: 2m
             noDataState: Alerting
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: critical
                 service: client-api
@@ -128,7 +136,7 @@ groups:
             for: 5m
             # No traffic means no errors, not an incident.
             noDataState: OK
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: warning
                 service: client-api
@@ -175,7 +183,7 @@ groups:
             condition: C
             for: 10m
             noDataState: OK
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: warning
                 service: client-api
@@ -229,7 +237,7 @@ groups:
             condition: C
             for: 5m
             noDataState: Alerting
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: warning
                 service: admin-api
@@ -278,7 +286,7 @@ groups:
             condition: C
             for: 15m
             noDataState: Alerting
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: critical
                 service: host
@@ -325,7 +333,7 @@ groups:
             condition: C
             for: 10m
             noDataState: Alerting
-            execErrState: Alerting
+            execErrState: Error
             labels:
                 severity: warning
                 service: host
