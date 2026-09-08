@@ -1,17 +1,55 @@
 'use client'
 
-import { useState } from 'react'
-import { useGetSupportMessages, useGetSupportMessage } from '@/state/domains/support'
+import { useState, useDeferredValue } from 'react'
+import {
+  useAddTicketNote,
+  useGetTicket,
+  useGetTickets,
+  useNewTicketCount,
+  useSetTicketStatus,
+} from '@/state/domains/support'
+import type { TicketFilters, TicketStatus, TicketType } from '@/data'
+
+const PAGE_SIZE = 20
 
 export const useSupportMessagesPage = () => {
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState<TicketStatus | undefined>(undefined)
+  const [type, setType] = useState<TicketType | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
 
-  const { messages, total, isLoading } = useGetSupportMessages(page)
-  const { message: selectedMessage, isLoading: isDetailLoading } = useGetSupportMessage(selectedId)
+  const debouncedSearch = useDeferredValue(search)
 
-  const totalPages = Math.ceil(total / 20)
+  const filters: TicketFilters = {
+    search: debouncedSearch || undefined,
+    status,
+    type,
+    page,
+    limit: PAGE_SIZE,
+  }
+
+  const { tickets, total, totalPages, isLoading } = useGetTickets(filters)
+  const { ticket: selectedTicket, isLoading: isDetailLoading } = useGetTicket(selectedId)
+  const { setStatus: moveTicket, isPending: isMoving } = useSetTicketStatus()
+  const { addNote, isPending: isAddingNote } = useAddTicketNote()
+  const { newCount } = useNewTicketCount()
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setPage(1)
+  }
+
+  const handleStatusChange = (value: TicketStatus | undefined) => {
+    setStatus(value)
+    setPage(1)
+  }
+
+  const handleTypeChange = (value: TicketType | undefined) => {
+    setType(value)
+    setPage(1)
+  }
 
   const handleRowClick = (id: string) => {
     setSelectedId(id)
@@ -25,9 +63,42 @@ export const useSupportMessagesPage = () => {
     }
   }
 
+  const handleMove = async (next: TicketStatus) => {
+    if (!selectedTicket) return
+    await moveTicket({ id: selectedTicket.id, status: next })
+  }
+
+  const handleAddNote = async (body: string) => {
+    if (!selectedTicket) return
+    await addNote({ id: selectedTicket.id, body })
+  }
+
+  const handleShowNew = () => {
+    setSearch('')
+    setType(undefined)
+    setStatus('new')
+    setPage(1)
+  }
+
+  const handleClearFilters = () => {
+    setSearch('')
+    setStatus(undefined)
+    setType(undefined)
+    setPage(1)
+  }
+
+  const hasFilters = search !== '' || status !== undefined || type !== undefined
+
   return {
-    messages, total, page, totalPages, isLoading,
-    selectedMessage, isDetailLoading, isDetailOpen,
-    setPage, handleRowClick, handleCloseDetail,
+    search, handleSearchChange,
+    status, handleStatusChange,
+    type, handleTypeChange,
+    hasFilters, handleClearFilters,
+    newCount, handleShowNew,
+    page, setPage, totalPages, total,
+    tickets, isLoading,
+    selectedTicket, isDetailLoading, isDetailOpen, handleRowClick, handleCloseDetail,
+    handleMove, isMoving,
+    handleAddNote, isAddingNote,
   }
 }

@@ -12,13 +12,15 @@ import type { DeletionFilter, UserFilters } from '@/data'
 
 const PAGE_SIZE = 20
 
-export const useUsersPage = () => {
+export const useUsersPage = (initialUserId: string | null = null) => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<'blocked' | 'unverified' | 'subscribed' | undefined>(undefined)
   const [deletion, setDeletion] = useState<DeletionFilter | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  // Opened from a support ticket: `/users/?id=…` lands on the card itself,
+  // not on a list the reader then has to search.
+  const [selectedId, setSelectedId] = useState<string | null>(initialUserId)
+  const [isDetailOpen, setIsDetailOpen] = useState(initialUserId !== null)
 
   const debouncedSearch = useDeferredValue(search)
 

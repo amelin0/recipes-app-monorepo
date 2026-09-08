@@ -1,2 +1,5 @@
-export { useGetSupportMessages } from './useGetSupportMessages'
-export { useGetSupportMessage } from './useGetSupportMessage'
+export { useGetTickets } from './useGetTickets'
+export { useGetTicket } from './useGetTicket'
+export { useSetTicketStatus } from './useSetTicketStatus'
+export { useAddTicketNote } from './useAddTicketNote'
+export { useNewTicketCount } from './useNewTicketCount'
