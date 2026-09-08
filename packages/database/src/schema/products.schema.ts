@@ -54,6 +54,18 @@ export const products = pgTable(
          */
         createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
 
+        /**
+         * Set when a product is taken out of the catalogue (admin
+         * product-catalogue FR-008).
+         *
+         * Not a `DELETE`, and that is the point: `recipe_ingredients`
+         * references products with ON DELETE RESTRICT precisely so removing
+         * one cannot hollow out a dish. Archiving keeps every reference intact
+         * — recipes, meal-log entries, shopping lists — and only hides the row
+         * from search, on both surfaces.
+         */
+        archivedAt: timestamp('archived_at', { withTimezone: true }),
+
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
     table => [index('products_source_creator_idx').on(table.source, table.createdBy)],

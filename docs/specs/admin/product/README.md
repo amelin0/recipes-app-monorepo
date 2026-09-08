@@ -1,6 +1,7 @@
 # Product (admin)
 
-Product management: CRUD for products, editing translations across 20 languages.
+Product management: CRUD, CSV import, verification of user-made products,
+archiving, and names in every supported language.
 
 Each feature lives in its own folder containing `spec.md` + `plan.md`
 (plus any supporting artifacts).
@@ -9,6 +10,7 @@ Each feature lives in its own folder containing `spec.md` + `plan.md`
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
+| [Product catalogue (Каталог продуктів)](./catalogue/spec.md) | Implemented | @amelin0 | 2026-09-08 |
 
 ## Related
 

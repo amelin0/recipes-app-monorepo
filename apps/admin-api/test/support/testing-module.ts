@@ -15,6 +15,7 @@ import {
 } from '../../src/common/config';
 import { AuthModule } from '../../src/modules/auth';
 import { CatalogModule } from '../../src/modules/catalog';
+import { ProductModule } from '../../src/modules/product';
 import { RecipeModule } from '../../src/modules/recipe';
 
 export interface AdminTestContext {
@@ -57,6 +58,7 @@ export async function createAdminTestContext(): Promise<AdminTestContext> {
             }),
             AuthModule,
             CatalogModule,
+            ProductModule,
             RecipeModule,
         ],
     }).compile();

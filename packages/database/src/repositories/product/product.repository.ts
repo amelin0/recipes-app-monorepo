@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SQL, and, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { SQL, and, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_LANGUAGE } from '@dns/constants';
@@ -40,6 +40,20 @@ export class ProductRepository extends BaseRepository {
         return visible;
     }
 
+    /**
+     * Archiving takes a product out of the catalogue without deleting it
+     * (admin product-catalogue FR-008/FR-009), so **search** must hide it —
+     * here and in the admin panel alike.
+     *
+     * The by-id lookups deliberately do NOT apply this: a dish or a meal-log
+     * entry that already references the product has to keep resolving it, or
+     * archiving would break exactly the data the whole approach exists to
+     * protect.
+     */
+    private notArchived(): SQL {
+        return isNull(products.archivedAt);
+    }
+
     async search(params: {
         userId: string;
         language: string;
@@ -48,7 +62,7 @@ export class ProductRepository extends BaseRepository {
         page: number;
         limit: number;
     }): Promise<ProductPage> {
-        const conditions: SQL[] = [this.visibleTo(params.userId)];
+        const conditions: SQL[] = [this.visibleTo(params.userId), this.notArchived()];
         if (params.groupId) conditions.push(eq(products.groupId, params.groupId));
 
         const where = and(...conditions);
@@ -78,7 +92,7 @@ export class ProductRepository extends BaseRepository {
         page: number;
         limit: number;
     }): Promise<ProductPage> {
-        const where = eq(products.source, ContentSource.Global);
+        const where = and(eq(products.source, ContentSource.Global), this.notArchived());
 
         const [items, total] = await Promise.all([
             this.findMany(params.language, where, params.query, {
@@ -91,9 +105,9 @@ export class ProductRepository extends BaseRepository {
         return { items, total };
     }
 
-    /** The fifteen one-tap chips the filter screen opens with (recipe-filters FR-002). */
+    /** The one-tap chips the filter screen opens with (recipe-filters FR-002). */
     async findQuickPicks(language: string): Promise<ProductEntity[]> {
-        return this.findMany(language, eq(products.isQuickPick, true));
+        return this.findMany(language, and(eq(products.isQuickPick, true), this.notArchived()));
     }
 
     async findById(id: string, userId: string, language: string): Promise<ProductEntity | null> {

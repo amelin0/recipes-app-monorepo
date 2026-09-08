@@ -20,6 +20,7 @@ import {
 import { AdminJwtGuard, AdminRolesGuard, AuthModule } from './modules/auth';
 import { CatalogModule } from './modules/catalog';
 import { HealthModule } from './modules/health';
+import { ProductModule } from './modules/product';
 import { RecipeModule } from './modules/recipe';
 import { UploadModule } from './modules/upload';
 
@@ -66,6 +67,7 @@ import { UploadModule } from './modules/upload';
         }),
         AuthModule,
         CatalogModule,
+        ProductModule,
         RecipeModule,
         UploadModule,
         HealthModule,
