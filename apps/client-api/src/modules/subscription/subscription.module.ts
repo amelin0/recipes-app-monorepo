@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { NotificationsProducerModule } from '@dns/api-common';
 import { ProfileRepositoryModule, SubscriptionRepositoryModule } from '@dns/database';
 
 import { AuthModule } from '../auth';
@@ -10,7 +11,13 @@ import { SubscriptionController } from './subscription.controller';
 import { SubscriptionService } from './subscription.service';
 
 @Module({
-    imports: [AuthModule, CatalogModule, SubscriptionRepositoryModule, ProfileRepositoryModule],
+    imports: [
+        AuthModule,
+        CatalogModule,
+        SubscriptionRepositoryModule,
+        ProfileRepositoryModule,
+        NotificationsProducerModule,
+    ],
     controllers: [SubscriptionController, ReferralController],
     providers: [SubscriptionService],
 })

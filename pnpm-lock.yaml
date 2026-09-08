@@ -517,6 +517,12 @@ importers:
 
   packages/api-common:
     dependencies:
+      '@dns/constants':
+        specifier: workspace:*
+        version: link:../constants
+      '@dns/database':
+        specifier: workspace:*
+        version: link:../database
       '@dns/shared-types':
         specifier: workspace:*
         version: link:../shared-types

@@ -1,7 +1,9 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
+import { NotificationsProducer } from '@dns/api-common';
 import { ACCOUNT_DELETION_GRACE_DAYS } from '@dns/constants';
 import { AccountDeletionRequestEntity, AccountDeletionRequestRepository } from '@dns/database';
+import { NotificationEvent } from '@dns/shared-types';
 
 import { UserErrorCode } from './user.errors';
 
@@ -9,7 +11,10 @@ const DAY_MS = 86_400_000;
 
 @Injectable()
 export class AccountDeletionService {
-    constructor(private readonly requestRepository: AccountDeletionRequestRepository) {}
+    constructor(
+        private readonly requestRepository: AccountDeletionRequestRepository,
+        private readonly notifications: NotificationsProducer,
+    ) {}
 
     findActive(userId: string): Promise<AccountDeletionRequestEntity | null> {
         return this.requestRepository.findActive(userId);
@@ -30,7 +35,18 @@ export class AccountDeletionService {
             });
         }
 
-        return this.requestRepository.create(userId, new Date(Date.now() + ACCOUNT_DELETION_GRACE_DAYS * DAY_MS));
+        const request = await this.requestRepository.create(
+            userId,
+            new Date(Date.now() + ACCOUNT_DELETION_GRACE_DAYS * DAY_MS),
+        );
+
+        // The one message here that is not a courtesy: it carries the date the
+        // account disappears, and the way back while it still exists.
+        await this.notifications.emit(userId, NotificationEvent.AccountDeletionRequested, {
+            date: request.scheduledFor,
+        });
+
+        return request;
     }
 
     /** Cancels the countdown and hands the account back untouched (FR-005). */
@@ -45,5 +61,6 @@ export class AccountDeletionService {
         }
 
         await this.requestRepository.cancel(active.id);
+        await this.notifications.emit(userId, NotificationEvent.AccountDeletionCancelled);
     }
 }

@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import { NotificationType } from '@dns/shared-types';
+import { NotificationEvent, NotificationType } from '@dns/shared-types';
 
 import { users } from './users.schema';
 
@@ -9,6 +9,22 @@ export const notificationTypeEnum = pgEnum('notification_type', [
     NotificationType.Reminder,
     NotificationType.System,
     NotificationType.Subscription,
+]);
+
+/** Why the message exists. See the enum for what is produced and what is only declared. */
+export const notificationEventEnum = pgEnum('notification_event', [
+    NotificationEvent.SubscriptionActivated,
+    NotificationEvent.SubscriptionCancelled,
+    NotificationEvent.ReferralRedeemed,
+    NotificationEvent.AccountDeletionRequested,
+    NotificationEvent.AccountDeletionCancelled,
+    NotificationEvent.ProductVerified,
+    NotificationEvent.Promo,
+    NotificationEvent.DailyLogReminder,
+    NotificationEvent.WaterReminder,
+    NotificationEvent.Inactivity,
+    NotificationEvent.SubscriptionExpiring,
+    NotificationEvent.SubscriptionExpired,
 ]);
 
 /**
@@ -33,6 +49,16 @@ export const notifications = pgTable(
             .references(() => users.id, { onDelete: 'cascade' }),
 
         type: notificationTypeEnum('type').notNull(),
+
+        /**
+         * The event that produced this row.
+         *
+         * Nullable, and deliberately: rows written before producers existed
+         * have no honest value to put here, and inventing one would make the
+         * column lie about where they came from. Everything written from now on
+         * carries it.
+         */
+        event: notificationEventEnum('event'),
 
         title: text('title').notNull(),
         body: text('body').notNull(),

@@ -1,18 +1,24 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
+import { NotificationsProducer } from '@dns/api-common';
+import { DEFAULT_LANGUAGE } from '@dns/constants';
 import {
     AdminProductDetail,
     AdminProductListItem,
     AdminProductRepository,
     WriteProductInput,
 } from '@dns/database';
+import { NotificationEvent } from '@dns/shared-types';
 import { AdminCreateProductInput, AdminProductListQuery } from '@dns/validation';
 
 import { ProductErrorCode } from './product.errors';
 
 @Injectable()
 export class AdminProductService {
-    constructor(private readonly productRepository: AdminProductRepository) {}
+    constructor(
+        private readonly productRepository: AdminProductRepository,
+        private readonly notifications: NotificationsProducer,
+    ) {}
 
     list(query: AdminProductListQuery): Promise<{ items: AdminProductListItem[]; total: number }> {
         return this.productRepository.list({
@@ -48,8 +54,18 @@ export class AdminProductService {
     }
 
     async setVerified(id: string, isVerified: boolean): Promise<void> {
+        // Read before the write: verification clears `createdBy`, so afterwards
+        // there is no author left to tell.
+        const before = await this.findById(id, DEFAULT_LANGUAGE);
+
         const updated = await this.productRepository.setVerified(id, isVerified);
         if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+
+        if (isVerified && before.createdBy) {
+            await this.notifications.emit(before.createdBy, NotificationEvent.ProductVerified, {
+                subject: before.name,
+            });
+        }
     }
 
     async setArchived(id: string, archived: boolean): Promise<void> {
