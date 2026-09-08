@@ -2,8 +2,6 @@ export * from './auth'
 export * from './user'
 export * from './dashboard'
 export * from './support'
-export * from './notifications'
-export * from './language'
 export * from './tag'
 
 // `recipe` and `product` both describe a product: the recipe module needs the
