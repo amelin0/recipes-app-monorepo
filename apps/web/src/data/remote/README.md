@@ -10,13 +10,13 @@ the honest state, so nobody assumes a screen works because its client compiles.
 | `recipe` | ✅ | CRUD, CSV import, presigned photo upload |
 | `tag` | ✅ read-only | `GET /tags` — the flat façade over categories, cuisines and diets. There is no write side and, under ADR-0006, none is planned. |
 | `product` | ✅ | CRUD, CSV import, verification, archiving. The recipe form's ingredient picker reads the same `GET /products` — a second, simpler list would disagree about which rows exist. |
-| `user` | ❌ | No endpoints. Screens will 404. |
+| `user` | ✅ | Directory, card, blocking, cancelling a deletion request. There is deliberately no «delete account» call — ADR-0005 is still open. |
 | `notifications` | ❌ | " |
 | `language` | ❌ | " |
 | `dashboard` | ❌ | " |
 | `support` | ❌ | " |
 
-The five without a server are left in their V1 shape on purpose: rewriting a
+The four without a server are left in their V1 shape on purpose: rewriting a
 client against an endpoint nobody has designed yet produces a contract that
 drifts before it is ever called. They keep their `/admin/...` paths, which is
 also a useful marker — anything still carrying that prefix has no backend.

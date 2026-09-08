@@ -1,3 +1,5 @@
 export { useGetUsers } from './useGetUsers'
 export { useGetUser } from './useGetUser'
 export { useBlockUser } from './useBlockUser'
+export { useCancelDeletionRequest } from './useCancelDeletionRequest'
+export { useOverdueDeletions } from './useOverdueDeletions'

@@ -1,36 +1,41 @@
-import { HttpService } from '@/shared/services'
-import type { User, UserFilters, UserDetail, PaginatedResponse } from './user.types'
+import { HttpService, type Paginated } from '@/shared/services'
 
-const ENDPOINTS = {
-  USERS: '/admin/users',
-  USER_BY_ID: (id: string) => `/admin/users/${id}`,
-  BLOCK_USER: (id: string) => `/admin/users/${id}/block`,
-}
+import type { User, UserDetail, UserFilters } from './user.types'
 
-function buildQuery(params: Record<string, string | number | undefined>): string {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
   if (entries.length === 0) return ''
-  return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()
+  return '?' + new URLSearchParams(entries.map(([key, value]) => [key, String(value)])).toString()
 }
 
 export const UserApi = {
-  getAll: (filters?: UserFilters) => {
-    const query = buildQuery({
-      search: filters?.search,
-      gender: filters?.gender,
-      country: filters?.country,
-      language: filters?.language,
-      page: filters?.page,
-      limit: filters?.limit,
-    })
-    return HttpService.get<PaginatedResponse<User>>(`${ENDPOINTS.USERS}${query}`)
-  },
+  getAll: (filters?: UserFilters) =>
+    HttpService.getPaginated<User>(
+      `/users${buildQuery({
+        search: filters?.search,
+        isBlocked: filters?.isBlocked,
+        isEmailVerified: filters?.isEmailVerified,
+        hasSubscription: filters?.hasSubscription,
+        deletion: filters?.deletion,
+        page: filters?.page,
+        limit: filters?.limit,
+      })}`,
+    ),
 
-  getById: (id: string) => {
-    return HttpService.get<UserDetail>(ENDPOINTS.USER_BY_ID(id))
-  },
+  getById: (id: string) => HttpService.get<UserDetail>(`/users/${id}`),
 
-  blockUser: (id: string, isBlocked: boolean) => {
-    return HttpService.patch<User>(ENDPOINTS.BLOCK_USER(id), { is_blocked: isBlocked })
-  },
+  /**
+   * Blocking revokes every session the account has; unblocking restores the
+   * ability to sign in, not the sessions themselves.
+   */
+  setBlocked: (id: string, blocked: boolean) => HttpService.patch<void>(`/users/${id}/block`, { blocked }),
+
+  /**
+   * Cancels the **request**, not the account — the path names the request so
+   * the two cannot be read for one another. There is no «delete account» call
+   * here on purpose: ADR-0005 is still open.
+   */
+  cancelDeletionRequest: (id: string) => HttpService.delete<void>(`/users/${id}/deletion-request`),
 }
+
+export type { Paginated }
