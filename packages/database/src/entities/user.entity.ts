@@ -7,6 +7,7 @@ export class UserEntity {
     readonly email: string;
     readonly passwordHash: string | null;
     readonly emailVerifiedAt: Date | null;
+    readonly blockedAt: Date | null;
     readonly createdAt: Date;
     readonly updatedAt: Date;
 
@@ -15,6 +16,7 @@ export class UserEntity {
         this.email = row.email;
         this.passwordHash = row.passwordHash;
         this.emailVerifiedAt = row.emailVerifiedAt;
+        this.blockedAt = row.blockedAt;
         this.createdAt = row.createdAt;
         this.updatedAt = row.updatedAt;
     }
@@ -25,6 +27,15 @@ export class UserEntity {
 
     isEmailVerified(): boolean {
         return this.emailVerifiedAt !== null;
+    }
+
+    /**
+     * Staff stopped this account. Checked wherever a session is handed out and
+     * on every authenticated request — an account that is blocked mid-session
+     * must not keep working for the rest of its token's fifteen minutes.
+     */
+    isBlocked(): boolean {
+        return this.blockedAt !== null;
     }
 
     /**

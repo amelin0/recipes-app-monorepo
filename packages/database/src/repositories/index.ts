@@ -25,3 +25,4 @@ export * from './admin-refresh-token';
 export * from './admin-login-attempt';
 export * from './admin-recipe';
 export * from './admin-product';
+export * from './admin-user';

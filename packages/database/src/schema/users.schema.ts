@@ -31,6 +31,19 @@ export const users = pgTable(
         // therefore means "registered but unverified", a normal state.
         emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
 
+        /**
+         * When staff stopped this account (admin user-directory FR-005).
+         *
+         * A moment rather than a flag: «since when» is what support is
+         * actually asked, and it costs the same to store.
+         *
+         * It lives here, on the row `JwtStrategy` already re-reads for every
+         * authenticated request, so enforcing it adds no query — which is what
+         * makes a block take effect on the next request instead of when the
+         * access token expires.
+         */
+        blockedAt: timestamp('blocked_at', { withTimezone: true }),
+
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     },

@@ -23,6 +23,7 @@ import { HealthModule } from './modules/health';
 import { ProductModule } from './modules/product';
 import { RecipeModule } from './modules/recipe';
 import { UploadModule } from './modules/upload';
+import { UserModule } from './modules/user';
 
 @Module({
     imports: [
@@ -69,6 +70,7 @@ import { UploadModule } from './modules/upload';
         CatalogModule,
         ProductModule,
         RecipeModule,
+        UserModule,
         UploadModule,
         HealthModule,
     ],

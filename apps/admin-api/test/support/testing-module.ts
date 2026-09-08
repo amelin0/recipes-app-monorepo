@@ -17,6 +17,7 @@ import { AuthModule } from '../../src/modules/auth';
 import { CatalogModule } from '../../src/modules/catalog';
 import { ProductModule } from '../../src/modules/product';
 import { RecipeModule } from '../../src/modules/recipe';
+import { UserModule } from '../../src/modules/user';
 
 export interface AdminTestContext {
     moduleRef: TestingModule;
@@ -60,6 +61,7 @@ export async function createAdminTestContext(): Promise<AdminTestContext> {
             CatalogModule,
             ProductModule,
             RecipeModule,
+            UserModule,
         ],
     }).compile();
 
