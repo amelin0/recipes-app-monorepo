@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { NotificationsProducerModule } from '@dns/api-common';
 import {
     AccountDeletionRequestRepositoryModule,
     FeedbackRepositoryModule,
@@ -31,6 +32,7 @@ import { RemindersService } from './reminders.service';
         AccountDeletionRequestRepositoryModule,
         FeedbackRepositoryModule,
         NutritionRepositoryModule,
+        NotificationsProducerModule,
     ],
     controllers: [
         ProfileController,

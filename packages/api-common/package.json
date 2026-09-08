@@ -13,6 +13,8 @@
         "test": "tsx --test \"src/**/*.test.ts\""
     },
     "dependencies": {
+        "@dns/constants": "workspace:*",
+        "@dns/database": "workspace:*",
         "@dns/shared-types": "workspace:*"
     },
     "peerDependencies": {

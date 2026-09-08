@@ -8,3 +8,4 @@ export * from './nutrition-policy';
 export * from './shopping-list';
 export * from './subscription';
 export * from './user-defaults';
+export * from './notification-templates';

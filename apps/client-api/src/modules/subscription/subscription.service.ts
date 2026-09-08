@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
+import { NotificationsProducer } from '@dns/api-common';
 import { PurchasesService } from '@dns/api-infrastructure/purchases';
 import { REFERRAL_CODE_LENGTH, REFERRAL_REWARD } from '@dns/constants';
 import {
@@ -12,7 +13,13 @@ import {
     SubscriptionPlanEntity,
     SubscriptionRepository,
 } from '@dns/database';
-import { BillingPeriod, PurchaseStore, SubscriptionSource, SubscriptionStatus } from '@dns/shared-types';
+import {
+    BillingPeriod,
+    NotificationEvent,
+    PurchaseStore,
+    SubscriptionSource,
+    SubscriptionStatus,
+} from '@dns/shared-types';
 import { SubmitReceiptInput } from '@dns/validation';
 
 import { ReaderLanguageService } from '../catalog/reader-language.service';
@@ -58,6 +65,7 @@ export class SubscriptionService {
         private readonly profiles: ProfileRepository,
         private readonly purchases: PurchasesService,
         private readonly language: ReaderLanguageService,
+        private readonly notifications: NotificationsProducer,
     ) {}
 
     /**
@@ -160,6 +168,10 @@ export class SubscriptionService {
 
         await this.dismissPaywall(userId);
 
+        // After the row exists, and never inside its transaction: the purchase
+        // is what must survive, the message about it is not.
+        await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, { date: row.expiresAt });
+
         return SubscriptionEntity.from({
             ...row,
             planSlug: plan.slug,
@@ -215,6 +227,12 @@ export class SubscriptionService {
 
         await this.subscriptions.recordRedemption(userId, referrerUserId, code);
         await this.dismissPaywall(userId);
+
+        await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, { date: row.expiresAt });
+
+        // The referrer is the one who otherwise never finds out: their screen
+        // shows a number that moves with nothing to explain it.
+        await this.notifications.emit(referrerUserId, NotificationEvent.ReferralRedeemed);
 
         return SubscriptionEntity.from({
             ...row,

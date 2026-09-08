@@ -1,0 +1,2 @@
+CREATE TYPE "public"."notification_event" AS ENUM('subscription_activated', 'subscription_cancelled', 'referral_redeemed', 'account_deletion_requested', 'account_deletion_cancelled', 'product_verified', 'promo', 'daily_log_reminder', 'water_reminder', 'inactivity', 'subscription_expiring', 'subscription_expired');--> statement-breakpoint
+ALTER TABLE "notifications" ADD COLUMN "event" "notification_event";

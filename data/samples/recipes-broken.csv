@@ -1,0 +1,9 @@
+import_key,title_uk,title_en,category,cuisine,diets,servings,cook_time_minutes,photo_url,ingredients,steps_uk,steps_en,step_durations
+,Без ключа,,,,,1,,,Tomatoes:100,Крок,,
+no-title,,,,,,1,,,Tomatoes:100,Крок,,
+bad-servings,Порції нулем,,,,,0,,,Tomatoes:100,Крок,,
+unknown-product,Продукт не з каталогу,,,,,1,,,Unobtainium:100,Крок,,
+unknown-diet,Дієта не з довідника,,,paleo,,1,,,Tomatoes:100,Крок,,
+steps-mismatch,Кроки не збігаються,,,,,1,,,Tomatoes:100,Крок один|Крок два,Step one,
+ham-cheese-sandwich,Дубль ключа в одному файлі,,,,,1,,,Tomatoes:100,Крок,,
+ham-cheese-sandwich,І ще раз той самий ключ,,,,,1,,,Tomatoes:100,Крок,,

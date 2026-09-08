@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import { DEFAULT_LANGUAGE } from '@dns/constants';
 import { AdminProductRepository, ProductRepository, schema } from '@dns/database';
-import { ContentSource, Language } from '@dns/shared-types';
+import { ContentSource, Language, NotificationEvent } from '@dns/shared-types';
 import { AdminCreateProductInput, adminCreateProductSchema } from '@dns/validation';
 
 import { ProductImportService } from '../src/modules/product/import/product-import.service';
@@ -144,6 +144,40 @@ describe('admin product catalogue', () => {
             expect(row?.isVerified).toBe(true);
 
             await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        /**
+         * The author is told, and told **before** the write clears
+         * `created_by`: a moment later there is nobody left to notify, which
+         * is exactly the bug the ordering in the service exists to avoid.
+         */
+        it('tells the person who created it', async () => {
+            const userId = await createUser(context);
+            const id = await createCustomProduct(context, userId, 'Homemade cheese');
+
+            await productService.setVerified(id, true);
+
+            const messages = await context.db
+                .select({ title: schema.notifications.title, event: schema.notifications.event })
+                .from(schema.notifications)
+                .where(eq(schema.notifications.userId, userId));
+
+            expect(messages).toHaveLength(1);
+            expect(messages[0]?.event).toBe(NotificationEvent.ProductVerified);
+
+            await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        it('tells nobody when the product was ours all along', async () => {
+            // Measured as a difference: notifications are not this suite's
+            // table, and a bare `count(*)` would be an assertion about whatever
+            // else happens to be in a shared database.
+            const before = await notificationCount(context);
+            const id = await productService.create(payload());
+
+            await productService.setVerified(id, true);
+
+            expect(await notificationCount(context)).toBe(before);
         });
 
         it('makes it findable by somebody else', async () => {
@@ -360,6 +394,11 @@ async function createUser(context: AdminTestContext): Promise<string> {
             values (${`product-${Date.now()}-${Math.random()}@example.com`}, 'x', now()) returning id`,
     );
     return row!.id;
+}
+
+async function notificationCount(context: AdminTestContext): Promise<number> {
+    const [row] = await context.db.select({ total: sql<number>`count(*)::int` }).from(schema.notifications);
+    return Number(row?.total ?? 0);
 }
 
 /** A product as a user's own — the state verification promotes out of. */

@@ -23,9 +23,14 @@ export async function truncateAuthTables(db: DrizzleDB): Promise<void> {
     );
     await db.execute(sql`DELETE FROM products WHERE source = 'custom'`);
 
+    // `feedback_notes` is listed only because it holds a foreign key into
+    // `feedback`: Postgres refuses to truncate a referenced table unless the
+    // referencing one goes in the same statement. It is the admin suite's
+    // table, and this is the whole of what we do to it — the alternative,
+    // CASCADE, would reach tables nobody named here.
     await db.execute(
         sql`TRUNCATE TABLE nutrition_goals, meal_log_entries, water_log_entries, daily_steps,
-            body_measurements, feedback, account_deletion_requests, user_reminders,
+            body_measurements, feedback_notes, feedback, account_deletion_requests, user_reminders,
             user_settings, profiles, oauth_identities, password_reset_permits, otp_codes, refresh_tokens`,
     );
 
