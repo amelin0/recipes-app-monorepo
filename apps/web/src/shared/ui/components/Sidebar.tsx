@@ -7,20 +7,15 @@ import { useState } from "react"
 import {
   LayoutDashboard,
   BookOpen,
-  CalendarDays,
   Users,
-  Settings,
-  HelpCircle,
-  Bell,
+  Heart,
   LogOut,
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/components/collapsible"
-import { Separator } from "@/shared/ui/components/separator"
 import { useLogout } from "@/state/domains/auth"
-import { useUnreadCount } from "@/state/domains/notifications"
 
 interface NavItem {
   label: string
@@ -38,6 +33,14 @@ type NavEntry = NavItem | NavGroup
 
 const isGroup = (entry: NavEntry): entry is NavGroup => "items" in entry
 
+/**
+ * Every entry here is a route that exists.
+ *
+ * It used to carry «Meal Plans», «Settings» and «Support» — three links to
+ * pages that were never built, and one page that was built («Favourite
+ * statistics») with nothing linking to it. A menu that leads to a 404 makes
+ * the reader doubt the items that do work.
+ */
 const navigation: NavEntry[] = [
   { label: "Dashboard", href: "/", icon: <LayoutDashboard size={20} /> },
   {
@@ -50,13 +53,6 @@ const navigation: NavEntry[] = [
     ],
   },
   {
-    label: "Planning",
-    icon: <CalendarDays size={20} />,
-    items: [
-      { label: "Meal Plans", href: "/meal-plans" },
-    ],
-  },
-  {
     label: "Management",
     icon: <Users size={20} />,
     items: [
@@ -64,11 +60,7 @@ const navigation: NavEntry[] = [
       { label: "Support Messages", href: "/support-messages" },
     ],
   },
-]
-
-const bottomNav: NavItem[] = [
-  { label: "Settings", href: "/settings", icon: <Settings size={20} /> },
-  { label: "Support", href: "/support", icon: <HelpCircle size={20} /> },
+  { label: "Favourites", href: "/favorite-statistics", icon: <Heart size={20} /> },
 ]
 
 export function Sidebar() {
@@ -77,7 +69,6 @@ export function Sidebar() {
   const pathname = normalisePath(usePathname())
   const [collapsed, setCollapsed] = useState(false)
   const { logout } = useLogout()
-  const { unreadCount } = useUnreadCount()
 
   return (
     <aside
@@ -85,7 +76,7 @@ export function Sidebar() {
         collapsed ? "w-16" : "w-64"
       }`}
     >
-      {/* Logo + Notifications */}
+      {/* Logo */}
       <div className="flex items-center justify-between px-4 py-5">
         {!collapsed && (
           <div className="flex items-center gap-2">
@@ -98,18 +89,6 @@ export function Sidebar() {
           </div>
         )}
         <div className="flex items-center gap-1">
-          <Link
-            href="/notifications"
-            className="p-1.5 rounded-md hover:bg-secondary-active text-icon-default relative"
-            title="Notifications"
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-primary-default text-[10px] font-bold text-primary-on-primary px-1">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </Link>
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="p-1.5 rounded-md hover:bg-secondary-active text-icon-default cursor-pointer"
@@ -139,20 +118,6 @@ export function Sidebar() {
           ),
         )}
       </nav>
-
-      <Separator className="mx-3" />
-
-      {/* Bottom navigation */}
-      <div className="px-3 py-2 space-y-1">
-        {bottomNav.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            isActive={pathname === item.href}
-            collapsed={collapsed}
-          />
-        ))}
-      </div>
 
       {/* Logout */}
       <div className="px-3 py-3 border-t border-border-default">

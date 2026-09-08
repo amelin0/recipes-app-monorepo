@@ -18,7 +18,6 @@ export enum Queries {
   RECIPE_FULL = 'recipe-full',
   TAGS = 'tags',
   PRODUCTS_SEARCH = 'products-search',
-  LANGUAGES = 'languages',
 
   // ─── Products ────────────────────────────────────────
   PRODUCTS = 'products',
@@ -34,10 +33,6 @@ export enum Queries {
   // ─── Support ─────────────────────────────────────────
   SUPPORT_MESSAGES = 'support-messages',
   SUPPORT_MESSAGE = 'support-message',
-
-  // ─── Notifications ──────────────────────────────────
-  NOTIFICATIONS = 'notifications',
-  UNREAD_COUNT = 'unread-count',
 
   // ─── Meal Plan ────────────────────────────────────────
   MEAL_PLAN_WEEK = 'meal-plan-week',

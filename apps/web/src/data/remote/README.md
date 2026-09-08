@@ -1,8 +1,8 @@
 # Data layer — what the server actually serves
 
-The panel was written against the V1 Supabase backend. The API it talks to now
-is `@dns/admin-api`, and only part of that surface exists yet. This table is
-the honest state, so nobody assumes a screen works because its client compiles.
+The panel was written against the V1 Supabase backend. Every domain left here
+now talks to `@dns/admin-api` — the table is kept so nobody has to read the
+code to find out what a screen is backed by.
 
 | Domain | Server | Notes |
 | --- | --- | --- |
@@ -13,13 +13,13 @@ the honest state, so nobody assumes a screen works because its client compiles.
 | `user` | ✅ | Directory, card, blocking, cancelling a deletion request. There is deliberately no «delete account» call — ADR-0005 is still open. |
 | `support` | ✅ | The queue, its states and internal notes, over `/feedback`. Nothing is sent to the reporter from here — replies go out by email. |
 | `dashboard` | ✅ | `/stats/overview` and `/stats/favorites`. No country breakdown: the field does not exist anywhere. |
-| `notifications` | ❌ | No endpoints. Screens will 404. |
-| `language` | ❌ | " |
 
-The two without a server are left in their V1 shape on purpose: rewriting a
-client against an endpoint nobody has designed yet produces a contract that
-drifts before it is ever called. They keep their `/admin/...` paths, which is
-also a useful marker — anything still carrying that prefix has no backend.
+Two domains are **gone** rather than waiting: `notifications` (a staff inbox
+whose `/admin/...` endpoints never existed — the dashboard's signal counters
+answer the same question) and `language` (a dictionary nothing rendered). A
+client kept against an endpoint nobody has designed drifts before it is ever
+called, and a page that 404s teaches the reader to distrust the pages that
+work.
 
 ## Conventions the working domains follow
 
