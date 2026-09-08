@@ -1,37 +1,54 @@
-import { HttpService } from '@/shared/services'
-import type { ProductDetail, ProductFilters, PaginatedProducts, UpdateProductParams } from './product.types'
+import { HttpService, type Paginated } from '@/shared/services'
 
-function buildQuery(params: Record<string, string | number | undefined>): string {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '')
+import type { Product, ProductDetail, ProductFilters, ProductImportReport, SaveProductParams } from './product.types'
+
+function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
   if (entries.length === 0) return ''
-  return '?' + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()
+  return '?' + new URLSearchParams(entries.map(([key, value]) => [key, String(value)])).toString()
 }
 
-/**
- * ⚠️ NONE of this has a server yet — the admin product domain is its own
- * slice. Left in its V1 shape deliberately; see `../../README.md`.
- *
- * The recipe form does not use this: it picks ingredients through
- * `RecipeApi.searchProducts()`, which hits the one product endpoint that does
- * exist.
- */
 export const ProductApi = {
-  getAll: (filters?: ProductFilters) => {
-    const query = buildQuery({
-      search: filters?.search,
-      type: filters?.type,
-      page: filters?.page,
-      limit: filters?.limit,
-    })
-    return HttpService.get<PaginatedProducts>(`/admin/products${query}`)
+  getAll: (filters?: ProductFilters) =>
+    HttpService.getPaginated<Product>(
+      `/products${buildQuery({
+        search: filters?.search,
+        source: filters?.source,
+        isVerified: filters?.isVerified,
+        isQuickPick: filters?.isQuickPick,
+        includeArchived: filters?.includeArchived,
+        language: filters?.language,
+        page: filters?.page,
+        limit: filters?.limit,
+      })}`,
+    ),
+
+  getById: (id: string) => HttpService.get<ProductDetail>(`/products/${id}`),
+
+  create: (data: SaveProductParams) => HttpService.post<ProductDetail>('/products', data),
+
+  /** `PUT`: translations are replaced whole, so the request carries them all. */
+  update: (id: string, data: SaveProductParams) => HttpService.put<ProductDetail>(`/products/${id}`, data),
+
+  /**
+   * Confirming a user's product **promotes** it: it becomes part of the shared
+   * catalogue and visible to everyone, and its author is cleared.
+   */
+  setVerified: (id: string, isVerified: boolean) =>
+    HttpService.patch<void>(`/products/${id}/verification`, { isVerified }),
+
+  /**
+   * Out of the catalogue without deleting. Dishes, meal-log entries and
+   * shopping lists that reference it stay intact; it disappears from search
+   * both here and in the app.
+   */
+  setArchived: (id: string, archived: boolean) => HttpService.patch<void>(`/products/${id}/archive`, { archived }),
+
+  importCsv: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return HttpService.upload<ProductImportReport>('/products/import', formData)
   },
-
-  getById: (id: string) =>
-    HttpService.get<ProductDetail>(`/admin/products/${id}`),
-
-  update: (id: string, params: UpdateProductParams) =>
-    HttpService.put<ProductDetail>(`/admin/products/${id}`, params),
-
-  verify: (id: string, isVerified: boolean) =>
-    HttpService.patch<unknown>(`/admin/products/${id}/verify`, { is_verified: isVerified }),
 }
+
+export type { Paginated }

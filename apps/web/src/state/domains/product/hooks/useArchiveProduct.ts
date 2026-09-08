@@ -5,20 +5,19 @@ import { ProductApi } from '@/data'
 import { Queries } from '@/shared/services'
 
 /**
- * Verifying **promotes** a user's product into the shared catalogue: it becomes
- * ours, visible to everyone, and its author is cleared. That is why the row's
- * source changes as well, and why the list has to be refetched rather than
- * patched in place.
+ * Out of the catalogue without deleting: dishes, meal-log entries and shopping
+ * lists that reference the product stay intact, and it disappears from search
+ * both here and in the app until someone restores it.
  */
-export const useVerifyProduct = () => {
+export const useArchiveProduct = () => {
   const qc = useQueryClient()
   const { mutateAsync, isPending } = useMutation({
-    mutationFn: ({ id, isVerified }: { id: string; isVerified: boolean }) => ProductApi.setVerified(id, isVerified),
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => ProductApi.setArchived(id, archived),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [Queries.PRODUCTS] })
       qc.invalidateQueries({ queryKey: [Queries.PRODUCT] })
       qc.invalidateQueries({ queryKey: [Queries.PRODUCTS_SEARCH] })
     },
   })
-  return { verifyProduct: mutateAsync, isPending }
+  return { archiveProduct: mutateAsync, isPending }
 }

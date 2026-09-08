@@ -2,7 +2,7 @@
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 
-import { RecipeApi } from '@/data'
+import { ProductApi } from '@/data'
 import { Queries } from '@/shared/services'
 
 /**
@@ -16,7 +16,7 @@ import { Queries } from '@/shared/services'
 export const useSearchProducts = (search?: string) => {
   const { data, isLoading } = useQuery({
     queryKey: [Queries.PRODUCTS_SEARCH, search],
-    queryFn: () => RecipeApi.searchProducts(search),
+    queryFn: () => ProductApi.getAll({ search, limit: 50 }),
     placeholderData: keepPreviousData,
   })
 

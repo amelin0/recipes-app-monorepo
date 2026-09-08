@@ -3,18 +3,35 @@ export * from './user'
 export * from './dashboard'
 export * from './support'
 export * from './notifications'
-export * from './recipe'
 export * from './language'
 export * from './tag'
 
-// `product` is re-exported by name: it still carries the V1 `Product` shape,
-// while `recipe` exports the one the search endpoint really returns. Two types
-// of the same name in one barrel is exactly the ambiguity that would send a
-// screen to the wrong one.
+// `recipe` and `product` both describe a product: the recipe module needs the
+// shape its ingredient picker reads, the product module the shape its own page
+// edits. Exported by name so the collision is a decision rather than whichever
+// `export *` ran last.
+export { RecipeApi, toSaveParams } from './recipe'
+export type {
+  ImportReport,
+  Recipe,
+  RecipeDetail,
+  RecipeFilters,
+  RecipeIngredient,
+  RecipeStep,
+  RecipeStepInput,
+  RecipeTranslation,
+  SaveRecipeParams,
+  Tag,
+  TagKind,
+  UploadGrant,
+} from './recipe'
+
 export { ProductApi } from './product'
 export type {
+  ContentSource,
+  Product,
   ProductDetail,
   ProductFilters,
-  PaginatedProducts,
-  UpdateProductParams,
+  ProductImportReport,
+  SaveProductParams,
 } from './product'

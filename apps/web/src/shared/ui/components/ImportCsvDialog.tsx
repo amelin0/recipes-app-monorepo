@@ -4,18 +4,31 @@ import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/components/dialog'
 import { Button } from '@/shared/ui/components/button'
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
-import type { ImportReport } from '@/data'
+
+/**
+ * What every CSV import returns. Recipes and products report the same four
+ * numbers plus a reason per rejected row, so the dialog is shared rather than
+ * copied — one of the two would otherwise stop showing errors the day its
+ * report grew a field.
+ */
+export interface CsvImportReport {
+  created: number
+  updated: number
+  skipped: number
+  errors: { row: number; importKey: string | null; message: string }[]
+}
 
 interface Props {
+  title: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (file: File) => Promise<ImportReport>
+  onImport: (file: File) => Promise<CsvImportReport>
   isImporting: boolean
 }
 
-export function ImportCsvDialog({ open, onOpenChange, onImport, isImporting }: Props) {
+export function ImportCsvDialog({ title, open, onOpenChange, onImport, isImporting }: Props) {
   const [file, setFile] = useState<File | null>(null)
-  const [result, setResult] = useState<ImportReport | null>(null)
+  const [result, setResult] = useState<CsvImportReport | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +57,7 @@ export function ImportCsvDialog({ open, onOpenChange, onImport, isImporting }: P
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Import Recipes from CSV</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">

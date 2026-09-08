@@ -2,7 +2,6 @@ import { HttpService, type Paginated } from '@/shared/services'
 
 import type {
   ImportReport,
-  Product,
   Recipe,
   RecipeDetail,
   RecipeFilters,
@@ -47,11 +46,6 @@ export const RecipeApi = {
   update: (id: string, data: SaveRecipeParams) => HttpService.put<RecipeDetail>(`/recipes/${id}`, data),
 
   deleteMany: (ids: string[]) => HttpService.post<{ deleted: number }>('/recipes/bulk-delete', { ids }),
-
-  /** Products for the composition editor. A dish can only be built from what
-   * the catalogue already holds — there is no «create product» here. */
-  searchProducts: (search?: string, language = 'uk') =>
-    HttpService.getPaginated<Product>(`/products${buildQuery({ search, language, limit: 50 })}`),
 
   /** The one place a file really travels through the API: a CSV has to be read
    * rather than stored, and at five hundred rows it is about 200 KB. */

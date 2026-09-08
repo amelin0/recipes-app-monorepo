@@ -2,7 +2,6 @@ export { RecipeApi } from './recipe.api'
 export { toSaveParams } from './recipe.helpers'
 export type {
   ImportReport,
-  Product,
   Recipe,
   RecipeDetail,
   RecipeFilters,

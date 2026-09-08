@@ -5,17 +5,14 @@ import { ProductApi } from '@/data'
 import type { SaveProductParams } from '@/data'
 import { Queries } from '@/shared/services'
 
-export const useUpdateProduct = () => {
+export const useCreateProduct = () => {
   const qc = useQueryClient()
   const { mutateAsync, isPending } = useMutation({
-    mutationFn: ({ id, params }: { id: string; params: SaveProductParams }) => ProductApi.update(id, params),
+    mutationFn: (params: SaveProductParams) => ProductApi.create(params),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [Queries.PRODUCTS] })
-      qc.invalidateQueries({ queryKey: [Queries.PRODUCT] })
-      // The recipe form searches the same catalogue, so a corrected number has
-      // to reach its picker too.
       qc.invalidateQueries({ queryKey: [Queries.PRODUCTS_SEARCH] })
     },
   })
-  return { updateProduct: mutateAsync, isPending }
+  return { createProduct: mutateAsync, isPending }
 }

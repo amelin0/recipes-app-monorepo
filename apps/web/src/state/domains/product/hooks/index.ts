@@ -1,4 +1,7 @@
 export { useGetProducts } from './useGetProducts'
 export { useGetProduct } from './useGetProduct'
-export { useVerifyProduct } from './useVerifyProduct'
+export { useCreateProduct } from './useCreateProduct'
 export { useUpdateProduct } from './useUpdateProduct'
+export { useVerifyProduct } from './useVerifyProduct'
+export { useArchiveProduct } from './useArchiveProduct'
+export { useImportProducts } from './useImportProducts'

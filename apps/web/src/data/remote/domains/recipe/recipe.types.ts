@@ -131,18 +131,6 @@ export interface RecipeFilters {
   limit?: number
 }
 
-/** A product, as the composition editor picks them. */
-export interface Product {
-  id: string
-  name: string
-  groupName: string | null
-  caloriesPer100g: number
-  proteinPer100g: number
-  fatsPer100g: number
-  carbsPer100g: number
-  servingWeightG: number | null
-}
-
 export interface ImportReport {
   created: number
   updated: number

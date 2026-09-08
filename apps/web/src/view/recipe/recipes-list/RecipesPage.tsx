@@ -2,7 +2,7 @@
 
 import { useRecipesPage } from './useRecipesPage'
 import { RecipeDetailPanel, RecipeCreatePanel } from './components/RecipeDetailPanel'
-import { ImportCsvDialog } from './components/ImportCsvDialog'
+import { ImportCsvDialog } from '@/shared/ui/components/ImportCsvDialog'
 import { Input } from '@/shared/ui/components/input'
 import { Button } from '@/shared/ui/components/button'
 import { Badge } from '@/shared/ui/components/badge'
@@ -225,7 +225,13 @@ export function RecipesPage() {
       </Sheet>
 
       {/* Import Dialog */}
-      <ImportCsvDialog open={isImportOpen} onOpenChange={setIsImportOpen} onImport={handleImport} isImporting={isImporting} />
+      <ImportCsvDialog
+        title="Import Recipes from CSV"
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={handleImport}
+        isImporting={isImporting}
+      />
     </div>
   )
 }
