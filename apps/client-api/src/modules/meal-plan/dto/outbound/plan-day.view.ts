@@ -81,12 +81,21 @@ export class PlanDayView {
     })
     readonly outcome: DailyOutcome | null;
 
+    @ApiProperty({
+        description:
+            'Whether the planned dishes are already counted into the shopping list. ' +
+            'There is no «add to list» action on a dish: the list sums the plan on every read, ' +
+            'so this is a state. The switch lives at PUT /shopping-list/plan-import.',
+    })
+    readonly importsIntoShoppingList: boolean;
+
     private constructor(day: PlanDay) {
         this.date = day.date;
         this.slots = day.slots.map(PlanSlotView.from);
         this.planned = PlanTotalsView.from(day.planned);
         this.goal = day.goal ? PlanTotalsView.from(day.goal) : null;
         this.outcome = day.outcome;
+        this.importsIntoShoppingList = day.importsIntoShoppingList;
     }
 
     static from(day: PlanDay): PlanDayView {

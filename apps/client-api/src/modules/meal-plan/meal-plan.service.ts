@@ -8,6 +8,7 @@ import {
     NutritionRepository,
     RecipeEntity,
     RecipeRepository,
+    ShoppingListRepository,
 } from '@dns/database';
 import { DailyOutcome, MealSlot } from '@dns/shared-types';
 import { AddPlanItemInput, CopyPlanDayInput, MealPlanRangeQuery } from '@dns/validation';
@@ -43,6 +44,16 @@ export interface PlanDay {
     goal: PlanTotals | null;
     /** Null when there is no goal, or nothing planned — a state, not a verdict. */
     outcome: DailyOutcome | null;
+    /**
+     * Whether what is planned is already counted into the shopping list.
+     *
+     * A planned dish needs no «add to list» action: the list sums the plan on
+     * every read (weekly-list FR-004), so the row shows a state rather than
+     * offering work that is already done. The account-level switch is what
+     * decides, and the screen would otherwise have to fetch the whole shopping
+     * list to learn one boolean.
+     */
+    importsIntoShoppingList: boolean;
 }
 
 @Injectable()
@@ -52,6 +63,7 @@ export class MealPlanService {
         private readonly recipes: RecipeRepository,
         private readonly nutrition: NutritionRepository,
         private readonly language: ReaderLanguageService,
+        private readonly shoppingList: ShoppingListRepository,
     ) {}
 
     /**
@@ -62,15 +74,18 @@ export class MealPlanService {
      * round trip, which is exactly what SC-001 rules out.
      */
     async range(userId: string, query: MealPlanRangeQuery): Promise<PlanDay[]> {
-        const [items, goal, language] = await Promise.all([
+        const [items, goal, language, importsIntoShoppingList] = await Promise.all([
             this.plan.findRange(userId, query.from, query.to),
             this.nutrition.findGoal(userId),
             this.language.of(userId),
+            this.shoppingList.importFromPlan(userId),
         ]);
 
         const recipes = await this.recipesById(items, userId, language);
 
-        return datesBetween(query.from, query.to).map(date => this.assemble(date, items, recipes, goal));
+        return datesBetween(query.from, query.to).map(date =>
+            this.assemble(date, items, recipes, goal, importsIntoShoppingList),
+        );
     }
 
     async addItem(userId: string, date: string, input: AddPlanItemInput): Promise<PlanDay> {
@@ -156,6 +171,7 @@ export class MealPlanService {
         items: MealPlanItemEntity[],
         recipes: Map<string, RecipeEntity>,
         goal: NutritionGoalEntity | null,
+        importsIntoShoppingList: boolean,
     ): PlanDay {
         const ofDay = items.filter(item => item.planDate === date);
 
@@ -188,6 +204,7 @@ export class MealPlanService {
 
         return {
             date,
+            importsIntoShoppingList,
             slots,
             planned: {
                 calories: Math.round(planned.calories),
