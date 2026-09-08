@@ -1,3 +1,4 @@
+export * from './admin-feedback.schemas';
 export * from './admin-product.schemas';
 export * from './admin-user.schemas';
 export * from './admin-recipe.schemas';

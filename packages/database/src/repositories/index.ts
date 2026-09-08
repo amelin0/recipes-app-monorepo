@@ -26,3 +26,4 @@ export * from './admin-login-attempt';
 export * from './admin-recipe';
 export * from './admin-product';
 export * from './admin-user';
+export * from './admin-feedback';

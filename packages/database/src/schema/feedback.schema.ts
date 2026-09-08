@@ -3,6 +3,7 @@ import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-or
 
 import { FeedbackStatus, FeedbackType } from '@dns/shared-types';
 
+import { admins } from './admins.schema';
 import { users } from './users.schema';
 
 export const feedbackTypeEnum = pgEnum('feedback_type', [
@@ -17,6 +18,7 @@ export const feedbackStatusEnum = pgEnum('feedback_status', [
     FeedbackStatus.New,
     FeedbackStatus.InProgress,
     FeedbackStatus.Resolved,
+    FeedbackStatus.Rejected,
 ]);
 
 /**
@@ -59,6 +61,51 @@ export const feedback = pgTable(
     table => [index('feedback_status_created_at_idx').on(table.status, table.createdAt)],
 );
 
-export const feedbackRelations = relations(feedback, ({ one }) => ({
+/**
+ * Internal notes on a ticket: what staff worked out, for the next person who
+ * opens it (support-inbox FR-008).
+ *
+ * Append-only by design — no update, no delete. A journal that can be rewritten
+ * is not a journal.
+ *
+ * Nothing here is ever shown to the person who raised the ticket.
+ */
+export const feedbackNotes = pgTable(
+    'feedback_notes',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+
+        feedbackId: uuid('feedback_id')
+            .notNull()
+            .references(() => feedback.id, { onDelete: 'cascade' }),
+
+        // Nulled when the staff account goes, which is why the name below is
+        // copied rather than joined.
+        authorId: uuid('author_id').references(() => admins.id, { onDelete: 'set null' }),
+
+        /**
+         * Who wrote it, as of the moment they wrote it (FR-010).
+         *
+         * A snapshot, not denormalisation for speed: without it a note by
+         * someone who has since left would read as anonymous, which is exactly
+         * what a journal must not do. Renaming a colleague deliberately does
+         * not rewrite their old notes.
+         */
+        authorName: text('author_name').notNull(),
+
+        body: text('body').notNull(),
+
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    },
+    table => [index('feedback_notes_ticket_idx').on(table.feedbackId, table.createdAt)],
+);
+
+export const feedbackRelations = relations(feedback, ({ one, many }) => ({
     user: one(users, { fields: [feedback.userId], references: [users.id] }),
+    notes: many(feedbackNotes),
+}));
+
+export const feedbackNotesRelations = relations(feedbackNotes, ({ one }) => ({
+    feedback: one(feedback, { fields: [feedbackNotes.feedbackId], references: [feedback.id] }),
+    author: one(admins, { fields: [feedbackNotes.authorId], references: [admins.id] }),
 }));
