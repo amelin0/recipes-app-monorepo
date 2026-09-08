@@ -1,0 +1,16 @@
+name_en,name_uk,group,calories,protein,fats,carbs,serving_weight_g,serving_label_uk,serving_label_en,quick_pick
+Wholegrain bread,Хліб цілозерновий,flour,247,13,3.4,41,30,1 скибочка,1 slice,false
+Ham,Шинка,meat,145,18,8,1.5,25,1 скибочка,1 slice,false
+Hard cheese,Сир твердий,dairy,356,25,27,2.2,20,1 скибочка,1 slice,false
+Lettuce,Листя салату,vegetables,15,1.4,0.2,2.9,10,1 листок,1 leaf,false
+Mustard,Гірчиця,sweets,66,4.4,4,5,4,1 ч. л,1 tsp,false
+Green buckwheat,Гречка зелена,grains,343,13.3,3.4,61.5,,,,false
+Canned tuna,Тунець консервований у власному соку,fish,116,26,1,0,160,1 банка,1 tin,false
+Parmesan,Пармезан,dairy,392,36,26,3.2,5,1 ст. л тертого,1 tbsp grated,false
+Balsamic glaze,Бальзамічний крем,sweets,220,0.5,0.2,53,5,1 ч. л,1 tsp,false
+Red cabbage,Капуста фіолетова,vegetables,31,1.4,0.2,7.4,,,,false
+Asparagus,Спаржа,vegetables,20,2.2,0.1,3.9,,,,false
+Iceberg lettuce,Айсберг,vegetables,14,0.9,0.1,3,,,,false
+Nori,Лист Норі,vegetables,35,5.8,0.3,5.1,3,1 лист,1 sheet,false
+Soy sauce,Соєвий соус,sweets,53,8.1,0.6,4.9,6,1 ч. л,1 tsp,false
+Lime juice,Лаймовий сік,fruits,25,0.4,0.1,8.4,5,1 ч. л,1 tsp,false
