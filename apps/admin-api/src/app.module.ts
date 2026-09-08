@@ -22,6 +22,7 @@ import { CatalogModule } from './modules/catalog';
 import { HealthModule } from './modules/health';
 import { ProductModule } from './modules/product';
 import { RecipeModule } from './modules/recipe';
+import { StatsModule } from './modules/stats';
 import { SupportModule } from './modules/support';
 import { UploadModule } from './modules/upload';
 import { UserModule } from './modules/user';
@@ -71,6 +72,7 @@ import { UserModule } from './modules/user';
         CatalogModule,
         ProductModule,
         RecipeModule,
+        StatsModule,
         SupportModule,
         UserModule,
         UploadModule,
