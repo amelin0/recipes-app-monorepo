@@ -37,7 +37,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
         const user = await this.userRepository.findById(payload.sub);
 
-        if (!user || !user.isEmailVerified()) {
+        // Blocked accounts die here rather than when their token expires:
+        // «block him now» has to mean now, not within fifteen minutes
+        // (admin user-directory SC-002).
+        if (!user || !user.isEmailVerified() || user.isBlocked()) {
             throw new UnauthorizedException();
         }
 

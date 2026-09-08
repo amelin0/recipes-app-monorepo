@@ -11,6 +11,13 @@ export const AuthErrorCode = {
     EmailTaken: 'auth.email-taken',
     InvalidCredentials: 'auth.invalid-credentials',
     EmailNotVerified: 'auth.email-not-verified',
+    /**
+     * Reached only after the credentials already checked out, so naming the
+     * reason tells nobody anything they had not already proven. Hiding it
+     * behind «invalid credentials» would send the owner round the password
+     * reset loop for something a reset cannot fix.
+     */
+    AccountBlocked: 'auth.account-blocked',
     InvalidCode: 'auth.invalid-code',
     InvalidRefreshToken: 'auth.invalid-refresh-token',
     InvalidPermit: 'auth.invalid-permit',

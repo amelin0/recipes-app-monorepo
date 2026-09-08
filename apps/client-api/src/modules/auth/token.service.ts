@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
@@ -31,6 +31,17 @@ export class TokenService {
      * letting one compromised chain be revoked whole.
      */
     async issuePair(user: UserEntity, familyId: string = randomUUID()): Promise<AuthTokens> {
+        // The single choke point for every way a session is handed out —
+        // sign-in, email confirmation, OAuth, and rotation, which calls this
+        // method too. One check here is what makes a block leave no way in
+        // (admin user-directory FR-006).
+        if (user.isBlocked()) {
+            throw new ForbiddenException({
+                message: 'This account has been blocked',
+                code: AuthErrorCode.AccountBlocked,
+            });
+        }
+
         const accessToken = await this.signAccessToken(user);
 
         // The row id has to exist before the token is signed, because it
@@ -55,6 +66,12 @@ export class TokenService {
      *
      * Every rejection is the same 401: telling a caller *why* a token failed
      * would say whether the id exists and whether it was already spent.
+     *
+     * One exception, and it is not an enumeration hole: a blocked account
+     * answers 403 `auth.account-blocked` from `issuePair`. Whoever presents a
+     * valid refresh token has already proved the account is theirs, and a
+     * silent logout would leave them reinstalling the app to fix something an
+     * install cannot fix.
      */
     async rotate(refreshToken: string): Promise<AuthTokens> {
         const payload = await this.verifyRefreshToken(refreshToken).catch(() => {
