@@ -12,10 +12,11 @@ import type { DeletionFilter, UserFilters } from '@/data'
 
 const PAGE_SIZE = 20
 
-export const useUsersPage = (initialUserId: string | null = null) => {
+export const useUsersPage = (initialUserId: string | null = null, initialDeletion?: DeletionFilter) => {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<'blocked' | 'unverified' | 'subscribed' | undefined>(undefined)
-  const [deletion, setDeletion] = useState<DeletionFilter | undefined>(undefined)
+  // Arrives from the dashboard's «N overdue» card, already filtered.
+  const [deletion, setDeletion] = useState<DeletionFilter | undefined>(initialDeletion)
   const [page, setPage] = useState(1)
   // Opened from a support ticket: `/users/?id=…` lands on the card itself,
   // not on a list the reader then has to search.

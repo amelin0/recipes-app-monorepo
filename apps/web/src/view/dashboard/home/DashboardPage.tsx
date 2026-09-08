@@ -2,163 +2,236 @@
 
 import Link from 'next/link'
 import { useDashboardPage } from './useDashboardPage'
-import { useTopFavorited } from '@/state/domains/dashboard'
+import { languageLabel } from '../constants'
 import { Button } from '@/shared/ui/components/button'
-import { Separator } from '@/shared/ui/components/separator'
 import { Badge } from '@/shared/ui/components/badge'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts'
-import { Users, Globe, Languages, Heart, ArrowRight } from 'lucide-react'
-
-const LANGUAGE_LABELS: Record<string, string> = {
-  uk: 'Ukrainian', en: 'English', ru: 'Russian', es: 'Spanish', unknown: 'Not set',
-}
-
-const COUNTRY_LABELS: Record<string, string> = {
-  UA: 'Ukraine', US: 'United States', GB: 'United Kingdom', DE: 'Germany',
-  ES: 'Spain', FR: 'France', PL: 'Poland', CA: 'Canada', unknown: 'Not set',
-}
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Users, Languages, Inbox, AlertTriangle, BookOpen, Carrot, ArrowRight, ShieldOff, CreditCard } from 'lucide-react'
 
 export function DashboardPage() {
-  const { days, setDays, stats, isLoading, periodOptions } = useDashboardPage()
-  const { recipes: topFavorites, isLoading: favLoading } = useTopFavorited()
+  const { days, setDays, overview, isLoading, periodOptions } = useDashboardPage()
+
+  const registrations = overview?.registrations
+  const queues = overview?.queues
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">
-          Dashboard
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">Overview of your platform</p>
+        <h1 className="font-[family-name:var(--font-heading)] text-2xl font-bold text-text-primary">Dashboard</h1>
+        <p className="text-sm text-text-secondary mt-1">What is growing, and what is waiting</p>
       </div>
 
+      {/* The only part of this screen that changes what anybody does today. */}
+      {(queues?.newTickets || queues?.overdueDeletions) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {queues.newTickets > 0 && (
+            <SignalCard
+              href="/support-messages/?status=new"
+              icon={<Inbox size={18} className="text-primary-default" />}
+              count={queues.newTickets}
+              label={`ticket${queues.newTickets === 1 ? '' : 's'} nobody has looked at`}
+            />
+          )}
+          {queues.overdueDeletions > 0 && (
+            <SignalCard
+              href="/users/?deletion=overdue"
+              icon={<AlertTriangle size={18} className="text-error-default" />}
+              count={queues.overdueDeletions}
+              label={`deletion request${queues.overdueDeletions === 1 ? '' : 's'} past the grace period`}
+            />
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Registration Stats Card */}
+        {/* Registrations */}
         <div className="rounded-xl border border-border-default bg-bg-canvas p-6">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Users size={18} className="text-primary-default" />
               <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-text-primary">
-                New Registrations
+                New registrations
               </h2>
             </div>
             <div className="flex gap-1">
-              {periodOptions.map((opt) => (
+              {periodOptions.map((option) => (
                 <Button
-                  key={opt.days}
-                  variant={days === opt.days ? 'default' : 'ghost'}
+                  key={option.days}
+                  variant={days === option.days ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setDays(opt.days)}
+                  onClick={() => setDays(option.days)}
                   className="text-xs h-7 px-2.5"
                 >
-                  {opt.label}
+                  {option.label}
                 </Button>
               ))}
             </div>
           </div>
 
           <p className="text-3xl font-bold text-text-primary mb-4">
-            {isLoading ? '—' : stats?.total ?? 0}
+            {isLoading && !registrations ? '—' : (registrations?.total ?? 0)}
           </p>
 
-          <div className="h-40 mb-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full text-text-tertiary text-sm">Loading...</div>
-            ) : stats?.by_date.length ? (
+          <div className="h-40">
+            {registrations?.byDate.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.by_date} barSize={days <= 7 ? 24 : days <= 30 ? 8 : 4}>
+                <BarChart data={registrations.byDate} barSize={days <= 7 ? 24 : days <= 30 ? 8 : 4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" vertical={false} />
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    tickFormatter={(value) =>
+                      new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    }
                     tick={{ fontSize: 11, fill: 'var(--color-text-tertiary)' }}
-                    axisLine={false} tickLine={false}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-tertiary)' }} axisLine={false} tickLine={false} width={24} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--color-border-default)', fontSize: 12 }} labelFormatter={(d) => new Date(d).toLocaleDateString()} />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: 'var(--color-text-tertiary)' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={24}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: '1px solid var(--color-border-default)', fontSize: 12 }}
+                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                  />
                   <Bar dataKey="count" fill="var(--color-primary-default)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-text-tertiary text-sm">No registrations in this period</div>
+              <div className="flex items-center justify-center h-full text-text-tertiary text-sm">Loading...</div>
             )}
-          </div>
-
-          <Separator className="mb-4" />
-
-          <div className="grid grid-cols-2 gap-4">
-            <DemoColumn icon={<Languages size={14} />} title="Languages" items={(stats?.by_language ?? []).map((i) => ({ label: LANGUAGE_LABELS[i.language] ?? i.language, count: i.count }))} loading={isLoading} />
-            <DemoColumn icon={<Globe size={14} />} title="Countries" items={(stats?.by_country ?? []).map((i) => ({ label: COUNTRY_LABELS[i.country] ?? i.country, count: i.count }))} loading={isLoading} />
           </div>
         </div>
 
-        {/* Top Favorites Card */}
-        <div className="rounded-xl border border-border-default bg-bg-canvas p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Heart size={18} className="text-error-default" />
-              <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-text-primary">
-                Top Favorited Recipes
-              </h2>
-            </div>
-            <Link href="/favorite-statistics">
-              <Button variant="ghost" size="sm" className="text-xs h-7 gap-1">
-                Favorite Statistics <ArrowRight size={14} />
-              </Button>
-            </Link>
+        {/* Accounts */}
+        <div className="rounded-xl border border-border-default bg-bg-canvas p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Languages size={18} className="text-primary-default" />
+            <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-text-primary">
+              Accounts
+            </h2>
           </div>
 
-          {favLoading ? (
-            <div className="flex items-center justify-center h-40 text-text-tertiary text-sm">Loading...</div>
-          ) : topFavorites.length === 0 ? (
-            <div className="flex items-center justify-center h-40 text-text-tertiary text-sm">No favorites yet</div>
-          ) : (
-            <div className="space-y-3">
-              {topFavorites.map((recipe, i) => (
-                <div key={recipe.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-bg-surface transition-colors">
-                  <span className="text-sm font-bold text-text-tertiary w-5">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">{recipe.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">{recipe.calories} kcal</Badge>
-                      {recipe.demographics.by_language.slice(0, 2).map((l) => (
-                        <span key={l.language} className="text-xs text-text-tertiary">
-                          {LANGUAGE_LABELS[l.language] ?? l.language}: {l.count}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-error-default">
-                    <Heart size={14} fill="currentColor" />
-                    <span className="text-sm font-semibold">{recipe.favorites_count}</span>
-                  </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat label="Total" value={overview?.users.total} />
+            <Stat label="Subscribed" value={overview?.users.withActiveSubscription} icon={<CreditCard size={12} />} />
+            <Stat label="Blocked" value={overview?.users.blocked} icon={<ShieldOff size={12} />} />
+          </div>
+
+          <div>
+            <p className="text-xs text-text-tertiary mb-2">By language</p>
+            <div className="space-y-1.5">
+              {(registrations?.byLanguage ?? []).map((row) => (
+                <div key={row.language ?? 'unset'} className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary">{languageLabel(row.language)}</span>
+                  <span className="text-text-primary font-medium">{row.count}</span>
                 </div>
               ))}
+              {registrations?.byLanguage.length === 0 && (
+                <p className="text-sm text-text-tertiary">No accounts yet.</p>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+      </div>
+
+      {/* Catalogue */}
+      <div className="rounded-xl border border-border-default bg-bg-canvas p-6">
+        <h2 className="font-[family-name:var(--font-heading)] text-sm font-semibold text-text-primary mb-4">
+          Catalogue
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <CatalogueCard
+            href="/recipes/"
+            icon={<BookOpen size={16} className="text-primary-default" />}
+            label="Dishes"
+            value={overview?.catalogue.recipes}
+          />
+          <CatalogueCard
+            href="/products/"
+            icon={<Carrot size={16} className="text-primary-default" />}
+            label="Products"
+            value={overview?.catalogue.products}
+          />
+          <CatalogueCard
+            href="/products/"
+            icon={<Carrot size={16} className="text-macro-carbs" />}
+            label="Awaiting verification"
+            value={overview?.catalogue.unverifiedCustomProducts}
+          />
         </div>
       </div>
     </div>
   )
 }
 
-function DemoColumn({ icon, title, items, loading }: { icon: React.ReactNode; title: string; items: { label: string; count: number }[]; loading: boolean }) {
+function SignalCard({
+  href,
+  icon,
+  count,
+  label,
+}: {
+  href: string
+  icon: React.ReactNode
+  count: number
+  label: string
+}) {
   return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-text-tertiary">{icon}</span>
-        <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide">{title}</p>
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-xl border border-border-default bg-bg-canvas p-4 hover:bg-bg-surface transition-colors"
+    >
+      {icon}
+      <div className="flex-1">
+        <p className="text-lg font-semibold text-text-primary">{count}</p>
+        <p className="text-xs text-text-secondary">{label}</p>
       </div>
-      <div className="space-y-1.5">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center justify-between text-sm">
-            <span className="text-text-secondary">{item.label}</span>
-            <span className="font-medium text-text-primary">{item.count}</span>
-          </div>
-        ))}
-        {!items.length && !loading && <p className="text-xs text-text-tertiary">No data</p>}
-      </div>
+      <ArrowRight size={16} className="text-icon-default" />
+    </Link>
+  )
+}
+
+function Stat({ label, value, icon }: { label: string; value: number | undefined; icon?: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border-default p-3">
+      <p className="flex items-center gap-1 text-xs text-text-tertiary">
+        {icon}
+        {label}
+      </p>
+      <p className="text-lg font-semibold text-text-primary">{value ?? '—'}</p>
     </div>
+  )
+}
+
+function CatalogueCard({
+  href,
+  icon,
+  label,
+  value,
+}: {
+  href: string
+  icon: React.ReactNode
+  label: string
+  value: number | undefined
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-lg border border-border-default p-4 hover:bg-bg-surface transition-colors"
+    >
+      {icon}
+      <div>
+        <p className="text-lg font-semibold text-text-primary">{value ?? '—'}</p>
+        <p className="text-xs text-text-secondary">{label}</p>
+      </div>
+      {value === 0 && (
+        <Badge variant="outline" className="ml-auto text-xs">
+          empty
+        </Badge>
+      )}
+    </Link>
   )
 }

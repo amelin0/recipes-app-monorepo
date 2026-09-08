@@ -1,47 +1,49 @@
-export interface RegistrationStats {
-  total: number
-  by_date: { date: string; count: number }[]
-  by_language: { language: string; count: number }[]
-  by_country: { country: string; count: number }[]
+export interface DailyCount {
+  /** `YYYY-MM-DD`, a UTC day. */
+  date: string
+  count: number
 }
 
-export interface Demographics {
-  by_language: { language: string; count: number }[]
-  by_country: { country: string; count: number }[]
+export interface LanguageCount {
+  /** Null for accounts that never got settings — counted, not dropped. */
+  language: string | null
+  count: number
 }
 
-export interface TopFavoritedRecipe {
+/** Everything the home screen shows. One request, because it is one screen. */
+export interface Overview {
+  registrations: {
+    total: number
+    /** Every day of the period, zeros included. */
+    byDate: DailyCount[]
+    byLanguage: LanguageCount[]
+  }
+  users: {
+    total: number
+    blocked: number
+    withActiveSubscription: number
+  }
+  catalogue: {
+    recipes: number
+    /** Archived products excluded, exactly as on the products page. */
+    products: number
+    unverifiedCustomProducts: number
+  }
+  /** What is waiting for someone to do something. */
+  queues: {
+    newTickets: number
+    overdueDeletions: number
+  }
+}
+
+/** How often a dish is kept, and in which languages. Never by whom. */
+export interface FavoriteRecipe {
   id: string
-  title: string
-  photo_url: string | null
+  name: string
+  photoUrl: string | null
   calories: number
-  favorites_count: number
-  demographics: Demographics
+  favorites: number
+  byLanguage: LanguageCount[]
 }
 
-export interface FavoriteStatsUser {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  language: string
-  country: string | null
-  added_at: string
-}
-
-export interface FavoriteStatsRecipe {
-  id: string
-  title: string
-  photo_url: string | null
-  calories: number
-  favorites_count: number
-  users: FavoriteStatsUser[]
-  demographics: Demographics
-}
-
-export interface PaginatedFavoriteStats {
-  data: FavoriteStatsRecipe[]
-  total: number
-  page: number
-  limit: number
-}
+export type DashboardPeriod = 7 | 30 | 90

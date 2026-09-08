@@ -4,17 +4,17 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { DashboardApi } from '@/data'
 import { Queries } from '@/shared/services'
 
-export const useFavoriteStats = (page: number) => {
+export const useGetFavoriteStats = (page: number) => {
   const { data, isLoading } = useQuery({
     queryKey: [Queries.FAVORITE_STATS, page],
-    queryFn: () => DashboardApi.getFavoriteStats(page, 20),
+    queryFn: () => DashboardApi.getFavorites(page),
     placeholderData: keepPreviousData,
   })
 
   return {
     recipes: data?.data ?? [],
-    total: data?.total ?? 0,
-    page: data?.page ?? 1,
+    total: data?.meta.total ?? 0,
+    totalPages: data?.meta.totalPages ?? 1,
     isLoading,
   }
 }

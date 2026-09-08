@@ -4,16 +4,26 @@ import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import { UsersPage } from '@/view/user'
+import type { DeletionFilter } from '@/data'
+
+const DELETION_FILTERS: DeletionFilter[] = ['none', 'active', 'overdue']
+
+const asDeletionFilter = (value: string | null): DeletionFilter | undefined =>
+  DELETION_FILTERS.find((filter) => filter === value)
 
 /**
- * `?id=…` opens straight onto that account's card.
+ * `?id=…` opens straight onto that account's card; `?deletion=overdue` opens
+ * the list already filtered.
  *
- * That is the link a support ticket carries: most tickets are answered by the
- * state of the account, and «find them again by hand» is not one click
- * (support-inbox SC-002).
+ * Those are the links a support ticket and the dashboard's signal card carry:
+ * most tickets are answered by the state of an account, and a counter that
+ * drops you into an unfiltered list saved nobody the click
+ * (support-inbox SC-002, dashboard-overview FR-002).
  */
 function UsersRoute() {
-  return <UsersPage initialUserId={useSearchParams().get('id')} />
+  const params = useSearchParams()
+
+  return <UsersPage initialUserId={params.get('id')} initialDeletion={asDeletionFilter(params.get('deletion'))} />
 }
 
 export default function Users() {

@@ -12,7 +12,13 @@ import { Sheet, SheetContent } from '@/shared/ui/components/sheet'
 import { Search, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react'
 import type { DeletionFilter } from '@/data'
 
-export function UsersPage({ initialUserId = null }: { initialUserId?: string | null }) {
+export function UsersPage({
+  initialUserId = null,
+  initialDeletion,
+}: {
+  initialUserId?: string | null
+  initialDeletion?: DeletionFilter
+}) {
   const {
     search, handleSearchChange,
     status, handleStatusChange,
@@ -24,7 +30,7 @@ export function UsersPage({ initialUserId = null }: { initialUserId?: string | n
     selectedUser, isDetailLoading, isDetailOpen, handleRowClick, handleCloseDetail,
     handleBlockToggle, isBlocking,
     handleCancelDeletion, isCancelling,
-  } = useUsersPage(initialUserId)
+  } = useUsersPage(initialUserId, initialDeletion)
 
   return (
     <div className="space-y-6">

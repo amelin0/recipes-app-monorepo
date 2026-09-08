@@ -12,11 +12,11 @@ the honest state, so nobody assumes a screen works because its client compiles.
 | `product` | ✅ | CRUD, CSV import, verification, archiving. The recipe form's ingredient picker reads the same `GET /products` — a second, simpler list would disagree about which rows exist. |
 | `user` | ✅ | Directory, card, blocking, cancelling a deletion request. There is deliberately no «delete account» call — ADR-0005 is still open. |
 | `support` | ✅ | The queue, its states and internal notes, over `/feedback`. Nothing is sent to the reporter from here — replies go out by email. |
+| `dashboard` | ✅ | `/stats/overview` and `/stats/favorites`. No country breakdown: the field does not exist anywhere. |
 | `notifications` | ❌ | No endpoints. Screens will 404. |
 | `language` | ❌ | " |
-| `dashboard` | ❌ | " |
 
-The three without a server are left in their V1 shape on purpose: rewriting a
+The two without a server are left in their V1 shape on purpose: rewriting a
 client against an endpoint nobody has designed yet produces a contract that
 drifts before it is ever called. They keep their `/admin/...` paths, which is
 also a useful marker — anything still carrying that prefix has no backend.
