@@ -15,7 +15,9 @@
     "dependencies": {
         "@dns/constants": "workspace:*",
         "@dns/database": "workspace:*",
-        "@dns/shared-types": "workspace:*"
+        "@dns/shared-types": "workspace:*",
+        "@nest-lab/throttler-storage-redis": "^1.2.0",
+        "ioredis": "^5.4.0"
     },
     "peerDependencies": {
         "@nestjs/common": "^11.0.0",

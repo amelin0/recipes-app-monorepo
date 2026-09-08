@@ -42,23 +42,28 @@ export enum NotificationEvent {
     AccountDeletionCancelled = 'account_deletion_cancelled',
     /** A product this person created was verified into the shared catalogue. */
     ProductVerified = 'product_verified',
+    /** The subscription runs out in a few days — written by the nightly job. */
+    SubscriptionExpiring = 'subscription_expiring',
+    /** It ran out, and the row was marked expired in the same sweep. */
+    SubscriptionExpired = 'subscription_expired',
 
     // --- declared, not produced yet ---
     /** Editorial: a promotion or an offer. Needs the admin broadcast first. */
     Promo = 'promo',
-    /** «Ви сьогодні нічого не записали» — needs the job runner and a timezone. */
+    /**
+     * «Ви сьогодні нічого не записали». The job runner exists now; what is
+     * still missing is the user's timezone — reminders are wall-clock times,
+     * and the server would send them at the wrong hour.
+     */
     DailyLogReminder = 'daily_log_reminder',
-    /** «Час випити води» — same two blockers. */
+    /** «Час випити води» — blocked on the same missing timezone. */
     WaterReminder = 'water_reminder',
-    /** Nobody has opened the app for a while. Needs the job runner. */
+    /** Nobody has opened the app for a while. Needs a definition of «active». */
     Inactivity = 'inactivity',
     /**
      * Cancelled and will not renew. Nothing in the API cancels a subscription
      * — the store does, and it does not tell us. Needs store notifications.
      */
     SubscriptionCancelled = 'subscription_cancelled',
-    /** The subscription runs out in a few days. Needs the job runner. */
-    SubscriptionExpiring = 'subscription_expiring',
-    /** It ran out. Needs the job runner. */
-    SubscriptionExpired = 'subscription_expired',
+
 }

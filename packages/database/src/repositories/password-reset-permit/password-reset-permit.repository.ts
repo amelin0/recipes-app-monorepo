@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 
 import { PasswordResetPermitEntity } from '../../entities';
 import { passwordResetPermits } from '../../schema';
@@ -9,6 +9,16 @@ type InsertPasswordResetPermit = typeof passwordResetPermits.$inferInsert;
 
 @Injectable()
 export class PasswordResetPermitRepository extends BaseRepository {
+    /** Sweeps permits past their expiry — an expired permit opens nothing. */
+    async deleteExpired(before: Date): Promise<number> {
+        const deleted = await this.db
+            .delete(passwordResetPermits)
+            .where(lt(passwordResetPermits.expiresAt, before))
+            .returning({ id: passwordResetPermits.id });
+
+        return deleted.length;
+    }
+
     async create(data: InsertPasswordResetPermit): Promise<PasswordResetPermitEntity> {
         const [row] = await this.db.insert(passwordResetPermits).values(data).returning();
         if (!row) throw new Error('Failed to insert password reset permit');

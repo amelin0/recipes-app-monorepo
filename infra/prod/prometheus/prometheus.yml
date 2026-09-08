@@ -80,6 +80,16 @@ scrape_configs:
     # The box itself. Disk filling up and CPU steal show up in the app as
     # «the API got slow for no reason», and only node-exporter can say that is
     # what happened.
+    # The worker answers no business requests, so `up` here is the difference
+    # between «nothing to do» and «wedged or dead». Its own job counters live
+    # at the same endpoint (dns_worker_job_runs_total).
+    - job_name: worker
+      metrics_path: /metrics
+      static_configs:
+          - targets: ['worker:3002']
+            labels:
+                service: worker
+
     - job_name: node
       static_configs:
           - targets: ['node-exporter:9100']

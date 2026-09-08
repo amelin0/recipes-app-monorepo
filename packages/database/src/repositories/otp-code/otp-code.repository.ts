@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 
 import { OtpPurpose } from '@dns/shared-types';
 
@@ -11,6 +11,22 @@ type InsertOtpCode = typeof otpCodes.$inferInsert;
 
 @Injectable()
 export class OtpCodeRepository extends BaseRepository {
+    /**
+     * Sweeps codes past their expiry.
+     *
+     * Consumed and burnt-out codes are kept only so a second attempt can be
+     * told apart from a first one; after expiry that distinction is moot and
+     * the rows are dead weight.
+     */
+    async deleteExpired(before: Date): Promise<number> {
+        const deleted = await this.db
+            .delete(otpCodes)
+            .where(lt(otpCodes.expiresAt, before))
+            .returning({ id: otpCodes.id });
+
+        return deleted.length;
+    }
+
     async create(data: InsertOtpCode): Promise<OtpCodeEntity> {
         const [row] = await this.db.insert(otpCodes).values(data).returning();
         if (!row) throw new Error('Failed to insert otp code');

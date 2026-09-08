@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 
 import { RefreshTokenEntity } from '../../entities';
 import { refreshTokens } from '../../schema';
@@ -13,6 +13,23 @@ export class RefreshTokenRepository extends BaseRepository {
         const [row] = await this.db.insert(refreshTokens).values(data).returning();
         if (!row) throw new Error('Failed to insert refresh token');
         return RefreshTokenEntity.from(row);
+    }
+
+    /**
+     * Sweeps rows whose expiry has passed.
+     *
+     * Spent tokens are kept deliberately — a replay is only detectable while
+     * the row exists (ADR-0003) — but that detection has a shelf life: once the
+     * token could no longer be accepted anyway, the row proves nothing and only
+     * grows the table.
+     */
+    async deleteExpired(before: Date): Promise<number> {
+        const deleted = await this.db
+            .delete(refreshTokens)
+            .where(lt(refreshTokens.expiresAt, before))
+            .returning({ id: refreshTokens.id });
+
+        return deleted.length;
     }
 
     /** Looked up by the `jti` carried in the token, so a refresh is one indexed read. */

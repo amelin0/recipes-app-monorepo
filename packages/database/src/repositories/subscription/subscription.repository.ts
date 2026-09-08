@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_LANGUAGE } from '@dns/constants';
@@ -138,6 +138,55 @@ export class SubscriptionRepository extends BaseRepository {
                     sql`${subscriptions.expiresAt} <= now()`,
                 ),
             );
+    }
+
+    /**
+     * Active subscriptions whose date has already passed, across all accounts.
+     *
+     * `expireLapsed` above sweeps one account at the moment it tries to buy
+     * again. That is enough to keep the unique index honest, and not enough to
+     * tell anybody their premium ended — which is what this is for.
+     */
+    async findLapsed(now: Date): Promise<{ id: string; userId: string; expiresAt: Date }[]> {
+        return this.db
+            .select({
+                id: subscriptions.id,
+                userId: subscriptions.userId,
+                expiresAt: subscriptions.expiresAt,
+            })
+            .from(subscriptions)
+            .where(and(eq(subscriptions.status, SubscriptionStatus.Active), lte(subscriptions.expiresAt, now)));
+    }
+
+    /** Active subscriptions running out inside the window — the warning, before the fact. */
+    async findExpiringBetween(from: Date, to: Date): Promise<{ id: string; userId: string; expiresAt: Date }[]> {
+        return this.db
+            .select({
+                id: subscriptions.id,
+                userId: subscriptions.userId,
+                expiresAt: subscriptions.expiresAt,
+            })
+            .from(subscriptions)
+            .where(
+                and(
+                    eq(subscriptions.status, SubscriptionStatus.Active),
+                    gt(subscriptions.expiresAt, from),
+                    lte(subscriptions.expiresAt, to),
+                ),
+            );
+    }
+
+    /** Marks named rows expired. Ids rather than a date predicate: the job has already decided. */
+    async markExpired(ids: string[]): Promise<number> {
+        if (ids.length === 0) return 0;
+
+        const updated = await this.db
+            .update(subscriptions)
+            .set({ status: SubscriptionStatus.Expired })
+            .where(and(inArray(subscriptions.id, ids), eq(subscriptions.status, SubscriptionStatus.Active)))
+            .returning({ id: subscriptions.id });
+
+        return updated.length;
     }
 
     /** Whether this receipt has already bought something, for anybody. */
