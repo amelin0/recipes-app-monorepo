@@ -144,6 +144,17 @@ services:
             GF_AUTH_ANONYMOUS_ENABLED: 'false'
             GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
             GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env.obs}
+            # Grafana keeps its own state in SQLite here, and this host runs
+            # two observability stacks on four cores. Without WAL a reader
+            # blocks the writer, the alerting scheduler's writes lose the race
+            # and Grafana logs «database is locked».
+            #
+            # That is not a cosmetic error: every rule below carries
+            # `execErrState: Alerting`, which was meant for a failing query to
+            # Prometheus but fires on Grafana's own storage error too. The rule
+            # then flaps Alerting↔Normal and sends phantom alerts to Telegram
+            # while the service it watches is perfectly fine.
+            GF_DATABASE_WAL: 'true'
             GF_SECURITY_COOKIE_SECURE: 'true'
             GF_ANALYTICS_REPORTING_ENABLED: 'false'
             GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
