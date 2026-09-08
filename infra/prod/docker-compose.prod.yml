@@ -30,9 +30,12 @@
 # The same goes for object storage: S3_* points at whatever serves the
 # bucket. Nothing here starts MinIO.
 #
-# Redis is absent on purpose — no code reads it. The throttler keeps its
-# counters in process memory, which is fine for one replica and is the thing
-# to fix before there are two.
+# Redis IS part of this stack now: it backs the worker's job queue (ADR-0008).
+# It is deliberately not persisted — see the service below.
+#
+# The throttler still keeps its counters in process memory, which is fine for
+# one replica and is the thing to fix before there are two. Redis being here
+# is what makes that fix cheap when the time comes.
 # ─────────────────────────────────────────────────────────────────────────
 
 name: dns-prod
@@ -116,6 +119,63 @@ services:
             timeout: 5s
             retries: 3
             start_period: 30s
+
+    # Backs the worker's queue and nothing else (ADR-0008).
+    #
+    # **Not persisted, on purpose.** `--save ''` and no volume: the only state
+    # here is the job schedule, which the worker re-registers on every boot,
+    # and a handful of finished job records. Losing it costs one restart's
+    # worth of history; keeping it would cost a volume, a backup and a restore
+    # procedure for data nobody would read.
+    #
+    # `noeviction` matters more than the limit itself: under an eviction policy
+    # Redis would silently drop queue keys to stay under the cap, and jobs
+    # would vanish without a trace. This way writes fail loudly instead.
+    redis:
+        image: redis:7-alpine
+        container_name: dns-redis
+        restart: unless-stopped
+        command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory', '128mb', '--maxmemory-policy', 'noeviction']
+        # No ports: the queue is reachable only over the compose network.
+        networks:
+            - obs
+        logging: *default-logging
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 30s
+            timeout: 3s
+            retries: 3
+
+    # The background worker (ADR-0008): the jobs that happen because time
+    # passed, not because somebody asked. Same image family as the APIs, built
+    # from the same Dockerfile with APP_PKG=@dns/worker.
+    #
+    # One replica, and that is load-bearing: two would run every nightly sweep
+    # twice. If this ever needs scaling, the queue is what makes it safe —
+    # not adding `deploy.replicas`.
+    worker:
+        <<: *api-common
+        image: ${WORKER_IMAGE_REPO:-dns/worker}:${IMAGE_TAG:?IMAGE_TAG is required}
+        container_name: dns-worker
+        depends_on:
+            redis:
+                condition: service_healthy
+        environment:
+            NODE_ENV: production
+        # No published port: /health and /metrics are for Prometheus and for
+        # `docker exec`, both of which reach it over the compose network.
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'node',
+                    '-e',
+                    "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 20s
 
     # One-shot, run explicitly BEFORE the API is swapped:
     #   docker compose -p dns-prod --env-file .env.prod \

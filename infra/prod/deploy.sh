@@ -97,8 +97,10 @@ ADMIN_PORT="${ADMIN_PORT:-3001}"
 
 IMAGE_REPO="$(read_env IMAGE_REPO)"
 ADMIN_IMAGE_REPO="$(read_env ADMIN_IMAGE_REPO)"
+WORKER_IMAGE_REPO="$(read_env WORKER_IMAGE_REPO)"
 IMAGE_REPO="${IMAGE_REPO:-dns/client-api}"
 ADMIN_IMAGE_REPO="${ADMIN_IMAGE_REPO:-dns/admin-api}"
+WORKER_IMAGE_REPO="${WORKER_IMAGE_REPO:-dns/worker}"
 
 # Captured before anything overwrites it — this is the rollback target.
 PREVIOUS_TAG="$(read_env IMAGE_TAG)"
@@ -109,7 +111,7 @@ cd "$ROOT"
 if [ -n "$EXPLICIT_TAG" ]; then
     TAG="$EXPLICIT_TAG"
     echo "── deploying existing tag $TAG (no build)"
-    for image in "$IMAGE_REPO:$TAG" "$IMAGE_REPO-migrator:$TAG" "$ADMIN_IMAGE_REPO:$TAG"; do
+    for image in "$IMAGE_REPO:$TAG" "$IMAGE_REPO-migrator:$TAG" "$ADMIN_IMAGE_REPO:$TAG" "$WORKER_IMAGE_REPO:$TAG"; do
         docker image inspect "$image" >/dev/null 2>&1 || {
             echo "image $image is not on this host — nothing to deploy" >&2
             exit 1
@@ -191,9 +193,18 @@ HEALTHY=1
 wait_healthy client-api "http://127.0.0.1:$CLIENT_PORT/api/v1/health/ready" || HEALTHY=0
 wait_healthy admin-api "http://127.0.0.1:$ADMIN_PORT/api/v1/health" || HEALTHY=0
 
+# The worker publishes no port — asked from inside the compose network, which
+# is also the only place Prometheus reaches it from.
+if ! "${COMPOSE[@]}" exec -T worker node -e     "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+    echo "    worker did NOT answer /health" >&2
+    HEALTHY=0
+else
+    echo "    worker ok"
+fi
+
 if [ "$HEALTHY" -eq 0 ]; then
     echo >&2
-    "${COMPOSE[@]}" logs --tail 40 client-api admin-api >&2 || true
+    "${COMPOSE[@]}" logs --tail 40 client-api admin-api worker >&2 || true
     echo >&2
 
     if [ -z "$PREVIOUS_TAG" ] || ! docker image inspect "$IMAGE_REPO:$PREVIOUS_TAG" >/dev/null 2>&1; then

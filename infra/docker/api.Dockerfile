@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
-# Image for either NestJS API. Build from the REPO ROOT:
+# Image for any of the three Nest services — both APIs and the worker.
+# Build from the REPO ROOT:
 #
 #   docker build -f infra/docker/api.Dockerfile \
 #     --build-arg APP_PKG=@dns/client-api --build-arg APP_DIR=apps/client-api \
@@ -48,6 +49,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/client-api/package.json ./apps/client-api/
 COPY apps/admin-api/package.json  ./apps/admin-api/
 COPY apps/mobile/package.json     ./apps/mobile/
+COPY apps/worker/package.json     ./apps/worker/
 COPY apps/web/package.json        ./apps/web/
 COPY packages/api-common/package.json         ./packages/api-common/
 COPY packages/api-infrastructure/package.json ./packages/api-infrastructure/

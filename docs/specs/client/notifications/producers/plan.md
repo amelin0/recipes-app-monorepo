@@ -40,7 +40,7 @@ Nullable навмисно: рядки, написані до появи прод
 
 **Перелік ширший за реалізоване** (FR-011). Оголошені, але не створювані:
 `promo`, `daily_log_reminder`, `water_reminder`, `inactivity`,
-`subscription_expiring`, `subscription_expired`, `subscription_cancelled`.
+`subscription_cancelled`.
 Тексту для них немає — і це навмисно: шаблон означав би, що повідомлення
 існує.
 
@@ -88,6 +88,8 @@ ISO-рядок.
 | `referral_redeemed` | `SubscriptionService.redeemCode` | **рефереру**, не тому, хто ввів код |
 | `account_deletion_requested` / `_cancelled` | `AccountDeletionService` | несе дату і шлях назад |
 | `product_verified` | `AdminProductService.setVerified` | **до** запису: промоція обнуляє `created_by`, і потім повідомляти вже нікого |
+| `subscription_expired` | `SubscriptionExpiryService` (нічне завдання) | спершу позначити рядок, потім повідомити — інакше можна сказати про кінець підписки, яка ще активна |
+| `subscription_expiring` | те саме завдання | один раз на підписку: чи вже казали, читається з інбокса, а не з колонки-прапорця |
 
 ## Environment variables
 

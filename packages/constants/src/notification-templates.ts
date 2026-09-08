@@ -70,6 +70,42 @@ const TEMPLATES: Partial<Record<NotificationEvent, Record<string, Writer>>> = {
         }),
     },
 
+    // Written by the nightly job, not by a request: a subscription's end is
+    // the one thing here that happens without anybody doing anything.
+    [NotificationEvent.SubscriptionExpiring]: {
+        uk: ({ subject }) => ({
+            type: NotificationType.Subscription,
+            title: 'Преміум незабаром закінчиться',
+            body: subject ? `Підписка діє до ${subject}.` : 'Підписка скоро завершується.',
+            actionLabel: 'Продовжити',
+            actionRoute: '/subscription',
+        }),
+        en: ({ subject }) => ({
+            type: NotificationType.Subscription,
+            title: 'Premium ends soon',
+            body: subject ? `Your subscription runs until ${subject}.` : 'Your subscription ends soon.',
+            actionLabel: 'Renew',
+            actionRoute: '/subscription',
+        }),
+    },
+
+    [NotificationEvent.SubscriptionExpired]: {
+        uk: ({ subject }) => ({
+            type: NotificationType.Subscription,
+            title: 'Преміум завершився',
+            body: subject ? `Підписка діяла до ${subject}.` : 'Підписка завершилася.',
+            actionLabel: 'Оформити знову',
+            actionRoute: '/subscription',
+        }),
+        en: ({ subject }) => ({
+            type: NotificationType.Subscription,
+            title: 'Premium has ended',
+            body: subject ? `Your subscription ran until ${subject}.` : 'Your subscription has ended.',
+            actionLabel: 'Subscribe again',
+            actionRoute: '/subscription',
+        }),
+    },
+
     [NotificationEvent.AccountDeletionRequested]: {
         uk: ({ subject }) => ({
             type: NotificationType.System,

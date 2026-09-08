@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+
+import { NotificationEvent } from '@dns/shared-types';
 
 import { NotificationEntity } from '../../entities';
 import { notifications } from '../../schema';
@@ -81,6 +83,27 @@ export class NotificationRepository extends BaseRepository {
             .update(notifications)
             .set({ readAt: new Date() })
             .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
+    }
+
+    /**
+     * Has this account already been told about this, since a given moment?
+     *
+     * The job that warns «premium runs out in three days» runs every day, and
+     * without this it would say so three times. There is no «notified» column
+     * for the same reason there is no copy of the shopping list: the
+     * notification IS the record, and a second flag could disagree with it.
+     */
+    async existsForUserSince(userId: string, event: NotificationEvent, since: Date): Promise<boolean> {
+        const row = await this.db.query.notifications.findFirst({
+            where: and(
+                eq(notifications.userId, userId),
+                eq(notifications.event, event),
+                gte(notifications.createdAt, since),
+            ),
+            columns: { id: true },
+        });
+
+        return row !== undefined;
     }
 
     /**

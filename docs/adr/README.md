@@ -38,4 +38,4 @@ Skip an ADR for routine choices that follow from existing skills / conventions.
 - [ADR-0005](./0005-what-account-deletion-erases.md) — Чого саме торкається видалення акаунту після пільгового періоду — **Proposed**
 - [ADR-0006](./0006-products-absorb-ingredients.md) — Продукти поглинають інгредієнти; фільтри рецептів комбінуються по-різному в різних групах — **Accepted**
 - [ADR-0007](./0007-daily-norm-formulas.md) — Добові норми за Mifflin-St Jeor; вода й кроки — евристики, що потребують підпису — **Proposed**
-- [ADR-0008](./0008-background-jobs.md) — Чим виконувати фонові задачі: окремий воркер на BullMQ поверх наявного Redis — **Proposed**
+- [ADR-0008](./0008-background-jobs.md) — Чим виконувати фонові задачі: окремий воркер на BullMQ; Redis доводиться додати в прод — **Accepted**
