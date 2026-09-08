@@ -115,6 +115,59 @@ describe('Shopping list', () => {
         });
     });
 
+    /**
+     * FR-006 of the meal plan asked for a per-dish «add to shopping list»
+     * button. There is nothing for it to do: planning a dish already puts its
+     * ingredients on the list, because the list sums the plan on every read.
+     * So the plan reports a state instead, and these are the tests that make
+     * that claim true rather than merely written down.
+     */
+    describe('the plan feeds the list without being asked', () => {
+        it('puts a planned dish on the list with no action in between', async () => {
+            const recipeId = await seedRecipe('План-страва', { Морква: 100 });
+
+            const before = await list.read(user.id, WINDOW);
+            expect(allItems(before.groups)).toHaveLength(0);
+
+            await plan.addItem(user.id, FROM, { slot: MealSlot.Lunch, recipeId });
+
+            const after = await list.read(user.id, WINDOW);
+            expect(itemFor(after.groups, 'Морква', ShoppingItemOrigin.Plan).amountG).toBe(100);
+        });
+
+        it('tells the plan screen that the list already counts it', async () => {
+            const [day] = await plan.range(user.id, WINDOW);
+
+            expect(day?.importsIntoShoppingList).toBe(true);
+        });
+
+        it('and tells it when the switch is off', async () => {
+            await list.setImportFromPlan(user.id, false);
+
+            const [day] = await plan.range(user.id, WINDOW);
+
+            expect(day?.importsIntoShoppingList).toBe(false);
+        });
+
+        /**
+         * The switch is the only control over this, so the plan's answer has to
+         * follow it — otherwise the screen would offer a state it cannot change
+         * and the user would have no way to reconcile the two.
+         */
+        it('keeps the flag in step with what the list actually shows', async () => {
+            const recipeId = await seedRecipe('Ще одна', { Морква: 50 });
+            await plan.addItem(user.id, FROM, { slot: MealSlot.Dinner, recipeId });
+
+            await list.setImportFromPlan(user.id, false);
+
+            const [day] = await plan.range(user.id, WINDOW);
+            const listed = await list.read(user.id, WINDOW);
+
+            expect(day?.importsIntoShoppingList).toBe(false);
+            expect(allItems(listed.groups).filter(item => item.origin === ShoppingItemOrigin.Plan)).toHaveLength(0);
+        });
+    });
+
     describe('adding by hand', () => {
         it('converts each unit into grams and prices the line from the product', async () => {
             // Carrot is 41 kcal per 100 g, so 100 g is 41.
