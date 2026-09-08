@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsProducerModule } from '@dns/api-common';
 import { DATABASE_CONNECTION, DatabaseConnectionModule, DrizzleDB } from '@dns/database';
 import {
+    AccountDeletionRequestRepositoryModule,
     NotificationRepositoryModule,
     OtpCodeRepositoryModule,
     PasswordResetPermitRepositoryModule,
@@ -13,6 +14,8 @@ import {
 
 import { AllConfig, appConfig, databaseConfig, jobsConfig, redisConfig } from '../../src/common/config';
 import { ExpiredRowsService } from '../../src/jobs/cleanup/expired-rows.service';
+import { JobsMetrics } from '../../src/jobs/jobs.metrics';
+import { PendingWorkService } from '../../src/jobs/pending-work/pending-work.service';
 import { SubscriptionExpiryService } from '../../src/jobs/subscription/subscription-expiry.service';
 
 export interface WorkerTestContext {
@@ -50,9 +53,10 @@ export async function createWorkerTestContext(): Promise<WorkerTestContext> {
             PasswordResetPermitRepositoryModule,
             SubscriptionRepositoryModule,
             NotificationRepositoryModule,
+            AccountDeletionRequestRepositoryModule,
             NotificationsProducerModule,
         ],
-        providers: [ExpiredRowsService, SubscriptionExpiryService],
+        providers: [ExpiredRowsService, SubscriptionExpiryService, PendingWorkService, JobsMetrics],
     }).compile();
 
     await moduleRef.init();

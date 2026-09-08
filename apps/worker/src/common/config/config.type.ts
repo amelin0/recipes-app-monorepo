@@ -17,6 +17,8 @@ export interface JobsConfig {
     cleanupCron: string;
     /** Cron for the subscription date sweep. */
     subscriptionCron: string;
+    /** Cron for the count that feeds the «work waiting for a human» gauge. */
+    pendingWorkCron: string;
     /** How many days ahead «your premium is running out» is worth saying. */
     expiringWithinDays: number;
 }

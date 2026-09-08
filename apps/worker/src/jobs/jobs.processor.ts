@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { ExpiredRowsService } from './cleanup/expired-rows.service';
 import { JOBS_QUEUE, JobName } from './jobs.constants';
 import { JobsMetrics } from './jobs.metrics';
+import { PendingWorkService } from './pending-work/pending-work.service';
 import { SubscriptionExpiryService } from './subscription/subscription-expiry.service';
 
 /**
@@ -21,6 +22,7 @@ export class JobsProcessor extends WorkerHost {
     constructor(
         private readonly expiredRows: ExpiredRowsService,
         private readonly subscriptions: SubscriptionExpiryService,
+        private readonly pendingWork: PendingWorkService,
         private readonly metrics: JobsMetrics,
     ) {
         super();
@@ -52,6 +54,8 @@ export class JobsProcessor extends WorkerHost {
                 return this.expiredRows.run();
             case JobName.SubscriptionExpiry:
                 return this.subscriptions.run();
+            case JobName.PendingWork:
+                return this.pendingWork.run();
             default:
                 // A job nobody handles is a deploy mistake, not a data problem:
                 // fail loudly rather than mark it done.

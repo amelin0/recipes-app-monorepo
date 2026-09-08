@@ -27,9 +27,18 @@ export class JobsScheduler implements OnApplicationBootstrap {
     async onApplicationBootstrap(): Promise<void> {
         const cleanup = this.configService.getOrThrow('jobs.cleanupCron', { infer: true });
         const subscriptions = this.configService.getOrThrow('jobs.subscriptionCron', { infer: true });
+        const pendingWork = this.configService.getOrThrow('jobs.pendingWorkCron', { infer: true });
 
         await this.schedule(JobName.ExpiredRows, cleanup);
         await this.schedule(JobName.SubscriptionExpiry, subscriptions);
+        await this.schedule(JobName.PendingWork, pendingWork);
+
+        // …and once immediately, only for the counting job. A gauge that is
+        // unset until the first scheduled run leaves a hole of up to an hour
+        // after every deploy, during which the alert on it reads no data —
+        // which is exactly when a deploy is most likely to have broken
+        // something. Counting twice costs two `count(*)`; it deletes nothing.
+        await this.queue.add(JobName.PendingWork, {}, { removeOnComplete: true, removeOnFail: { count: 20 } });
     }
 
     private async schedule(name: string, pattern: string): Promise<void> {
