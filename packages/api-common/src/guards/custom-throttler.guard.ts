@@ -31,6 +31,14 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
             const rule = this.getRule(throttleKey);
             requestProps.limit = rule.limit;
             requestProps.ttl = rule.ttl;
+
+            // The block lasts as long as the window the rule describes.
+            // Without this line it keeps the value the base guard computed
+            // from the GLOBAL ttl, so «5 logins per minute» could lock the
+            // caller out for the global window instead of a minute — a
+            // mismatch invisible with in-memory counters, because nothing
+            // ever read it back.
+            requestProps.blockDuration = rule.ttl;
         }
 
         const result = await super.handleRequest(requestProps);

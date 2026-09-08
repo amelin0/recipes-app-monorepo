@@ -8,6 +8,11 @@ import type { DatabaseConfig } from '@dns/database';
 
 export type { DatabaseConfig, EmailConfig, OAuthConfig, OtpConfig, PurchasesConfig, StorageConfig, ThrottleRuleConfig };
 
+export interface RedisConfig {
+    /** Empty means «keep rate-limit counters in this process» — see ThrottlerStorageModule. */
+    url: string;
+}
+
 export enum AppEnv {
     Dev = 'development',
     Stage = 'stage',
@@ -60,6 +65,7 @@ export interface AllConfig {
     oauth: OAuthConfig;
     otp: OtpConfig;
     purchases: PurchasesConfig;
+    redis: RedisConfig;
     storage: StorageConfig;
     throttler: ThrottlerConfig;
 }

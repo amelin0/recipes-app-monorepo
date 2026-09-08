@@ -4,7 +4,13 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
-import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, ResponseInterceptor } from '@dns/api-common';
+import {
+    createLoggerConfig,
+    CustomThrottlerGuard,
+    GlobalExceptionFilter,
+    ResponseInterceptor,
+    ThrottlerStorageModule,
+} from '@dns/api-common';
 import { StorageModule } from '@dns/api-infrastructure/storage';
 import { DatabaseConnectionModule } from '@dns/database';
 
@@ -14,6 +20,7 @@ import {
     AppEnv,
     authConfig,
     databaseConfig,
+    redisConfig,
     storageConfig,
     throttlerConfig,
 } from './common/config';
@@ -34,7 +41,7 @@ import { UserModule } from './modules/user';
             // App-local .env first, then the monorepo root one that
             // docker-compose and the clients also read.
             envFilePath: ['.env', '../../.env'],
-            load: [appConfig, authConfig, databaseConfig, storageConfig, throttlerConfig],
+            load: [appConfig, authConfig, databaseConfig, redisConfig, storageConfig, throttlerConfig],
         }),
         LoggerModule.forRootAsync({
             inject: [ConfigService],
@@ -44,6 +51,16 @@ import { UserModule } from './modules/user';
                     level: process.env.LOG_LEVEL,
                     pretty: configService.getOrThrow('app.env', { infer: true }) === AppEnv.Dev,
                 }),
+        }),
+        // Before the throttler: it consumes the ThrottlerStorage this
+        // provides. Without a REDIS_URL it provides nothing and the throttler
+        // keeps its in-memory default.
+        ThrottlerStorageModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<AllConfig>) => ({
+                url: configService.get('redis.url', { infer: true }),
+            }),
         }),
         ThrottlerModule.forRootAsync({
             inject: [ConfigService],

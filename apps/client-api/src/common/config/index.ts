@@ -6,5 +6,6 @@ export { default as oauthConfig } from './oauth.config';
 export { default as otpConfig } from './otp.config';
 export { default as purchasesConfig } from './purchases.config';
 export { default as storageConfig } from './storage.config';
+export { default as redisConfig } from './redis.config';
 export { default as throttlerConfig } from './throttler.config';
 export * from './config.type';

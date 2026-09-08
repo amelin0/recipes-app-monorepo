@@ -4,7 +4,13 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
-import { createLoggerConfig, CustomThrottlerGuard, GlobalExceptionFilter, ResponseInterceptor } from '@dns/api-common';
+import {
+    createLoggerConfig,
+    CustomThrottlerGuard,
+    GlobalExceptionFilter,
+    ResponseInterceptor,
+    ThrottlerStorageModule,
+} from '@dns/api-common';
 import { EmailModule } from '@dns/api-infrastructure/email';
 import { OAuthModule } from '@dns/api-infrastructure/oauth';
 import { OtpModule } from '@dns/api-infrastructure/otp';
@@ -22,6 +28,7 @@ import {
     oauthConfig,
     otpConfig,
     purchasesConfig,
+    redisConfig,
     storageConfig,
     throttlerConfig,
 } from './common/config';
@@ -54,6 +61,7 @@ import { UserModule } from './modules/user';
                 oauthConfig,
                 otpConfig,
                 purchasesConfig,
+                redisConfig,
                 storageConfig,
                 throttlerConfig,
             ],
@@ -68,6 +76,16 @@ import { UserModule } from './modules/user';
                     // collector parses the JSON, pino-pretty output is opaque to it.
                     pretty: configService.getOrThrow('app.env', { infer: true }) === AppEnv.Dev,
                 }),
+        }),
+        // Before the throttler: it consumes the ThrottlerStorage this
+        // provides. Without a REDIS_URL it provides nothing and the throttler
+        // keeps its in-memory default.
+        ThrottlerStorageModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<AllConfig>) => ({
+                url: configService.get('redis.url', { infer: true }),
+            }),
         }),
         ThrottlerModule.forRootAsync({
             inject: [ConfigService],
