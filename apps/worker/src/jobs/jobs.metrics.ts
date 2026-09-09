@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
 
 /**
  * What Grafana can ask about a process that answers no requests.
@@ -27,8 +27,44 @@ export class JobsMetrics {
         registers: [this.registry],
     });
 
+    /**
+     * A queue of human work, not of machine work.
+     *
+     * Deliberately a gauge rather than a counter: the question is «how many are
+     * waiting right now», and it must be able to go back down when somebody
+     * runs the manual procedure. Both label values are always set, including
+     * when they are zero — a series that disappears when the number is fine
+     * cannot be told from a series that stopped being written.
+     */
+    private readonly openAccountDeletions = new Gauge({
+        name: 'dns_account_deletion_requests_open',
+        help: 'Open account deletion requests, by whether their scheduled date has passed',
+        labelNames: ['state'] as const,
+        registers: [this.registry],
+    });
+
     constructor() {
         collectDefaultMetrics({ register: this.registry, prefix: 'dns_worker_' });
+    }
+
+    /**
+     * The number the alert actually reads.
+     *
+     * The count cannot carry one: clearing these is a manual weekly procedure,
+     * so «more than zero» is the ordinary state between runs. Age is what
+     * separates a normal Tuesday from nobody having run it in a month — and,
+     * unlike a long `for:` on the count, it survives Grafana restarting.
+     */
+    private readonly oldestOverdueDeletion = new Gauge({
+        name: 'dns_account_deletion_requests_oldest_overdue_seconds',
+        help: 'How long the longest-waiting overdue deletion request has been due; 0 when there are none',
+        registers: [this.registry],
+    });
+
+    recordOpenAccountDeletions(counts: { overdue: number; waiting: number; oldestOverdueSeconds: number }): void {
+        this.openAccountDeletions.set({ state: 'overdue' }, counts.overdue);
+        this.openAccountDeletions.set({ state: 'waiting' }, counts.waiting);
+        this.oldestOverdueDeletion.set(counts.oldestOverdueSeconds);
     }
 
     recordRun(job: string, outcome: 'ok' | 'failed', elapsedMs: number): void {

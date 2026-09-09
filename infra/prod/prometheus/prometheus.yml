@@ -77,12 +77,11 @@ scrape_configs:
           - target_label: service
             replacement: admin-api
 
-    # The box itself. Disk filling up and CPU steal show up in the app as
-    # «the API got slow for no reason», and only node-exporter can say that is
-    # what happened.
     # The worker answers no business requests, so `up` here is the difference
-    # between «nothing to do» and «wedged or dead». Its own job counters live
-    # at the same endpoint (dns_worker_job_runs_total).
+    # between «nothing to do» and «wedged or dead» — see the dns-worker-down
+    # rule. Its job counters and the «work waiting for a human» gauges live at
+    # the same endpoint (dns_worker_job_runs_total,
+    # dns_account_deletion_requests_open).
     - job_name: worker
       metrics_path: /metrics
       static_configs:
@@ -90,6 +89,9 @@ scrape_configs:
             labels:
                 service: worker
 
+    # The box itself. Disk filling up and CPU steal show up in the app as
+    # «the API got slow for no reason», and only node-exporter can say that is
+    # what happened.
     - job_name: node
       static_configs:
           - targets: ['node-exporter:9100']

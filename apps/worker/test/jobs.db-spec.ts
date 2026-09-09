@@ -11,6 +11,8 @@ import {
 } from '@dns/shared-types';
 
 import { ExpiredRowsService } from '../src/jobs/cleanup/expired-rows.service';
+import { JobsMetrics } from '../src/jobs/jobs.metrics';
+import { PendingWorkService } from '../src/jobs/pending-work/pending-work.service';
 import { SubscriptionExpiryService } from '../src/jobs/subscription/subscription-expiry.service';
 
 import { WorkerTestContext, createWorkerTestContext } from './support/testing-module';
@@ -22,11 +24,15 @@ describe('background jobs', () => {
     let context: WorkerTestContext;
     let cleanup: ExpiredRowsService;
     let expiry: SubscriptionExpiryService;
+    let pendingWork: PendingWorkService;
+    let metrics: JobsMetrics;
 
     beforeAll(async () => {
         context = await createWorkerTestContext();
         cleanup = context.moduleRef.get(ExpiredRowsService);
         expiry = context.moduleRef.get(SubscriptionExpiryService);
+        pendingWork = context.moduleRef.get(PendingWorkService);
+        metrics = context.moduleRef.get(JobsMetrics);
     });
 
     afterAll(async () => {
@@ -150,6 +156,74 @@ describe('background jobs', () => {
             expect(report.warned).toBe(0);
         });
     });
+
+    /**
+     * Counts are read against a shared database, so every expectation here is a
+     * **delta** from a baseline taken in the same test. Asserting an absolute
+     * number would pass alone and fail the moment another suite left a row
+     * behind — the kind of red that teaches people to re-run instead of look.
+     */
+    describe('work waiting for a human', () => {
+        it('separates requests whose date has passed from those still counting down', async () => {
+            const before = await pendingWork.run();
+
+            const overdueUser = await createUser(context, `overdue${DOMAIN}`);
+            const waitingUser = await createUser(context, `waiting${DOMAIN}`);
+            await requestDeletion(context, overdueUser, { dueIn: -2 * DAY });
+            await requestDeletion(context, waitingUser, { dueIn: 5 * DAY });
+
+            const after = await pendingWork.run();
+
+            expect(after.overdueDeletions - before.overdueDeletions).toBe(1);
+            expect(after.waitingDeletions - before.waitingDeletions).toBe(1);
+        });
+
+        /**
+         * Age, not count, is what the alert reads — see the gauge's comment.
+         * The assertion is a lower bound because the oldest overdue request in
+         * a shared database may belong to somebody else's fixture; it can only
+         * be older than the two-day-old one this test just wrote.
+         */
+        it('reports how long the oldest overdue request has been waiting', async () => {
+            const userId = await createUser(context, `age${DOMAIN}`);
+            await requestDeletion(context, userId, { dueIn: -2 * DAY });
+
+            const report = await pendingWork.run();
+
+            expect(report.oldestOverdueSeconds).toBeGreaterThanOrEqual(2 * 86_400 - 60);
+        });
+
+        /**
+         * The table keeps history — a request can be taken back, and one day a
+         * job will mark them executed. Both are closed, and counting either as
+         * outstanding would page somebody over work that is already done.
+         */
+        it('ignores requests that were cancelled or already carried out', async () => {
+            const before = await pendingWork.run();
+
+            const cancelled = await createUser(context, `cancelled${DOMAIN}`);
+            const executed = await createUser(context, `executed${DOMAIN}`);
+            await requestDeletion(context, cancelled, { dueIn: -2 * DAY, cancelled: true });
+            await requestDeletion(context, executed, { dueIn: -2 * DAY, executed: true });
+
+            const after = await pendingWork.run();
+
+            expect(after.overdueDeletions).toBe(before.overdueDeletions);
+            expect(after.waitingDeletions).toBe(before.waitingDeletions);
+        });
+
+        /** The gauge is the whole point of the job; the return value is for the log. */
+        it('publishes every number on the gauges, zero included', async () => {
+            const report = await pendingWork.run();
+            const scrape = await metrics.scrape();
+
+            expect(scrape).toContain(`dns_account_deletion_requests_open{state="overdue"} ${report.overdueDeletions}`);
+            expect(scrape).toContain(`dns_account_deletion_requests_open{state="waiting"} ${report.waitingDeletions}`);
+            expect(scrape).toContain(
+                `dns_account_deletion_requests_oldest_overdue_seconds ${report.oldestOverdueSeconds}`,
+            );
+        });
+    });
 });
 
 async function eventsOf(context: WorkerTestContext, userId: string): Promise<(string | null)[]> {
@@ -237,6 +311,19 @@ async function giveSubscription(
         currency: 'UAH',
         store: PurchaseStore.Apple,
         storeTransactionId: `txn-${userId}`,
+    });
+}
+
+async function requestDeletion(
+    context: WorkerTestContext,
+    userId: string,
+    options: { dueIn: number; cancelled?: boolean; executed?: boolean },
+): Promise<void> {
+    await context.db.insert(schema.accountDeletionRequests).values({
+        userId,
+        scheduledFor: new Date(Date.now() + options.dueIn),
+        cancelledAt: options.cancelled ? new Date() : null,
+        executedAt: options.executed ? new Date() : null,
     });
 }
 

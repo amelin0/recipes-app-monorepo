@@ -13,8 +13,11 @@ last-tested: 2026-09-09
 виглядає як тиша**. Він не обслуговує запитів, тож «нічого не сталося» і
 «зламався» ззовні однакові. Ознаки, за якими варто зазирнути:
 
-- `dns_worker_job_runs_total` не зростає **більше доби** (задачі нічні: 03:17
-  і 04:23 UTC);
+- спрацював алерт **`dns-worker-down`** (`up{job="worker"} == 0` протягом
+  10 хвилин) — це основний сигнал, решта нижче лишається для випадків, коли
+  процес живий, а задачі все одно не йдуть;
+- `dns_worker_job_runs_total` не зростає **більше доби** (сходяться нічні
+  задачі: 03:17 і 04:23 UTC; погодинний підрахунок — о :07);
 - `up{service="worker"} == 0` у Prometheus;
 - прострочені токени й коди накопичуються — `select count(*) from
   refresh_tokens where expires_at < now();` дає тисячі;
@@ -48,10 +51,11 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
   exec worker node -e "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>r.json()).then(j=>console.log(JSON.stringify(j)))"
 ```
 
-Здорова відповідь — `{"status":"ok","queue":{...,"delayed":2,...}}`.
+Здорова відповідь — `{"status":"ok","queue":{...,"delayed":3,...}}`.
 
-**`delayed` менше двох означає, що розклад не зареєстрований.** Він
-створюється на старті процесу, тож перезапуск воркера його відновить:
+**`delayed` менше трьох означає, що розклад не зареєстрований** (дві нічні
+задачі плюс погодинний підрахунок). Він створюється на старті процесу, тож
+перезапуск воркера його відновить:
 
 ```bash
 docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
@@ -83,7 +87,8 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
 ```
 
 Кожен запуск лишає рядок `job finished` із результатом
-(`{"refreshTokens":N,...}` або `{"expired":N,"warned":N}`). Провал —
+(`{"refreshTokens":N,...}`, `{"expired":N,"warned":N}` або
+`{"overdueDeletions":N,...}`). Провал —
 `job failed` із помилкою; BullMQ повторить тричі з наростаючою паузою, потім
 лишить задачу у `failed` до наступної ночі.
 
@@ -132,7 +137,10 @@ psql "$DATABASE_URL" -c "select count(*) from refresh_tokens where expires_at < 
 видалення далі виконуються руками —
 [`execute-overdue-account-deletions`](./execute-overdue-account-deletions.md)
 — і так буде, доки не ухвалено
-[ADR-0005](../adr/0005-what-account-deletion-erases.md).
+[ADR-0005](../adr/0005-what-account-deletion-erases.md). Воркер їх лише
+**рахує**: доки він лежить, `dns-overdue-account-deletions` мовчить, бо
+показник не оновлюється. Тобто цей алерт не заміняє попередній — він за ним
+слідує.
 
 ## Related
 

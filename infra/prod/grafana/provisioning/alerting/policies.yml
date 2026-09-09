@@ -55,3 +55,16 @@ policies:
             group_wait: 10s
             group_interval: 5m
             repeat_interval: 1h
+
+          # The worker's alerts are both «look at it in the morning»: no user
+          # request passes through that process, and the deletion backlog is
+          # cleared by a runbook somebody runs on a working day. Once a day is
+          # therefore the right cadence — the default 4h would re-ping a dozen
+          # times about a task that was always going to wait until Monday, and
+          # that is exactly how a channel gets muted.
+          - receiver: telegram
+            object_matchers:
+                - ['service', '=', 'worker']
+            group_wait: 5m
+            group_interval: 1h
+            repeat_interval: 24h

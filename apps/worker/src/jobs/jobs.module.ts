@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 
 import { NotificationsProducerModule } from '@dns/api-common';
 import {
+    AccountDeletionRequestRepositoryModule,
     NotificationRepositoryModule,
     OtpCodeRepositoryModule,
     PasswordResetPermitRepositoryModule,
@@ -15,6 +16,7 @@ import { JOBS_QUEUE } from './jobs.constants';
 import { JobsMetrics } from './jobs.metrics';
 import { JobsProcessor } from './jobs.processor';
 import { JobsScheduler } from './jobs.scheduler';
+import { PendingWorkService } from './pending-work/pending-work.service';
 import { SubscriptionExpiryService } from './subscription/subscription-expiry.service';
 
 @Module({
@@ -25,9 +27,17 @@ import { SubscriptionExpiryService } from './subscription/subscription-expiry.se
         PasswordResetPermitRepositoryModule,
         SubscriptionRepositoryModule,
         NotificationRepositoryModule,
+        AccountDeletionRequestRepositoryModule,
         NotificationsProducerModule,
     ],
-    providers: [ExpiredRowsService, SubscriptionExpiryService, JobsProcessor, JobsScheduler, JobsMetrics],
-    exports: [ExpiredRowsService, SubscriptionExpiryService, JobsMetrics],
+    providers: [
+        ExpiredRowsService,
+        SubscriptionExpiryService,
+        PendingWorkService,
+        JobsProcessor,
+        JobsScheduler,
+        JobsMetrics,
+    ],
+    exports: [ExpiredRowsService, SubscriptionExpiryService, PendingWorkService, JobsMetrics],
 })
 export class JobsModule {}

@@ -4,6 +4,7 @@ export const JOBS_QUEUE = 'maintenance';
 export const JobName = {
     ExpiredRows: 'expired-rows',
     SubscriptionExpiry: 'subscription-expiry',
+    PendingWork: 'pending-work',
 } as const;
 
 export type JobName = (typeof JobName)[keyof typeof JobName];

@@ -276,6 +276,120 @@ groups:
                       maxDataPoints: 43200
 
     - orgId: 1
+      name: worker
+      folder: 'DNS'
+      interval: 1m
+      rules:
+          # The worker answers no requests, so nothing about it is visible the
+          # way a broken API is: «idle» and «dead» look identical from outside.
+          # This is the only thing that tells them apart.
+          #
+          # noDataState is OK on purpose. `up` reports 0 for a target that is
+          # configured and unreachable — that is the failure this catches. It
+          # goes ABSENT only when the scrape config no longer lists the worker,
+          # which happens before the first deploy that ships it; paging then
+          # would mean the alert fires on a service that does not exist yet.
+          - uid: dns-worker-down
+            title: worker not answering
+            condition: C
+            for: 10m
+            noDataState: OK
+            execErrState: Error
+            labels:
+                severity: warning
+                service: worker
+            annotations:
+                summary: 'The background worker is unreachable — nightly cleanup and subscription expiry are not running'
+                description: >-
+                    Warning rather than critical, and deliberately so: no user request passes
+                    through this process. What degrades is slow — token tables grow, and
+                    people stop being told their subscription is about to end. It can wait
+                    for the morning.
+                runbook_url: https://github.com/amelin0/recipes-app-monorepo/blob/development/docs/runbooks/worker-not-running-jobs.md
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'up{job="worker"}'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+          # The one alert here that is about a promise rather than a machine.
+          #
+          # It reads AGE, not count. Carrying out a deletion is still a manual
+          # weekly runbook (ADR-0005 is unresolved), so «some requests are
+          # overdue» is the ordinary state on a Tuesday and a count-based rule
+          # would fire every week. Ten days means the weekly run has been
+          # missed — and age, unlike a ten-day `for:` on a count, survives
+          # Grafana restarting.
+          - uid: dns-overdue-account-deletions
+            title: account deletions overdue by more than 10 days
+            condition: C
+            for: 1h
+            # The worker being down is dns-worker-down's job to say; this rule
+            # staying quiet then is correct, not a gap.
+            noDataState: OK
+            execErrState: Error
+            labels:
+                severity: warning
+                service: worker
+            annotations:
+                summary: 'Someone asked us to delete their account more than 10 days after the date we promised, and it is still here'
+                description: >-
+                    Not an outage — a commitment with a date on it that nobody has kept. The
+                    procedure is manual until ADR-0005 settles what deletion erases; run the
+                    runbook, and if this keeps firing, that is the argument for finishing the
+                    ADR rather than for raising the threshold.
+                runbook_url: https://github.com/amelin0/recipes-app-monorepo/blob/development/docs/runbooks/execute-overdue-account-deletions.md
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 3600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'dns_account_deletion_requests_oldest_overdue_seconds'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: gt, params: [864000] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+    - orgId: 1
       name: host
       folder: 'DNS'
       interval: 1m
