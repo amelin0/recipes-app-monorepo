@@ -1,12 +1,21 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Response } from 'express';
 
 import { HealthService } from './health.service';
 import { HealthView } from './health.view';
 import { ReadinessView } from './readiness.view';
 
+// Probes are exempt from the rate limit, and that is not a convenience.
+// They share a tracker key — they come from the load balancer and the
+// monitoring host rather than from a user — so nginx, blackbox-exporter and
+// the container health check all draw on the same 60/min budget. The failure
+// that produces is perverse: the probe starts getting 429, everything
+// concludes the service is down, and the service was fine. Neither route
+// touches anything expensive; readiness asks Postgres for `select 1`.
 @ApiTags('health')
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
     constructor(private readonly healthService: HealthService) {}
