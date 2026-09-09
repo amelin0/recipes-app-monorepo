@@ -18,6 +18,8 @@ CLAUDE.local.md
 .claude/settings.local.json
 **/.claude/settings.local.json
 .claude/mcp.json
+# Points at a port on 127.0.0.1 that only this machine's IDE is listening on.
+.mcp.json
 
 # IDE
 .vscode/
