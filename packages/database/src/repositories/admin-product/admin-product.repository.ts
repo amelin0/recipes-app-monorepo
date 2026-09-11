@@ -70,6 +70,12 @@ export interface WriteProductInput {
     translations: AdminProductTranslation[];
 }
 
+/** What a verify did. Only `promoted` is a change — and only it has an author to tell. */
+export type VerifyProductOutcome =
+    | { kind: 'promoted'; authorId: string | null; name: string }
+    | { kind: 'already-verified' }
+    | { kind: 'not-found' };
+
 /** The index behind «no two global products share an English name» (schema). */
 const GLOBAL_NAME_INDEX = 'products_global_name_en_key_unique';
 
@@ -201,24 +207,72 @@ export class AdminProductRepository extends BaseRepository {
 
     /**
      * Confirms a user's product and promotes it into the shared catalogue
-     * (decision of 2026-09-08).
+     * (decision of 2026-09-08), reporting whose it was.
      *
      * `createdBy` is cleared, and that is deliberate rather than tidy: once a
      * product is visible to everyone and sits inside other people's dishes it
      * has stopped being one person's data, and the cleared column is what
      * stops a later account deletion from taking it back out.
      *
-     * Un-verifying therefore does not hand it back — there is no owner left to
-     * hand it to. That asymmetry is the cost of the decision, not an oversight.
+     * **One statement, conditional on «not yet verified».** The author has to
+     * be read before the write erases it, and read-then-write was the bug:
+     * two admins verifying at once both read the author, both wrote, and the
+     * author was told twice. Here the CTE locks the row `FOR UPDATE` and the
+     * update returns the author it cleared. A second verify blocks on that
+     * lock; once the first commits, READ COMMITTED re-checks `not is_verified`
+     * on the new row version, finds it false and matches nothing — so exactly
+     * one caller gets `promoted`, and only that one tells the author.
+     *
+     * The English-name key is computed here too: promotion is how a row
+     * enters the global scope of the unique index, and a promoted product
+     * whose name the catalogue already has throws `DuplicateProductNameError`
+     * — the private «Tomatoes» does not become a second catalogue one.
      */
-    async setVerified(id: string, isVerified: boolean): Promise<boolean> {
+    async verify(id: string): Promise<VerifyProductOutcome> {
+        const rows = await this.refusingDuplicateNames(() =>
+            this.db.execute<{ author_id: string | null; name: string | null }>(sql`
+                with target as (
+                    select id, created_by
+                      from products
+                     where id = ${id} and not is_verified
+                       for update
+                )
+                update products
+                   set is_verified = true,
+                       source = ${ContentSource.Global},
+                       created_by = null,
+                       name_en_key = (
+                           select ${englishNameKey(sql`t.name`)}
+                             from product_translations t
+                            where t.product_id = target.id and t.language = 'en'
+                       )
+                  from target
+                 where products.id = target.id
+             returning target.created_by as author_id,
+                       (select t.name
+                          from product_translations t
+                         where t.product_id = target.id and t.language = ${DEFAULT_LANGUAGE}) as name
+            `),
+        );
+
+        const [row] = rows;
+        if (row) return { kind: 'promoted', authorId: row.author_id, name: row.name ?? '' };
+
+        // Nothing changed: either there is no such product or somebody got
+        // there first. Only which of the two is read here; nothing is written.
+        const [exists] = await this.db.select({ id: products.id }).from(products).where(eq(products.id, id));
+        return exists ? { kind: 'already-verified' } : { kind: 'not-found' };
+    }
+
+    /**
+     * Takes the mark off. Un-verifying does not hand the product back — there
+     * is no owner left to hand it to. That asymmetry is the cost of the
+     * decision, not an oversight. Idempotent, so it needs no guard.
+     */
+    async unverify(id: string): Promise<boolean> {
         const updated = await this.db
             .update(products)
-            .set(
-                isVerified
-                    ? { isVerified: true, source: ContentSource.Global, createdBy: null }
-                    : { isVerified: false },
-            )
+            .set({ isVerified: false })
             .where(eq(products.id, id))
             .returning({ id: products.id });
 

@@ -1,7 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
-import { NotificationsProducer } from '@dns/api-common';
-import { DEFAULT_LANGUAGE } from '@dns/constants';
+import { NotificationDedupeKey, NotificationsProducer } from '@dns/api-common';
 import {
     AdminProductDetail,
     AdminProductListItem,
@@ -44,12 +43,14 @@ export class AdminProductService {
 
     async create(input: AdminCreateProductInput): Promise<string> {
         const write = await this.toWriteInput(input);
-        return this.refusingDuplicateNames(input, () => this.productRepository.create(write));
+        return this.refusingDuplicateNames(englishNameOf(input), () => this.productRepository.create(write));
     }
 
     async update(id: string, input: AdminCreateProductInput): Promise<void> {
         const write = await this.toWriteInput(input);
-        const updated = await this.refusingDuplicateNames(input, () => this.productRepository.update(id, write));
+        const updated = await this.refusingDuplicateNames(englishNameOf(input), () =>
+            this.productRepository.update(id, write),
+        );
         if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
     }
 
@@ -60,20 +61,37 @@ export class AdminProductService {
      */
     async importRow(input: AdminCreateProductInput): Promise<'created' | 'updated'> {
         const write = await this.toWriteInput(input);
-        return this.refusingDuplicateNames(input, () => this.productRepository.upsertGlobalByEnglishName(write));
+        return this.refusingDuplicateNames(englishNameOf(input), () =>
+            this.productRepository.upsertGlobalByEnglishName(write),
+        );
     }
 
+    /**
+     * Verifying promotes; un-verifying only takes the mark off.
+     *
+     * The author is told only when **this** call did the promotion — the
+     * repository's conditional update decides that, so two admins verifying
+     * at once produce one message. Verifying again, or a product that was
+     * ours all along, tells nobody. The dedupe key is the second lock on the
+     * same door: whatever happens upstream, one product is announced once.
+     */
     async setVerified(id: string, isVerified: boolean): Promise<void> {
-        // Read before the write: verification clears `createdBy`, so afterwards
-        // there is no author left to tell.
-        const before = await this.findById(id, DEFAULT_LANGUAGE);
+        if (!isVerified) {
+            const updated = await this.productRepository.unverify(id);
+            if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+            return;
+        }
 
-        const updated = await this.productRepository.setVerified(id, isVerified);
-        if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+        const outcome = await this.refusingDuplicateNames(null, () => this.productRepository.verify(id));
 
-        if (isVerified && before.createdBy) {
-            await this.notifications.emit(before.createdBy, NotificationEvent.ProductVerified, {
-                subject: before.name,
+        if (outcome.kind === 'not-found') {
+            throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+        }
+
+        if (outcome.kind === 'promoted' && outcome.authorId) {
+            await this.notifications.emit(outcome.authorId, NotificationEvent.ProductVerified, {
+                subject: outcome.name,
+                dedupeKey: NotificationDedupeKey.productVerified(id),
             });
         }
     }
@@ -123,17 +141,23 @@ export class AdminProductService {
      * write are two statements, and two requests fit between them. This only
      * translates the index's refusal into the 409 the panel shows.
      */
-    private async refusingDuplicateNames<T>(input: AdminCreateProductInput, write: () => Promise<T>): Promise<T> {
+    private async refusingDuplicateNames<T>(englishName: string | null, write: () => Promise<T>): Promise<T> {
         try {
             return await write();
         } catch (error) {
             if (!(error instanceof DuplicateProductNameError)) throw error;
 
-            const english = input.translations.find(t => t.language === 'en')?.name ?? '';
             throw new ConflictException({
-                message: `Another product is already called "${english}" in English`,
+                message:
+                    englishName === null
+                        ? 'The catalogue already has a product with this English name'
+                        : `Another product is already called "${englishName}" in English`,
                 code: ProductErrorCode.DuplicateName,
             });
         }
     }
+}
+
+function englishNameOf(input: AdminCreateProductInput): string | null {
+    return input.translations.find(t => t.language === 'en')?.name ?? null;
 }

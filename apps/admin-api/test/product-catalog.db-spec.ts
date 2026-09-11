@@ -214,9 +214,9 @@ describe('admin product catalogue', () => {
         });
 
         /**
-         * The author is told, and told **before** the write clears
-         * `created_by`: a moment later there is nobody left to notify, which
-         * is exactly the bug the ordering in the service exists to avoid.
+         * The author is told even though the write clears `created_by`: the
+         * promoting statement returns the author it cleared, so there is
+         * still somebody to notify afterwards.
          */
         it('tells the person who created it', async () => {
             const userId = await createUser(context);
@@ -233,6 +233,81 @@ describe('admin product catalogue', () => {
             expect(messages[0]?.event).toBe(NotificationEvent.ProductVerified);
 
             await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        /**
+         * The old service read the author, then wrote unconditionally: two
+         * admins verifying at once both read the author and both told them.
+         * Now one conditional statement decides who promoted it, and only
+         * that caller tells.
+         */
+        it('tells the author once when two admins verify at the same moment', async () => {
+            const userId = await createUser(context);
+            const id = await createCustomProduct(context, userId, 'Homemade cheese');
+
+            await Promise.all([
+                productService.setVerified(id, true),
+                productService.setVerified(id, true),
+                productService.setVerified(id, true),
+            ]);
+
+            const messages = await context.db
+                .select({ event: schema.notifications.event })
+                .from(schema.notifications)
+                .where(eq(schema.notifications.userId, userId));
+            expect(messages).toHaveLength(1);
+            expect(messages[0]?.event).toBe(NotificationEvent.ProductVerified);
+
+            await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        it('tells nobody a second time when it is verified again', async () => {
+            const userId = await createUser(context);
+            const id = await createCustomProduct(context, userId, 'Homemade cheese');
+
+            await productService.setVerified(id, true);
+            await productService.setVerified(id, false);
+            await productService.setVerified(id, true);
+
+            const messages = await context.db
+                .select({ id: schema.notifications.id })
+                .from(schema.notifications)
+                .where(eq(schema.notifications.userId, userId));
+            expect(messages).toHaveLength(1);
+
+            await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        /**
+         * Promotion is how a row enters the catalogue's name index. A private
+         * «Test product» cannot become a second catalogue one: 409, and the
+         * product stays its author's, untold.
+         */
+        it('refuses to promote a product whose English name the catalogue already has', async () => {
+            await productService.create(payload());
+            const userId = await createUser(context);
+            const id = await createCustomProduct(context, userId, 'Test product');
+
+            await expect(productService.setVerified(id, true)).rejects.toThrow(ConflictException);
+
+            const [row] = await context.db.select().from(schema.products).where(eq(schema.products.id, id));
+            expect(row?.source).toBe(ContentSource.Custom);
+            expect(row?.createdBy).toBe(userId);
+            expect(row?.isVerified).toBe(false);
+
+            const messages = await context.db
+                .select({ id: schema.notifications.id })
+                .from(schema.notifications)
+                .where(eq(schema.notifications.userId, userId));
+            expect(messages).toHaveLength(0);
+
+            await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        it('404s when verifying a product that is not there', async () => {
+            await expect(productService.setVerified('00000000-0000-4000-8000-000000000000', true)).rejects.toThrow(
+                NotFoundException,
+            );
         });
 
         it('tells nobody when the product was ours all along', async () => {
