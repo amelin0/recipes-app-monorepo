@@ -88,6 +88,29 @@ describe('Onboarding', () => {
             expect(after.onboardingStep).toBe(7);
         });
 
+        /**
+         * Every call below read the profile before any of them wrote. The old
+         * `Math.max(step, profile.onboardingStep)` compared against that
+         * stale zero, so the last write to land won — even a small step.
+         */
+        it('never moves the resume point backwards when answers land out of order', async () => {
+            const stale = await profileOf();
+            const steps = [3, 9, 1, 12, 5, 7, 2, 10];
+
+            const saved = await Promise.all(steps.map(step => onboarding.saveStep(stale, { step })));
+
+            // Each write already sees at least its own step…
+            saved.forEach((profile, index) => {
+                expect(profile.onboardingStep).toBeGreaterThanOrEqual(steps[index] as number);
+            });
+            // …and the row ends on the furthest one, whatever the order.
+            expect((await profileOf()).onboardingStep).toBe(Math.max(...steps));
+
+            // A second wave of earlier steps, in flight together, cannot pull it back.
+            await Promise.all([4, 6, 8].map(step => onboarding.saveStep(stale, { step })));
+            expect((await profileOf()).onboardingStep).toBe(Math.max(...steps));
+        });
+
         it('drops a stale target weight when the goal stops being about weight', async () => {
             await onboarding.saveStep(await profileOf(), { goal: UserGoal.LoseWeight, targetWeightKg: 72 });
             expect((await profileOf()).targetWeightKg).toBe(72);
@@ -154,6 +177,64 @@ describe('Onboarding', () => {
             ).rejects.toBeInstanceOf(BadRequestException);
 
             expect((await profileOf()).hasCompletedOnboarding()).toBe(false);
+            // The refusal happens inside the transaction, so nothing of the
+            // goal half is left behind either.
+            expect(await nutrition.findGoal(user.id)).toBeNull();
+        });
+
+        it('judges the answers as they stand, not as the request first read them', async () => {
+            // Read before the questionnaire was answered: judged by this copy,
+            // completion would be refused as unfinished.
+            const stale = await profileOf();
+            await answerEverything();
+
+            const profile = await onboarding.complete(stale, {
+                dailyCalories: 1700,
+                dailyWaterMl: 2500,
+                dailySteps: 9000,
+            });
+
+            expect(profile.hasCompletedOnboarding()).toBe(true);
+            expect(await nutrition.findGoal(user.id)).not.toBeNull();
+        });
+
+        it('freezes the recommendation for the weight the profile holds when it commits', async () => {
+            await answerEverything({ weightKg: 80 });
+            const stale = await profileOf();
+
+            // A weight saved after the completing request read the profile.
+            await onboarding.saveStep(await profileOf(), { weightKg: 90 });
+            const current = onboarding.recommendations(await profileOf());
+
+            await onboarding.complete(stale, { dailyCalories: 1700, dailyWaterMl: 2500, dailySteps: 9000 });
+
+            const [row] = await ctx.db.query.nutritionGoals.findMany();
+            expect(row?.recommendedCalories).toBe(current?.norms.calories);
+            expect(row?.recommendedWaterMl).toBe(current?.norms.waterMl);
+        });
+
+        it('ends with one whole goal when completions race', async () => {
+            await answerEverything();
+            const choices = [1600, 1800, 2000, 2200];
+
+            await Promise.all(
+                choices.map(async dailyCalories =>
+                    onboarding.complete(await profileOf(), { dailyCalories, dailyWaterMl: 2500, dailySteps: 9000 }),
+                ),
+            );
+
+            const rows = await ctx.db.query.nutritionGoals.findMany();
+            expect(rows).toHaveLength(1);
+
+            // One request's goal in full, never the calories of one and the
+            // split of another.
+            const [goal] = rows;
+            expect(choices).toContain(goal?.dailyCalories);
+            expect(goal?.dailyProteinG).toBe(Math.round(((goal?.dailyCalories as number) * 0.3) / 4));
+
+            const profile = await profileOf();
+            expect(profile.hasCompletedOnboarding()).toBe(true);
+            expect(profile.onboardingStep).toBe(ONBOARDING_LIMITS.stepCount);
         });
 
         it('marks the account done and writes the daily goal in one go', async () => {
