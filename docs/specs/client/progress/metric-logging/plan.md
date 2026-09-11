@@ -3,7 +3,7 @@ spec: ./spec.md
 status: Implemented
 owner: '@amelin0'
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-11
 related-adrs: [ADR-0004, ADR-0007]
 related-runbooks: []
 ---
@@ -75,6 +75,28 @@ FR-001, FR-004, FR-006, FR-010 і FR-011 — серверна частина: з
 (FR-006), пораховану з ваги, яку людина замінила тижні тому. Талія профілю
 не торкається — у формулі її немає.
 
+**Профіль бере найсвіжіший вимір за датою, а не той, що записали
+останнім.** Раніше профіль отримував значення щойно записаного виміру —
+неправильно навіть без гонок: вчорашня вага, внесена сьогодні, затирала
+сьогоднішню. А паралельно профіль лишався на тому запиті, що закомітився
+останнім. Тепер `BodyMeasurementRepository.record` в одній транзакції:
+
+1. блокує рядок профілю (`SELECT … FOR NO KEY UPDATE`) — **першим**
+   оператором;
+2. вставляє вимір;
+3. ставить у профіль `round(value, 1)` найсвіжішого виміру цього показника
+   підзапитом по таблиці.
+
+Блокування саме першим, бо без нього `UPDATE`, що чекає на блокування рядка,
+лишається зі знімком, у якому підзапит почав рахувати, — і записав би вже
+застарілий «найсвіжіший». Із блокуванням наступні оператори бачать усе, що
+закомітилось до нього.
+
+«Найсвіжіший» — один порядок на всіх: `measured_on DESC, created_at DESC,
+id DESC`. Його ж бере `current` на картці, тож профіль і картка не можуть
+розійтися; два виміри в один день мають рівно одного «найсвіжішого», і
+вибір не залежить від того, чий запит закомітився останнім.
+
 ### `DELETE /progress/metrics/{metric}/measurements/{id}`
 
 **Response 204.** `404` `progress.measurement-not-found` — і коли запису
@@ -127,6 +149,7 @@ apps/client-api/src/modules/progress/dto/inbound/record-measurement.inbound.dto.
 apps/client-api/src/modules/nutrition/nutrition.controller.ts        # PATCH /nutrition/goal
 apps/client-api/src/modules/user/profile.service.ts                  # targetWeightKg
 packages/database/src/repositories/nutrition/nutrition.repository.ts # updateGoal()
+packages/database/src/repositories/body-measurement/body-measurement.repository.ts # record(): вимір + профіль
 packages/validation/src/progress.schemas.ts
 packages/validation/src/nutrition.schemas.ts                         # patchNutritionGoalSchema
 packages/validation/src/user.schemas.ts                              # targetWeightKgSchema
@@ -143,8 +166,8 @@ packages/validation/src/user.schemas.ts                              # targetWei
 
 - Видалення обмежене власником у самому `WHERE`, а не перевіркою після
   читання.
-- Значення зберігається як `numeric` з двома знаками; профіль отримує один —
-  та сама точність, що й в анкеті.
+- Значення зберігається як `numeric` з двома знаками; профіль отримує один
+  (`round(value, 1)` у базі) — та сама точність, що й в анкеті.
 - Дата виміру проходить ту саму перевірку вікна, що й дати трекінгу: захист
   від пристрою зі зламаним годинником.
 - `PATCH /nutrition/goal` не створює ціль. Створення — це `PUT` з екрана
@@ -155,7 +178,11 @@ packages/validation/src/user.schemas.ts                              # targetWei
 
 - `apps/client-api/test/progress.db-spec.ts` — запис і поява на картці,
   відмова на значенні поза межами, перенесення ваги і зросту в профіль,
-  талія профілю не чіпає, видалення чужого запису → 404.
+  талія профілю не чіпає, видалення чужого запису → 404. Порядок і гонки:
+  вимір заднім числом не зсуває профіль із новішого; з двох в один день
+  профіль бере той самий, що й картка; шість паралельних записів з різними
+  датами лишають профіль на найсвіжішій, п'ять паралельних в один день —
+  профіль дорівнює `current` картки; те саме для зросту.
 - `apps/client-api/test/nutrition.db-spec.ts` — часткова зміна цілі не
   чіпає решту полів; патч без наявної цілі → 404.
 - Смоук: `PATCH /nutrition/goal` з одним полем повертає всі сім;

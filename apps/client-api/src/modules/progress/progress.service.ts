@@ -135,10 +135,12 @@ export class ProgressService {
     /**
      * Records a reading.
      *
-     * A weight reading also updates the profile, because the calorie
+     * A weight or height reading also moves the profile, because the calorie
      * recommendation is computed from it (metric-logging FR-006) — leaving the
      * two apart would mean the app offers a «new norm» derived from a weight
-     * the user replaced weeks ago.
+     * the user replaced weeks ago. The profile takes the **latest reading by
+     * date**, not this one: a back-dated entry is history, not the current
+     * weight. The repository does both writes in one transaction.
      */
     async record(userId: string, metric: BodyMetric, input: RecordMeasurementInput): Promise<BodyMeasurementEntity> {
         const limits = MEASUREMENT_LIMITS[metric];
@@ -150,22 +152,12 @@ export class ProgressService {
             });
         }
 
-        const measurement = await this.measurements.create({
+        return this.measurements.record({
             userId,
             metric,
             value: input.value.toFixed(2),
             measuredOn: input.measuredOn ?? today(),
         });
-
-        if (metric === BodyMetric.Weight) {
-            await this.profiles.update(userId, { weightKg: input.value.toFixed(1) });
-        }
-
-        if (metric === BodyMetric.Height) {
-            await this.profiles.update(userId, { heightCm: input.value.toFixed(1) });
-        }
-
-        return measurement;
     }
 
     async remove(userId: string, id: string): Promise<void> {
