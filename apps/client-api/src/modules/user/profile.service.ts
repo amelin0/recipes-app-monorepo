@@ -4,6 +4,8 @@ import { StorageService } from '@dns/api-infrastructure/storage';
 import {
     ProfileEntity,
     ProfileRepository,
+    SubscriptionEntity,
+    SubscriptionRepository,
     UserEntity,
     UserSettingsEntity,
     UserSettingsRepository,
@@ -16,11 +18,18 @@ export interface ProfileAggregate {
     settings: UserSettingsEntity;
 }
 
+/** What the profile screen draws — the aggregate plus the «Підписка» row (FR-003). */
+export interface ProfileScreen extends ProfileAggregate {
+    /** Null on the free tier, and once the period has run out. */
+    subscription: SubscriptionEntity | null;
+}
+
 @Injectable()
 export class ProfileService {
     constructor(
         private readonly profileRepository: ProfileRepository,
         private readonly settingsRepository: UserSettingsRepository,
+        private readonly subscriptionRepository: SubscriptionRepository,
         private readonly storageService: StorageService,
     ) {}
 
@@ -38,6 +47,21 @@ export class ProfileService {
         }
 
         return { profile, settings };
+    }
+
+    /**
+     * The subscription is read through the same repository call that answers
+     * `GET /subscription`, so the profile row and the subscription screen
+     * cannot disagree (SC-005). Kept out of `getAggregate` because onboarding
+     * reads that too and has no use for a subscription.
+     */
+    async getScreen(user: UserEntity): Promise<ProfileScreen> {
+        const aggregate = await this.getAggregate(user);
+        // Plan names are translated, so the language has to be known first —
+        // and it is already on the settings row just read.
+        const subscription = await this.subscriptionRepository.findActive(user.id, aggregate.settings.language);
+
+        return { ...aggregate, subscription };
     }
 
     // `async` for the same reason as FeedbackService.create: a failed

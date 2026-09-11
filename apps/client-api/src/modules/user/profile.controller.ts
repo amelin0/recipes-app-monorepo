@@ -26,16 +26,16 @@ export class ProfileController {
     @Get()
     @ApiOkResponse({ type: ProfileView })
     async get(@CurrentUser() user: UserEntity): Promise<ProfileView> {
-        const { profile, settings } = await this.profileService.getAggregate(user);
-        return ProfileView.from(user, profile, settings);
+        return ProfileView.from(user, await this.profileService.getScreen(user));
     }
 
     @Patch()
     @ApiOkResponse({ type: ProfileView })
     async update(@CurrentUser() user: UserEntity, @Body() body: UpdateProfileInboundDto): Promise<ProfileView> {
         const profile = await this.profileService.updateProfile(user, body);
-        const { settings } = await this.profileService.getAggregate(user);
-        return ProfileView.from(user, profile, settings);
+        // Echo the row this request wrote, not a re-read that a concurrent
+        // write could have moved on.
+        return ProfileView.from(user, { ...(await this.profileService.getScreen(user)), profile });
     }
 
     @Patch('settings')

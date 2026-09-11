@@ -1,16 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { ProfileEntity, UserEntity, UserSettingsEntity } from '@dns/database';
+import { UserEntity } from '@dns/database';
+
+import { SubscriptionView } from '../../../subscription/dto';
+import { ProfileScreen } from '../../profile.service';
 
 import { UserSettingsView } from './user-settings.view';
 
 /**
- * What the profile screen needs in one read: identity, the avatar's inputs and
- * the current settings shown as row subtitles.
- *
- * Subscription state (profile FR-003) is absent until that domain ships —
- * adding the field later is backwards-compatible, inventing it now would mean
- * shipping a value nothing can populate.
+ * What the profile screen needs in one read: identity, the avatar's inputs,
+ * the current settings shown as row subtitles, and the «Підписка» row.
  */
 export class ProfileView {
     @ApiProperty({ format: 'uuid' })
@@ -37,7 +36,16 @@ export class ProfileView {
     @ApiProperty({ type: UserSettingsView })
     readonly settings: UserSettingsView;
 
-    private constructor(user: UserEntity, profile: ProfileEntity, settings: UserSettingsEntity) {
+    @ApiProperty({
+        type: SubscriptionView,
+        nullable: true,
+        description:
+            'The same object `GET /subscription` returns — tag from `planName`, «До …» from `expiresAt` (FR-003). ' +
+            'Null on the free tier; how that row reads is the client’s copy.',
+    })
+    readonly subscription: SubscriptionView | null;
+
+    private constructor(user: UserEntity, { profile, settings, subscription }: ProfileScreen) {
         this.id = user.id;
         this.email = user.email;
         this.name = profile.name;
@@ -47,9 +55,12 @@ export class ProfileView {
         // field and gets a body without it cannot tell the write took.
         this.targetWeightKg = profile.targetWeightKg;
         this.settings = UserSettingsView.from(settings);
+        // The subscription screen's own view rather than a narrower one: two
+        // shapes of one row would be two places for the same date to drift.
+        this.subscription = subscription ? SubscriptionView.from(subscription) : null;
     }
 
-    static from(user: UserEntity, profile: ProfileEntity, settings: UserSettingsEntity): ProfileView {
-        return new ProfileView(user, profile, settings);
+    static from(user: UserEntity, screen: ProfileScreen): ProfileView {
+        return new ProfileView(user, screen);
     }
 }
