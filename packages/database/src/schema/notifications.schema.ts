@@ -25,6 +25,10 @@ export const notificationEventEnum = pgEnum('notification_event', [
     NotificationEvent.Inactivity,
     NotificationEvent.SubscriptionExpiring,
     NotificationEvent.SubscriptionExpired,
+    // Appended, not placed beside `referral_redeemed`: a value added at the
+    // end is a plain `ADD VALUE`, one in the middle needs `BEFORE`, and the
+    // order here means nothing to anybody reading the column.
+    NotificationEvent.ReferralRewarded,
 ]);
 
 /**

@@ -210,6 +210,17 @@ export const referralRedemptions = pgTable(
         code: text('code').notNull(),
 
         redeemedAt: timestamp('redeemed_at', { withTimezone: true }).notNull().defaultNow(),
+
+        /**
+         * When the referrer got their month for this invitation (referral
+         * FR-006) — null until the redeemer's first paid purchase.
+         *
+         * On this row rather than in a table of its own because the primary
+         * key already says «one per redeemer»: a column that goes from null to
+         * a date once, claimed by a conditional update, cannot be claimed
+         * twice. A second table would need a second key to say the same thing.
+         */
+        rewardedAt: timestamp('rewarded_at', { withTimezone: true }),
     },
     table => [index('referral_redemptions_referrer_idx').on(table.referrerUserId)],
 );

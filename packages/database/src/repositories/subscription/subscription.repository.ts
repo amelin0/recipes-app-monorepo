@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
+import { SQL, and, asc, eq, gt, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_LANGUAGE } from '@dns/constants';
-import { SubscriptionStatus } from '@dns/shared-types';
+import { PurchaseStore, SubscriptionSource, SubscriptionStatus } from '@dns/shared-types';
 
 import { ReferenceEntity, SubscriptionEntity, SubscriptionPlanEntity } from '../../entities';
 import {
@@ -20,8 +20,54 @@ import { BaseRepository } from '../base.repository';
 type InsertSubscription = typeof subscriptions.$inferInsert;
 
 export interface ReferralStats {
+    /** Everybody who redeemed the code. */
     invited: number;
+    /** Those of them who have since paid — see `convertedRedemption`. */
     converted: number;
+    /** Those whose conversion has actually been rewarded. Trails `converted` only while a grant is failing. */
+    rewarded: number;
+}
+
+/** How the reward is shaped. The calendar rule belongs to the service, so it is handed in. */
+export interface ReferralRewardTerms {
+    /** The plan a reward lands on when the referrer has nothing to lengthen. */
+    planSlug: string;
+    /** Where a period that ends at `from` ends once the reward is added. */
+    extend: (from: Date) => Date;
+}
+
+export interface GrantedReferralReward {
+    referrerUserId: string;
+    /** When the referrer's subscription now ends. */
+    expiresAt: Date;
+    /** Whether a live subscription was lengthened, rather than one created. */
+    extended: boolean;
+    /** Who bills the subscription that was lengthened — `none` for one we created. */
+    store: PurchaseStore;
+}
+
+/**
+ * Whether a redemption has **converted**: the person who redeemed has since
+ * paid for a period of their own.
+ *
+ * The one definition, used both to count (`referralStats`) and to decide a
+ * reward (`grantReferralReward`), so the number on the referral screen cannot
+ * describe a different set of people from the ones who earned somebody a month.
+ *
+ * - **A purchase, not any subscription.** The free month the code itself gives
+ *   is a subscription; counting it would pay the referrer for every sign-up,
+ *   and sign-ups cost nothing to make. A trial charges nothing either.
+ * - **Started after the redemption.** A purchase made before the code was used
+ *   was not the code's doing — somebody who had paid, lapsed, and then took a
+ *   friend's free month was already a customer.
+ */
+function convertedRedemption(): SQL {
+    return sql`exists (
+        select 1 from ${subscriptions}
+        where ${subscriptions.userId} = ${referralRedemptions.redeemerUserId}
+          and ${subscriptions.source} = ${SubscriptionSource.Purchase}
+          and ${subscriptions.startedAt} >= ${referralRedemptions.redeemedAt}
+    )`;
 }
 
 @Injectable()
@@ -235,19 +281,142 @@ export class SubscriptionRepository extends BaseRepository {
     /**
      * How this account's code has done (referral FR-004).
      *
-     * «Invited» is everybody who redeemed it; «converted» is those of them
-     * who ended up with a subscription — the condition the reward depends on.
+     * One row per redemption, counted by predicate — not a join against
+     * `subscriptions`. The join this replaced counted subscription **rows**:
+     * it included the free month the code itself grants, so every redemption
+     * was «converted» on the spot, and somebody who later bought as well was
+     * counted twice.
      */
     async referralStats(userId: string): Promise<ReferralStats> {
         const [row] = await this.db
             .select({
                 invited: sql<number>`count(*)::int`,
-                converted: sql<number>`count(${subscriptions.id})::int`,
+                converted: sql<number>`(count(*) filter (where ${convertedRedemption()}))::int`,
+                rewarded: sql<number>`count(${referralRedemptions.rewardedAt})::int`,
             })
             .from(referralRedemptions)
-            .leftJoin(subscriptions, eq(subscriptions.userId, referralRedemptions.redeemerUserId))
             .where(eq(referralRedemptions.referrerUserId, userId));
 
-        return { invited: row?.invited ?? 0, converted: row?.converted ?? 0 };
+        return { invited: row?.invited ?? 0, converted: row?.converted ?? 0, rewarded: row?.rewarded ?? 0 };
+    }
+
+    /**
+     * Gives the referrer their month for this redeemer's first purchase —
+     * once, and all of it or none of it (referral FR-006).
+     *
+     * Returns null when there is nothing to grant: the buyer was not invited,
+     * has not converted, or the month was granted already. That last case is
+     * the ordinary one on a retried receipt and is not an error.
+     *
+     * **The claim is the idempotency.** `rewarded_at` goes from null to a date
+     * in a conditional update, on a row the primary key makes unique per
+     * redeemer; a second caller — a replayed receipt, a concurrent retry —
+     * waits on the row lock, re-reads it, finds the date and matches nothing.
+     * There is no read-then-write in the service to race.
+     *
+     * **One transaction** for the claim and the grant: a failure anywhere rolls
+     * the claim back with it, so the reward is either granted and recorded or
+     * still waiting to be — never recorded and not granted.
+     *
+     * Lengthening a subscription a store bills moves only our date, not the
+     * store's — see the referral plan for what that means at renewal.
+     */
+    async grantReferralReward(
+        redeemerUserId: string,
+        terms: ReferralRewardTerms,
+    ): Promise<GrantedReferralReward | null> {
+        return this.db.transaction(async tx => {
+            const [claimed] = await tx
+                .update(referralRedemptions)
+                .set({ rewardedAt: sql`now()` })
+                .where(
+                    and(
+                        eq(referralRedemptions.redeemerUserId, redeemerUserId),
+                        isNull(referralRedemptions.rewardedAt),
+                        convertedRedemption(),
+                    ),
+                )
+                .returning({ referrerUserId: referralRedemptions.referrerUserId, code: referralRedemptions.code });
+
+            if (!claimed) return null;
+
+            const { referrerUserId, code } = claimed;
+
+            // Two friends of the same referrer can convert at the same moment.
+            // Without a lock both would read the same end date and one month
+            // would be lost, or both would find nothing active and the second
+            // insert would hit the one-active-per-account index. The referrer's
+            // code row is the natural thing to queue on: it exists (the code
+            // was redeemed) and nothing else writes to it.
+            await tx
+                .select({ userId: referralCodes.userId })
+                .from(referralCodes)
+                .where(eq(referralCodes.userId, referrerUserId))
+                .for('update');
+
+            // Same sweep as a purchase, for the same reason: a lapsed row still
+            // marked active would be lengthened from a date in the past, or
+            // would block the insert below.
+            await tx
+                .update(subscriptions)
+                .set({ status: SubscriptionStatus.Expired })
+                .where(
+                    and(
+                        eq(subscriptions.userId, referrerUserId),
+                        eq(subscriptions.status, SubscriptionStatus.Active),
+                        sql`${subscriptions.expiresAt} <= now()`,
+                    ),
+                );
+
+            const [active] = await tx
+                .select({ id: subscriptions.id, expiresAt: subscriptions.expiresAt, store: subscriptions.store })
+                .from(subscriptions)
+                .where(
+                    and(eq(subscriptions.userId, referrerUserId), eq(subscriptions.status, SubscriptionStatus.Active)),
+                );
+
+            if (active) {
+                const expiresAt = terms.extend(active.expiresAt);
+
+                await tx.update(subscriptions).set({ expiresAt }).where(eq(subscriptions.id, active.id));
+
+                return { referrerUserId, expiresAt, extended: true, store: active.store };
+            }
+
+            const [plan] = await tx
+                .select({
+                    id: subscriptionPlans.id,
+                    priceCents: subscriptionPlans.priceCents,
+                    currency: subscriptionPlans.currency,
+                })
+                .from(subscriptionPlans)
+                .where(and(eq(subscriptionPlans.slug, terms.planSlug), eq(subscriptionPlans.isActive, true)));
+
+            // Thrown rather than skipped: returning here would commit the claim
+            // with nothing granted, which is the one outcome this method exists
+            // to rule out.
+            if (!plan) throw new Error(`The referral reward plan «${terms.planSlug}» is not on sale`);
+
+            const startedAt = new Date();
+            const expiresAt = terms.extend(startedAt);
+
+            // The same row `redeemCode` writes for the person who used the code:
+            // the monthly plan, nothing paid, no store.
+            await tx.insert(subscriptions).values({
+                userId: referrerUserId,
+                planId: plan.id,
+                source: SubscriptionSource.Referral,
+                status: SubscriptionStatus.Active,
+                startedAt,
+                expiresAt,
+                pricePaidCents: 0,
+                fullPriceCents: plan.priceCents,
+                currency: plan.currency,
+                referralCode: code,
+                store: PurchaseStore.None,
+            });
+
+            return { referrerUserId, expiresAt, extended: false, store: PurchaseStore.None };
+        });
     }
 }

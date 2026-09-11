@@ -134,6 +134,13 @@
       "when": 1789145710079,
       "tag": "0018_amazing_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789146047649,
+      "tag": "0019_yielding_radioactive_man",
+      "breakpoints": true
     }
   ]
 }
