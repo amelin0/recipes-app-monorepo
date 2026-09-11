@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { compare, hash } from 'bcryptjs';
 
 import { ADMIN_AUTH_POLICY } from '@dns/constants';
@@ -16,8 +16,6 @@ export interface AdminSignInResult extends AdminTokenPair {
 
 @Injectable()
 export class AdminAuthService implements OnModuleInit {
-    private readonly logger = new Logger(AdminAuthService.name);
-
     /**
      * A real bcrypt hash of a value nobody knows, compared against when the
      * address has no account.
@@ -54,7 +52,32 @@ export class AdminAuthService implements OnModuleInit {
         const email = input.email.toLowerCase();
 
         const admin = await this.adminRepository.findByEmail(email);
-        const lockedOut = await this.isLockedOut(email);
+
+        // Journalled as a failure *before* the password is looked at, and
+        // counted with itself included — so a burst of parallel guesses cannot
+        // all see «fewer than five» (see `AdminLoginAttemptRepository.openAttempt`).
+        //
+        // Counted per address in the database, alongside — not instead of —
+        // the throttler's per-IP limit. One stops a run against a single
+        // account from anywhere; the other stops a run against many accounts
+        // from one place. Neither covers the other's case.
+        //
+        // Not wrapped in a try/catch any more: this row is the lockout
+        // counter, not just the audit trail, and swallowing its failure would
+        // turn «the journal is down» into «the lockout is off». A database
+        // that cannot take this insert cannot store the session either.
+        const attempt = await this.loginAttemptRepository.openAttempt(
+            {
+                email,
+                adminId: admin?.id ?? null,
+                ip: context.ip,
+                userAgent: context.userAgent,
+            },
+            ADMIN_AUTH_POLICY.lockoutWindowMinutes,
+        );
+        // A locked-out address still gets `invalid credentials`, never
+        // «locked»: naming the state would confirm the account exists.
+        const lockedOut = attempt.failures > ADMIN_AUTH_POLICY.maxFailedAttempts;
 
         // Runs on every path, including the two where the answer is already
         // decided. Skipping it when the account is unknown or locked out is
@@ -62,19 +85,16 @@ export class AdminAuthService implements OnModuleInit {
         const passwordMatches = await compare(input.password, admin?.passwordHash ?? this.dummyHash);
 
         if (lockedOut || !admin || !passwordMatches || !admin.canSignIn()) {
-            await this.recordAttempt({ email, adminId: admin?.id ?? null, context, succeeded: false });
             throw invalidCredentialsException();
         }
 
         // Re-checks `is_active` under the admin row lock: a deactivation that
         // landed during bcrypt above must not be followed by a fresh session.
+        // The attempt stays journalled as failed, which is what it was.
         const session = await this.tokenService.openSession(admin.id);
-        if (!session) {
-            await this.recordAttempt({ email, adminId: admin.id, context, succeeded: false });
-            throw invalidCredentialsException();
-        }
+        if (!session) throw invalidCredentialsException();
 
-        await this.recordAttempt({ email, adminId: admin.id, context, succeeded: true });
+        await this.loginAttemptRepository.markSucceeded(attempt.attemptId);
         await this.adminRepository.touchLastLogin(admin.id);
 
         return session;
@@ -99,50 +119,5 @@ export class AdminAuthService implements OnModuleInit {
             fullName: input.fullName,
             role: input.role,
         });
-    }
-
-    /**
-     * Whether this address has burned through its attempts.
-     *
-     * Counted per address in the database, alongside — not instead of — the
-     * throttler's per-IP limit. One stops a run against a single account from
-     * anywhere; the other stops a run against many accounts from one place.
-     * Neither covers the other's case.
-     *
-     * A locked-out address still gets `invalid credentials`, never «locked»:
-     * naming the state would confirm the account exists.
-     */
-    private async isLockedOut(email: string): Promise<boolean> {
-        const since = new Date(Date.now() - ADMIN_AUTH_POLICY.lockoutWindowMinutes * 60_000);
-        const failures = await this.loginAttemptRepository.countFailuresSince(email, since);
-
-        return failures >= ADMIN_AUTH_POLICY.maxFailedAttempts;
-    }
-
-    /**
-     * The journal write must never be the reason a sign-in fails.
-     *
-     * A full disk or a locked table would otherwise lock every admin out of
-     * the panel — the audit trail taking down the thing it audits. It is
-     * logged at error level instead, because a silently missing trail is its
-     * own kind of incident.
-     */
-    private async recordAttempt(params: {
-        email: string;
-        adminId: string | null;
-        context: AttemptContext;
-        succeeded: boolean;
-    }): Promise<void> {
-        try {
-            await this.loginAttemptRepository.record({
-                email: params.email,
-                adminId: params.adminId,
-                ip: params.context.ip,
-                userAgent: params.context.userAgent,
-                succeeded: params.succeeded,
-            });
-        } catch (error) {
-            this.logger.error({ msg: 'failed to record admin login attempt', email: params.email, error });
-        }
     }
 }

@@ -1,12 +1,14 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 
+import { ADMIN_AUTH_POLICY } from '@dns/constants';
 import {
     AdminEntity,
     AdminLoginAttemptRepository,
     AdminRefreshTokenRepository,
     AdminRepository,
     DrizzleDB,
+    OpenedAttempt,
 } from '@dns/database';
 import { AdminRole } from '@dns/shared-types';
 
@@ -154,6 +156,91 @@ describe('admin auth', () => {
 
             const reloaded = await adminRepository.findById(admin.id);
             expect(reloaded?.lastLoginAt).toBeInstanceOf(Date);
+        });
+    });
+
+    describe('login under concurrency', () => {
+        const LIMIT = ADMIN_AUTH_POLICY.maxFailedAttempts;
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('lets a burst of guesses through no more times than the limit allows', async () => {
+            const admin = await createAdmin();
+            const opened = jest.spyOn(loginAttemptRepository, 'openAttempt');
+
+            await Promise.allSettled(
+                Array.from({ length: 12 }, () =>
+                    authService.login({ email: admin.email, password: 'wrong-password-1' }, CONTEXT),
+                ),
+            );
+
+            // What each guess counted, itself included. A guess is checked
+            // against the real hash only when that count is within the limit.
+            // Before the fix all twelve counted zero and all twelve were
+            // checked; now the k-th to commit sees at least k, so no more than
+            // LIMIT can be under it — exactly, since wrong guesses never flip
+            // a row back.
+            const seen = await Promise.all(opened.mock.results.map(result => result.value as Promise<OpenedAttempt>));
+            const checked = seen.filter(attempt => attempt.failures <= LIMIT);
+
+            expect(seen).toHaveLength(12);
+            expect(checked.length).toBeLessThanOrEqual(LIMIT);
+
+            // And the door is shut: the right password is refused now too.
+            await expect(authService.login({ email: admin.email, password: PASSWORD }, CONTEXT)).rejects.toThrow(
+                UnauthorizedException,
+            );
+        });
+
+        it('lets one guess through, not a burst, when one is all the window has left', async () => {
+            const admin = await createAdmin();
+            for (let attempt = 0; attempt < LIMIT - 1; attempt++) {
+                await authService
+                    .login({ email: admin.email, password: 'wrong-password-1' }, CONTEXT)
+                    .catch(() => null);
+            }
+
+            // Ten guesses at once, every one of them right. Before the fix
+            // each counted the same four failures and all ten signed in — the
+            // limit meant nothing to anyone who could send requests in
+            // parallel. The one that gets through cannot flip its row back
+            // before the others have counted: the flip follows ~500 ms of
+            // bcrypt, the counts a few milliseconds of I/O.
+            const results = await Promise.allSettled(
+                Array.from({ length: 10 }, () =>
+                    authService.login({ email: admin.email, password: PASSWORD }, CONTEXT),
+                ),
+            );
+
+            const signedIn = results.filter(result => result.status === 'fulfilled');
+            expect(signedIn.length).toBeLessThanOrEqual(1);
+
+            const attempts = await loginAttemptRepository.findRecentByEmail(admin.email);
+            expect(attempts).toHaveLength(LIMIT - 1 + 10);
+            // The journal agrees with the answers: a row reads «succeeded»
+            // only for an attempt that really did.
+            expect(attempts.filter(row => row.succeeded)).toHaveLength(signedIn.length);
+        });
+
+        it('turns a correct attempt back into a success, so it does not count against the address', async () => {
+            const admin = await createAdmin();
+
+            await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            const attempts = await loginAttemptRepository.findRecentByEmail(admin.email);
+            expect(attempts.map(row => row.succeeded)).toEqual([true]);
+
+            // Four wrong ones and then the right one still get in. Had the
+            // success been left behind as a failure, that last attempt would
+            // count six and be refused.
+            for (let attempt = 0; attempt < LIMIT - 1; attempt++) {
+                await authService
+                    .login({ email: admin.email, password: 'wrong-password-1' }, CONTEXT)
+                    .catch(() => null);
+            }
+            await expect(authService.login({ email: admin.email, password: PASSWORD }, CONTEXT)).resolves.toBeDefined();
         });
     });
 
