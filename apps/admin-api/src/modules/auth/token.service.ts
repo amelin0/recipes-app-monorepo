@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 
 import { ADMIN_AUTH_POLICY } from '@dns/constants';
-import { AdminEntity, AdminRefreshTokenRepository, AdminRepository } from '@dns/database';
+import { AdminEntity, AdminRefreshTokenRepository, PreparedAdminRefreshToken } from '@dns/database';
 
 import { AllConfig } from '../../common/config';
 
@@ -29,37 +29,33 @@ export class AdminTokenService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService<AllConfig>,
         private readonly refreshTokenRepository: AdminRefreshTokenRepository,
-        private readonly adminRepository: AdminRepository,
     ) {}
 
     /**
-     * Mints a pair and opens (or continues) one browser's chain.
+     * Opens a new browser chain on sign-in.
      *
-     * `familyId` is omitted on a fresh sign-in and carried over on rotation —
-     * that is what keeps browsers independent while still letting one
-     * compromised chain be revoked whole.
+     * `null` when the account can no longer sign in by the time the row is
+     * written: sign-in checked `is_active` before bcrypt, and a deactivation
+     * landing in those ~250 ms must win. The returned `admin` is the row as
+     * read under that lock, so the access token carries what is true now.
      */
-    async issuePair(admin: AdminEntity, familyId: string = randomUUID()): Promise<AdminTokenPair> {
-        const accessToken = await this.signAccessToken(admin);
+    async openSession(adminId: string): Promise<AdminTokenPairWithAdmin | null> {
+        const successor = await this.prepareRefreshToken(adminId);
 
-        // The row id must exist before the token is signed: it travels inside
-        // it as `jti`.
-        const tokenId = randomUUID();
-        const refreshToken = await this.signRefreshToken(admin.id, tokenId);
+        const admin = await this.refreshTokenRepository.openChain(adminId, randomUUID(), successor.row);
+        if (!admin) return null;
 
-        await this.refreshTokenRepository.create({
-            id: tokenId,
-            adminId: admin.id,
-            familyId,
-            tokenHash: await hash(refreshToken, ADMIN_AUTH_POLICY.bcryptRounds),
-            expiresAt: this.refreshExpiresAt(),
-        });
-
-        return { accessToken, refreshToken };
+        return { accessToken: await this.signAccessToken(admin), refreshToken: successor.token, admin };
     }
 
     /**
      * Exchanges a refresh token for a new pair, keeping the browser's chain.
+     *
+     * The slow, stateless work — signature, digest comparison, hashing the
+     * successor — happens first, with no lock and no transaction. The decision
+     * itself is one repository call that owns its transaction, so nothing read
+     * here is trusted by the time it is written (see
+     * `AdminRefreshTokenRepository.rotate`).
      *
      * Every rejection is the same 401: saying *why* would reveal whether the
      * id exists and whether it was already spent.
@@ -75,40 +71,32 @@ export class AdminTokenService {
         // signature verifies but whose body does not match the stored digest
         // was minted by someone holding the refresh secret, not handed out by
         // us. Treating that as a replay would let an attacker revoke a
-        // victim's live chain at will.
+        // victim's live chain at will. The digest never changes, so comparing
+        // against a copy read outside the transaction is sound.
         if (!(await compare(refreshToken, stored.tokenHash))) throw invalidRefreshTokenException();
 
-        if (stored.isRotated()) {
-            // Two tabs refreshed at the same instant. The loser is holding the
-            // same genuine token, not a stolen one, so it gets its own pair on
-            // the same chain rather than signing the admin out mid-edit.
-            //
-            // Note this hands out a *second* live pair for the chain, not a
-            // copy of the winner's — we store only a digest and cannot
-            // reproduce a token we already issued.
-            if (stored.isWithinRotationGrace(ADMIN_AUTH_POLICY.refreshRotationGraceSeconds * 1000)) {
-                const admin = await this.adminRepository.findById(stored.adminId);
-                if (!admin?.canSignIn()) throw invalidRefreshTokenException();
-                return { ...(await this.issuePair(admin, stored.familyId)), admin };
-            }
+        // Minted even if the rotation then refuses: hashing it inside the
+        // transaction would hold the admin row lock through ~250 ms of bcrypt.
+        //
+        // A grace sibling is a *second* live pair for the chain, not a copy of
+        // the winner's — we store only a digest and cannot reproduce a token
+        // we already issued.
+        const successor = await this.prepareRefreshToken(stored.adminId);
 
-            // Past the window, only theft explains it. The whole chain goes —
-            // and only that chain, leaving other browsers signed in.
-            await this.refreshTokenRepository.deleteFamily(stored.familyId);
-            throw invalidRefreshTokenException();
-        }
+        const result = await this.refreshTokenRepository.rotate({
+            presentedId: stored.id,
+            adminId: stored.adminId,
+            graceSeconds: ADMIN_AUTH_POLICY.refreshRotationGraceSeconds,
+            successor: successor.row,
+        });
 
-        if (stored.isExpired()) throw invalidRefreshTokenException();
+        if (result.outcome !== 'rotated' && result.outcome !== 'grace') throw invalidRefreshTokenException();
 
-        const admin = await this.adminRepository.findById(stored.adminId);
-        // Deactivation revokes refresh rows too, so this is a second line of
-        // defence rather than the only one — it also covers a row that
-        // survived a partial failure.
-        if (!admin || !admin.canSignIn()) throw invalidRefreshTokenException();
-
-        await this.refreshTokenRepository.markRotated(stored.id);
-
-        return { ...(await this.issuePair(admin, stored.familyId)), admin };
+        return {
+            accessToken: await this.signAccessToken(result.admin),
+            refreshToken: successor.token,
+            admin: result.admin,
+        };
     }
 
     /**
@@ -123,12 +111,34 @@ export class AdminTokenService {
         const stored = await this.refreshTokenRepository.findById(payload.jti);
         if (!stored) return;
 
-        await this.refreshTokenRepository.deleteFamily(stored.familyId);
+        await this.refreshTokenRepository.deleteFamily(stored.adminId, stored.familyId);
     }
 
-    /** Every session of one account — sign-out-everywhere and deactivation (FR-008). */
+    /**
+     * Every session of one account — sign-out-everywhere (FR-007).
+     * Deactivation revokes inside `AdminRepository.setActive` instead, in the
+     * same transaction that flips the flag.
+     */
     revokeAllForAdmin(adminId: string): Promise<void> {
         return this.refreshTokenRepository.deleteAllForAdmin(adminId);
+    }
+
+    /**
+     * Signs and hashes a refresh token whose row does not exist yet. The row
+     * id must be chosen before signing: it travels inside the token as `jti`.
+     */
+    private async prepareRefreshToken(adminId: string): Promise<{ token: string; row: PreparedAdminRefreshToken }> {
+        const id = randomUUID();
+        const token = await this.signRefreshToken(adminId, id);
+
+        return {
+            token,
+            row: {
+                id,
+                tokenHash: await hash(token, ADMIN_AUTH_POLICY.bcryptRounds),
+                expiresAt: this.refreshExpiresAt(),
+            },
+        };
     }
 
     verifyRefreshToken(token: string): Promise<AdminRefreshTokenPayload> {

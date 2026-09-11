@@ -1,7 +1,13 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 
-import { AdminEntity, AdminLoginAttemptRepository, AdminRefreshTokenRepository, AdminRepository } from '@dns/database';
+import {
+    AdminEntity,
+    AdminLoginAttemptRepository,
+    AdminRefreshTokenRepository,
+    AdminRepository,
+    DrizzleDB,
+} from '@dns/database';
 import { AdminRole } from '@dns/shared-types';
 
 import { AdminAuthService } from '../src/modules/auth/auth.service';
@@ -233,6 +239,144 @@ describe('admin auth', () => {
         it('refuses a garbage token', async () => {
             await expect(tokenService.rotate('not-a-jwt')).rejects.toThrow(UnauthorizedException);
         });
+
+        it('gives a spent token one sibling, not one per replay', async () => {
+            const admin = await createAdmin();
+            const first = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            const winner = await tokenService.rotate(first.refreshToken);
+            await tokenService.rotate(first.refreshToken);
+
+            // Still inside the window, but the allowance is spent: this is the
+            // replay the window used to hand a fresh pair to, every time.
+            await expect(tokenService.rotate(first.refreshToken)).rejects.toThrow(UnauthorizedException);
+
+            // And it was treated as one — the chain went with it.
+            await expect(tokenService.rotate(winner.refreshToken)).rejects.toThrow(UnauthorizedException);
+            await expect(countRefreshRows(context, admin.id)).resolves.toBe(0);
+        });
+    });
+
+    describe('refresh under concurrency', () => {
+        it('lets two tabs refreshing one token at once both stay signed in', async () => {
+            const admin = await createAdmin();
+            const session = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            const [a, b] = await Promise.all([
+                tokenService.rotate(session.refreshToken),
+                tokenService.rotate(session.refreshToken),
+            ]);
+
+            expect(a.refreshToken).not.toBe(b.refreshToken);
+
+            // One of them rotated the token, the other claimed its sibling —
+            // decided by the row, not by which request read it first.
+            const presented = await refreshTokenRepository.findById(jtiOf(session.refreshToken));
+            expect(presented?.rotatedAt).toBeInstanceOf(Date);
+            expect(presented?.graceUsedAt).toBeInstanceOf(Date);
+
+            // Both pairs are live and independent.
+            await expect(tokenService.rotate(a.refreshToken)).resolves.toBeDefined();
+            await expect(tokenService.rotate(b.refreshToken)).resolves.toBeDefined();
+        });
+
+        it('never mints more than one rotation and one sibling, however many present the token', async () => {
+            const admin = await createAdmin();
+            const session = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            const results = await Promise.allSettled(
+                Array.from({ length: 6 }, () => tokenService.rotate(session.refreshToken)),
+            );
+
+            const fulfilled = results.filter(result => result.status === 'fulfilled');
+            const rejected = results.filter(result => result.status === 'rejected');
+
+            // Before the fix all six succeeded: every presentation inside the
+            // window was answered with a fresh pair.
+            expect(fulfilled).toHaveLength(2);
+            for (const result of rejected) {
+                expect((result as PromiseRejectedResult).reason).toBeInstanceOf(UnauthorizedException);
+            }
+
+            // The third presentation is a replay by definition, so the chain
+            // is gone — including the two pairs just handed out.
+            await expect(countRefreshRows(context, admin.id)).resolves.toBe(0);
+        });
+
+        it.each([
+            ['deactivation', (adminId: string, _token: string) => authService.setActive(adminId, false)],
+            ['logout-all', (adminId: string, _token: string) => tokenService.revokeAllForAdmin(adminId)],
+            ['logout', (_adminId: string, token: string) => tokenService.revokeChain(token)],
+        ])('lets %s win over a refresh in flight', async (_name, revoke) => {
+            // Rounds with the revocation fired at a spread of offsets across
+            // the refresh's ~500 ms of bcrypt, so some rounds land it exactly
+            // in the gap the old code had between spending the token and
+            // storing the successor. The invariant is checked every round.
+            for (let round = 0; round < 8; round++) {
+                await truncateAdminTables(context.db);
+                const admin = await createAdmin();
+                const session = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+                const refresh = tokenService.rotate(session.refreshToken).then(
+                    pair => pair.refreshToken,
+                    () => null,
+                );
+                await delay(round * 90);
+                await revoke(admin.id, session.refreshToken);
+                const successor = await refresh;
+
+                // Whatever the order, the revocation has the last word: no
+                // session row survives it, and a successor, if one was
+                // issued, is already dead.
+                await expect(countRefreshRows(context, admin.id)).resolves.toBe(0);
+                if (successor) {
+                    await expect(tokenService.rotate(successor)).rejects.toThrow(UnauthorizedException);
+                }
+            }
+        });
+
+        it('makes a refresh that waits behind a revocation see it', async () => {
+            const admin = await createAdmin();
+            const session = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            // Stand in for a revocation that has taken the admin row lock and
+            // not committed yet, then let the refresh queue up behind it.
+            let refresh!: Promise<unknown>;
+            await context.db.transaction(async tx => {
+                await tx.execute(sql`SELECT id FROM admins WHERE id = ${admin.id} FOR UPDATE`);
+
+                refresh = tokenService.rotate(session.refreshToken).catch((error: unknown) => error);
+                await waitUntilBlockedBy(context, tx);
+
+                await tx.execute(sql`UPDATE admins SET is_active = false WHERE id = ${admin.id}`);
+                await tx.execute(sql`DELETE FROM admin_refresh_tokens WHERE admin_id = ${admin.id}`);
+            });
+
+            await expect(refresh).resolves.toBeInstanceOf(UnauthorizedException);
+            await expect(countRefreshRows(context, admin.id)).resolves.toBe(0);
+        });
+
+        it('does not open a session for an account deactivated during sign-in', async () => {
+            const admin = await createAdmin();
+
+            // The same stand-in, this time in front of the sign-in's session
+            // write — which comes after ~250 ms of bcrypt on an `is_active`
+            // it read before.
+            let login!: Promise<unknown>;
+            await context.db.transaction(async tx => {
+                await tx.execute(sql`SELECT id FROM admins WHERE id = ${admin.id} FOR UPDATE`);
+
+                login = authService
+                    .login({ email: admin.email, password: PASSWORD }, CONTEXT)
+                    .catch((error: unknown) => error);
+                await waitUntilBlockedBy(context, tx);
+
+                await tx.execute(sql`UPDATE admins SET is_active = false WHERE id = ${admin.id}`);
+            });
+
+            await expect(login).resolves.toBeInstanceOf(UnauthorizedException);
+            await expect(countRefreshRows(context, admin.id)).resolves.toBe(0);
+        });
     });
 
     describe('logout', () => {
@@ -323,4 +467,39 @@ async function backdateRotation(context: AdminTestContext, refreshToken: string)
     await context.db.execute(
         sql`UPDATE admin_refresh_tokens SET rotated_at = now() - interval '1 hour' WHERE id = ${jtiOf(refreshToken)}`,
     );
+}
+
+/** Every session row the account holds, spent or live. */
+async function countRefreshRows(context: AdminTestContext, adminId: string): Promise<number> {
+    const [row] = await context.db.execute<{ total: number }>(
+        sql`SELECT count(*)::int AS total FROM admin_refresh_tokens WHERE admin_id = ${adminId}`,
+    );
+    return row?.total ?? 0;
+}
+
+const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Resolves once some other backend is waiting on a lock `tx` holds — the
+ * moment a request under test has queued up behind it.
+ *
+ * Asks Postgres rather than sleeping: a fixed sleep either wastes seconds or,
+ * on a slow machine, fires before the request has got that far and quietly
+ * turns the test into one that checks nothing. Polls on a pooled connection
+ * other than `tx`'s, which is busy holding the lock.
+ */
+async function waitUntilBlockedBy(context: AdminTestContext, tx: DrizzleDB): Promise<void> {
+    const [holder] = await tx.execute<{ pid: number }>(sql`SELECT pg_backend_pid() AS pid`);
+    const deadline = Date.now() + 10_000;
+
+    while (Date.now() < deadline) {
+        const [row] = await context.db.execute<{ waiting: number }>(
+            sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
+                 WHERE ${holder?.pid ?? -1}::int = ANY (pg_blocking_pids(pid))`,
+        );
+        if ((row?.waiting ?? 0) > 0) return;
+        await delay(20);
+    }
+
+    throw new Error('Nothing queued up behind the held lock within 10 s — the request under test never reached it');
 }

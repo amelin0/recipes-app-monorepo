@@ -66,27 +66,26 @@ export class AdminAuthService implements OnModuleInit {
             throw invalidCredentialsException();
         }
 
+        // Re-checks `is_active` under the admin row lock: a deactivation that
+        // landed during bcrypt above must not be followed by a fresh session.
+        const session = await this.tokenService.openSession(admin.id);
+        if (!session) {
+            await this.recordAttempt({ email, adminId: admin.id, context, succeeded: false });
+            throw invalidCredentialsException();
+        }
+
         await this.recordAttempt({ email, adminId: admin.id, context, succeeded: true });
         await this.adminRepository.touchLastLogin(admin.id);
 
-        const tokens = await this.tokenService.issuePair(admin);
-
-        return { ...tokens, admin };
+        return session;
     }
 
     /**
-     * Revokes an account (sign-in FR-008).
-     *
-     * Two steps, and the order matters: flip the flag first, so a refresh
-     * arriving between the two statements finds an account that can no longer
-     * sign in, rather than a live row whose tokens were just deleted.
+     * Revokes an account (sign-in FR-008). The flag and the account's refresh
+     * tokens change in one locked transaction — see `AdminRepository.setActive`.
      */
     async setActive(adminId: string, isActive: boolean): Promise<void> {
         await this.adminRepository.setActive(adminId, isActive);
-
-        if (!isActive) {
-            await this.tokenService.revokeAllForAdmin(adminId);
-        }
     }
 
     /**

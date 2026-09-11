@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { AdminRole } from '@dns/shared-types';
 
 import { AdminEntity } from '../../entities';
-import { admins } from '../../schema';
+import { adminRefreshTokens, admins } from '../../schema';
 import { BaseRepository } from '../base.repository';
 
 type InsertAdmin = typeof admins.$inferInsert;
@@ -45,13 +45,28 @@ export class AdminRepository extends BaseRepository {
     }
 
     /**
-     * The revocation switch (sign-in FR-008). Flipping it is only half the
-     * job — the caller must also drop the account's refresh tokens, or the
-     * panel keeps renewing a session for an account that can no longer be
-     * signed into.
+     * The revocation switch (sign-in FR-008): the flag and, when it closes,
+     * every refresh token of the account — one transaction, under the same
+     * row lock every session write takes (see `AdminRefreshTokenRepository`).
+     *
+     * As two autocommits the order was the whole defence, and it was not
+     * enough: a refresh already past its `is_active` check could insert its
+     * successor after the tokens were deleted. Under the lock the refresh
+     * either commits first — and this `DELETE` sees its successor — or waits
+     * and finds the account closed.
      */
     async setActive(id: string, isActive: boolean): Promise<void> {
-        await this.db.update(admins).set({ isActive, updatedAt: new Date() }).where(eq(admins.id, id));
+        await this.db.transaction(
+            async tx => {
+                await tx.select({ id: admins.id }).from(admins).where(eq(admins.id, id)).for('update');
+                await tx.update(admins).set({ isActive, updatedAt: new Date() }).where(eq(admins.id, id));
+
+                if (!isActive) {
+                    await tx.delete(adminRefreshTokens).where(eq(adminRefreshTokens.adminId, id));
+                }
+            },
+            { isolationLevel: 'read committed' },
+        );
     }
 
     /** Every staff account, oldest first — the SUPER_ADMIN's list. */
