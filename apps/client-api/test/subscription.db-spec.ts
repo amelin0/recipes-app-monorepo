@@ -1,10 +1,19 @@
+import { randomUUID } from 'node:crypto';
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { SubscriptionRepository, UserEntity, UserRepository, schema } from '@dns/database';
-import { BillingPeriod, PurchaseStore, SubscriptionSource, SubscriptionStatus } from '@dns/shared-types';
+import {
+    BillingPeriod,
+    NotificationEvent,
+    PurchaseStore,
+    SubscriptionSource,
+    SubscriptionStatus,
+} from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
+import { SubscriptionErrorCode } from '../src/modules/subscription/subscription.errors';
 import { SubscriptionService } from '../src/modules/subscription/subscription.service';
 
 import { truncateAuthTables } from './support/db';
@@ -18,6 +27,9 @@ const PASSWORD = 'passw0rd';
 
 const APPLE_ANNUAL = 'com.rationfit.application.annual';
 const APPLE_MONTHLY = 'com.rationfit.application.monthly';
+
+type LedgerRow = typeof schema.storeTransactions.$inferSelect;
+type SubscriptionRow = typeof schema.subscriptions.$inferSelect;
 
 const inDays = (days: number): Date => new Date(Date.now() + days * 86_400_000);
 
@@ -68,6 +80,42 @@ describe('Subscription', () => {
             receipt: receipt(overrides),
         });
     };
+
+    /** Every transaction recorded for the account — the money, whatever it bought. */
+    const ledgerOf = (userId: string): Promise<LedgerRow[]> =>
+        ctx.db.select().from(schema.storeTransactions).where(eq(schema.storeTransactions.userId, userId));
+
+    const rowsOf = (userId: string): Promise<SubscriptionRow[]> =>
+        ctx.db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId));
+
+    const activeRowsOf = (userId: string): Promise<SubscriptionRow[]> =>
+        ctx.db
+            .select()
+            .from(schema.subscriptions)
+            .where(
+                and(
+                    eq(schema.subscriptions.userId, userId),
+                    eq(schema.subscriptions.status, SubscriptionStatus.Active),
+                ),
+            );
+
+    const activationsOf = async (userId: string): Promise<number> => {
+        const rows = await ctx.db
+            .select({ id: schema.notifications.id })
+            .from(schema.notifications)
+            .where(
+                and(
+                    eq(schema.notifications.userId, userId),
+                    eq(schema.notifications.event, NotificationEvent.SubscriptionActivated),
+                ),
+            );
+
+        return rows.length;
+    };
+
+    /** The machine-readable code on a refusal; undefined for anything that is not one — a 500 included. */
+    const refusalCode = (error: unknown): string | undefined =>
+        error instanceof BadRequestException ? (error.getResponse() as { code?: string }).code : undefined;
 
     beforeEach(async () => {
         await truncateAuthTables(ctx.db);
@@ -180,10 +228,18 @@ describe('Subscription', () => {
             expect(again.planSlug).toBe('annual');
         });
 
-        it('refuses to sell a second subscription to somebody who has one', async () => {
-            await buy(user.id);
+        /**
+         * The store has already charged by the time a receipt reaches us, so
+         * «already subscribed» is not an answer to one: it used to be, and the
+         * transaction was never stored.
+         */
+        it('records a second purchase rather than refusing it', async () => {
+            await buy(user.id, { productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() });
 
-            await expect(buy(user.id)).rejects.toBeInstanceOf(BadRequestException);
+            await expect(buy(user.id)).resolves.toBeUndefined();
+
+            expect(await ledgerOf(user.id)).toHaveLength(2);
+            expect(await activeRowsOf(user.id)).toHaveLength(1);
         });
 
         it('reports a lapsed subscription as no subscription at all', async () => {
@@ -203,6 +259,303 @@ describe('Subscription', () => {
 
             const state = await subscriptions.state(user.id);
             expect(state.subscription?.daysRemaining).toBeGreaterThan(360);
+        });
+    });
+
+    /**
+     * A receipt that lands on an account with a live row. The rule: the receipt
+     * replaces the row when it ends later than what a store billed of it, and
+     * brings along whatever of the row no store billed; otherwise it is only
+     * recorded. Access never gets shorter, and the money is always written down.
+     */
+    describe('a receipt on an account that already has a subscription', () => {
+        it('an upgrade replaces the month: the year is live, the month closed, both recorded', async () => {
+            await buy(user.id, { productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() });
+            const monthly = (await subscriptions.state(user.id)).subscription;
+
+            const annual = await subscriptions.redeemReceipt(user.id, {
+                store: PurchaseStore.Apple,
+                receipt: receipt({ expiresAt: inDays(365).toISOString() }),
+            });
+
+            expect(annual.planSlug).toBe('annual');
+            expect((await subscriptions.state(user.id)).subscription?.id).toBe(annual.id);
+            // The store refunds what is left of the month itself, so nothing of
+            // it carries over.
+            expect(annual.daysRemaining).toBe(365);
+
+            const replaced = (await rowsOf(user.id)).find(row => row.id === monthly?.id);
+            expect(replaced?.status).toBe(SubscriptionStatus.Expired);
+            expect(replaced?.expiresAt.getTime()).toBeLessThanOrEqual(Date.now());
+
+            const ledger = await ledgerOf(user.id);
+            expect(ledger).toHaveLength(2);
+            expect(ledger.map(entry => entry.priceCents ?? 0).sort((a, b) => a - b)).toEqual([999, 5999]);
+            expect(ledger.find(entry => entry.productId === APPLE_ANNUAL)?.subscriptionId).toBe(annual.id);
+            expect(await activationsOf(user.id)).toBe(2);
+        });
+
+        it('a purchase over a free referral month keeps what was left of the month', async () => {
+            const owner = await register(OTHER_EMAIL);
+            const { code } = await subscriptions.referral(owner.id);
+            const free = await subscriptions.redeemCode(user.id, code);
+
+            const paid = await subscriptions.redeemReceipt(user.id, {
+                store: PurchaseStore.Apple,
+                receipt: receipt({ productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() }),
+            });
+
+            expect(paid.source).toBe(SubscriptionSource.Purchase);
+            expect(paid.planSlug).toBe('monthly');
+            // Thirty paid days on top of the free month's remainder, not instead of it.
+            const expected = free.expiresAt.getTime() + 30 * 86_400_000;
+            expect(Math.abs(paid.expiresAt.getTime() - expected)).toBeLessThan(60_000);
+
+            const rows = await rowsOf(user.id);
+            expect(rows).toHaveLength(2);
+            expect(rows.find(row => row.id === free.id)?.status).toBe(SubscriptionStatus.Expired);
+            expect(await activeRowsOf(user.id)).toHaveLength(1);
+        });
+
+        it('a trial converting replaces the trial and carries nothing over', async () => {
+            await buy(user.id, { isTrial: true, expiresAt: inDays(7).toISOString() });
+
+            const converted = await subscriptions.redeemReceipt(user.id, {
+                store: PurchaseStore.Apple,
+                receipt: receipt({ startedAt: inDays(7).toISOString(), expiresAt: inDays(372).toISOString() }),
+            });
+
+            expect(converted.source).toBe(SubscriptionSource.Purchase);
+            expect(converted.pricePaidCents).toBe(5999);
+            expect(converted.daysRemaining).toBe(372);
+            expect(await ledgerOf(user.id)).toHaveLength(2);
+        });
+
+        it('an older transaction replayed from purchase history is recorded and changes nothing', async () => {
+            await buy(user.id);
+            const annual = (await subscriptions.state(user.id)).subscription;
+
+            const lapsed = receipt({
+                productId: APPLE_MONTHLY,
+                startedAt: inDays(-60).toISOString(),
+                expiresAt: inDays(-30).toISOString(),
+            });
+            const shorter = receipt({ productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() });
+
+            for (const replayed of [lapsed, shorter]) {
+                const answer = await subscriptions.redeemReceipt(user.id, {
+                    store: PurchaseStore.Apple,
+                    receipt: replayed,
+                });
+
+                // The answer is what the account has, and what it has is untouched.
+                expect(answer.id).toBe(annual?.id);
+            }
+
+            expect((await subscriptions.state(user.id)).subscription?.expiresAt).toEqual(annual?.expiresAt);
+            expect(await rowsOf(user.id)).toHaveLength(1);
+
+            const ledger = await ledgerOf(user.id);
+            expect(ledger).toHaveLength(3);
+            expect(ledger.filter(entry => entry.subscriptionId === null)).toHaveLength(2);
+            // Nothing switched on, so nothing was announced.
+            expect(await activationsOf(user.id)).toBe(1);
+        });
+
+        it('records a transaction for a product this server does not sell, and answers the same on a retry', async () => {
+            const unknown = receipt({ productId: 'com.example.something' });
+
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const refusal = await subscriptions
+                    .redeemReceipt(user.id, { store: PurchaseStore.Apple, receipt: unknown })
+                    .catch((error: unknown) => error);
+
+                expect(refusalCode(refusal)).toBe(SubscriptionErrorCode.UnknownProduct);
+            }
+
+            const ledger = await ledgerOf(user.id);
+            expect(ledger).toHaveLength(1);
+            expect(ledger[0]?.planId).toBeNull();
+            expect(await rowsOf(user.id)).toHaveLength(0);
+        });
+
+        it('honours a receipt for a plan taken off sale — its subscribers still renew', async () => {
+            await ctx.db
+                .update(schema.subscriptionPlans)
+                .set({ isActive: false })
+                .where(eq(schema.subscriptionPlans.slug, 'monthly'));
+
+            try {
+                await buy(user.id, { productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() });
+
+                expect((await subscriptions.state(user.id)).subscription?.planSlug).toBe('monthly');
+            } finally {
+                await ctx.db
+                    .update(schema.subscriptionPlans)
+                    .set({ isActive: true })
+                    .where(eq(schema.subscriptionPlans.slug, 'monthly'));
+            }
+        });
+    });
+
+    /**
+     * The same request twice at once is the ordinary case, not an edge one: the
+     * StoreKit listener and the explicit submit both send the receipt, and a
+     * double tap sends a code twice. Rounds, because one lucky interleaving
+     * proves nothing.
+     */
+    describe('under concurrent requests', () => {
+        const ROUNDS = 3;
+
+        it('the same receipt five times at once on one account is one purchase', async () => {
+            for (let round = 0; round < ROUNDS; round++) {
+                await truncateAuthTables(ctx.db);
+                const buyer = await register(EMAIL);
+                const same = receipt();
+
+                const answers = await Promise.all(
+                    Array.from({ length: 5 }, () =>
+                        subscriptions.redeemReceipt(buyer.id, { store: PurchaseStore.Apple, receipt: same }),
+                    ),
+                );
+
+                expect(new Set(answers.map(answer => answer.id)).size).toBe(1);
+                expect(await rowsOf(buyer.id)).toHaveLength(1);
+                expect(await ledgerOf(buyer.id)).toHaveLength(1);
+                // Announced once — by the request that switched it on.
+                expect(await activationsOf(buyer.id)).toBe(1);
+            }
+        });
+
+        it('the same receipt on two accounts at once buys one subscription, and the other is told why', async () => {
+            for (let round = 0; round < ROUNDS; round++) {
+                await truncateAuthTables(ctx.db);
+                const first = await register(EMAIL);
+                const second = await register(OTHER_EMAIL);
+                const shared = receipt();
+
+                const results = await Promise.allSettled([
+                    subscriptions.redeemReceipt(first.id, { store: PurchaseStore.Apple, receipt: shared }),
+                    subscriptions.redeemReceipt(second.id, { store: PurchaseStore.Apple, receipt: shared }),
+                ]);
+
+                expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+
+                const refused = results.find(result => result.status === 'rejected');
+                expect(refusalCode(refused?.reason)).toBe(SubscriptionErrorCode.ReceiptAlreadyUsed);
+
+                const rows = [...(await rowsOf(first.id)), ...(await rowsOf(second.id))];
+                const ledger = [...(await ledgerOf(first.id)), ...(await ledgerOf(second.id))];
+                expect(rows).toHaveLength(1);
+                expect(ledger).toHaveLength(1);
+                expect(ledger[0]?.userId).toBe(rows[0]?.userId);
+            }
+        });
+
+        it('a purchase racing a code redemption leaves one live row, and it is the purchase', async () => {
+            for (let round = 0; round < ROUNDS; round++) {
+                await truncateAuthTables(ctx.db);
+                const owner = await register(OTHER_EMAIL);
+                const buyer = await register(EMAIL);
+                const { code } = await subscriptions.referral(owner.id);
+
+                const [redemption, purchase] = await Promise.allSettled([
+                    subscriptions.redeemCode(buyer.id, code),
+                    subscriptions.redeemReceipt(buyer.id, {
+                        store: PurchaseStore.Apple,
+                        receipt: receipt({ productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() }),
+                    }),
+                ]);
+
+                // The purchase never fails; the code may lose, but with a
+                // reason rather than a 500.
+                expect(purchase.status).toBe('fulfilled');
+                if (redemption.status === 'rejected') {
+                    expect(refusalCode(redemption.reason)).toBe(SubscriptionErrorCode.AlreadySubscribed);
+                    // Refused means not spent: the redemption went with the month.
+                    expect(await subscriptionRepository.hasRedeemed(buyer.id)).toBe(false);
+                } else {
+                    expect(await subscriptionRepository.hasRedeemed(buyer.id)).toBe(true);
+                }
+
+                const live = await activeRowsOf(buyer.id);
+                expect(live).toHaveLength(1);
+                expect(live[0]?.source).toBe(SubscriptionSource.Purchase);
+                expect(await ledgerOf(buyer.id)).toHaveLength(1);
+            }
+        });
+
+        it('two codes spent at once on one account spend one', async () => {
+            const firstOwner = await register(OTHER_EMAIL);
+            const secondOwner = await register(THIRD_EMAIL);
+            const first = await subscriptions.referral(firstOwner.id);
+            const second = await subscriptions.referral(secondOwner.id);
+
+            const results = await Promise.allSettled([
+                subscriptions.redeemCode(user.id, first.code),
+                subscriptions.redeemCode(user.id, second.code),
+            ]);
+
+            expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+
+            const refused = results.find(result => result.status === 'rejected');
+            expect(refusalCode(refused?.reason)).toBe(SubscriptionErrorCode.AlreadyRedeemed);
+
+            expect(await activeRowsOf(user.id)).toHaveLength(1);
+
+            const invited =
+                (await subscriptions.referral(firstOwner.id)).stats.invited +
+                (await subscriptions.referral(secondOwner.id)).stats.invited;
+            expect(invited).toBe(1);
+        });
+    });
+
+    /**
+     * The free month and the redemption that pays for it are one transaction.
+     * The old order — month first, redemption after, separate commits — could
+     * leave a month granted with nothing spent, and the account free to spend
+     * another code.
+     */
+    describe('a code redemption that fails half-way', () => {
+        it('leaves neither the redemption nor the month when the month cannot be written', async () => {
+            const owner = await register(OTHER_EMAIL);
+            const { code } = await subscriptions.referral(owner.id);
+            const startedAt = new Date();
+
+            // A plan that does not exist: the redemption goes in, then the
+            // month's insert fails on its foreign key.
+            await expect(
+                subscriptionRepository.redeemReferralCode(
+                    {
+                        redeemerUserId: user.id,
+                        referrerUserId: owner.id,
+                        code,
+                        plan: { id: randomUUID(), priceCents: 999, currency: 'USD' },
+                        startedAt,
+                        expiresAt: inDays(30),
+                    },
+                    'uk',
+                ),
+            ).rejects.toThrow();
+
+            expect(await subscriptionRepository.hasRedeemed(user.id)).toBe(false);
+            expect(await rowsOf(user.id)).toHaveLength(0);
+
+            // Nothing was spent, so the code still works.
+            const granted = await subscriptions.redeemCode(user.id, code);
+            expect(granted.source).toBe(SubscriptionSource.Referral);
+        });
+
+        it('does not spend the code when the account turns out to be subscribed', async () => {
+            const owner = await register(OTHER_EMAIL);
+            const { code } = await subscriptions.referral(owner.id);
+            await buy(user.id);
+
+            const refusal = await subscriptions.redeemCode(user.id, code).catch((error: unknown) => error);
+
+            expect(refusalCode(refusal)).toBe(SubscriptionErrorCode.AlreadySubscribed);
+            expect(await subscriptionRepository.hasRedeemed(user.id)).toBe(false);
+            expect((await subscriptions.referral(owner.id)).stats.invited).toBe(0);
         });
     });
 
@@ -507,6 +860,63 @@ describe('Subscription', () => {
 
             expect((await subscriptions.state(user.id)).subscription?.source).toBe(SubscriptionSource.Referral);
             expect((await subscriptions.referral(user.id)).monthsEarned).toBe(1);
+        });
+
+        /**
+         * The referrer's own purchase and the reward their friend's payment
+         * earns both write the referrer's subscription. They used to queue on
+         * different things, so both could find nothing live and both insert —
+         * and one lost to the one-active index with a 500. Both orders now end
+         * in the same place: the purchase, with the month on top.
+         */
+        it('a referrer buying while their friend pays gets the purchase and the month, in either order', async () => {
+            for (let round = 0; round < 3; round++) {
+                await truncateAuthTables(ctx.db);
+                const referrer = await register(EMAIL);
+                const friend = await invitedFriend(referrer.id, OTHER_EMAIL);
+
+                await Promise.all([buy(referrer.id), payMonthly(friend.id)]);
+
+                const live = await activeRowsOf(referrer.id);
+                expect(live).toHaveLength(1);
+                expect(live[0]?.source).toBe(SubscriptionSource.Purchase);
+
+                const state = (await subscriptions.state(referrer.id)).subscription;
+                expect(state?.planSlug).toBe('annual');
+                expect(state?.daysRemaining).toBeGreaterThanOrEqual(365 + 28);
+                expect(state?.daysRemaining).toBeLessThanOrEqual(365 + 31);
+
+                expect(await ledgerOf(referrer.id)).toHaveLength(1);
+                expect((await subscriptions.referral(referrer.id)).stats.rewarded).toBe(1);
+            }
+        });
+
+        /**
+         * A reward lengthens a store-billed row past the store's date. The
+         * store's renewal then used to be refused (the row was still live) and
+         * the month was absorbed by a period the customer paid for. Now the
+         * renewal replaces the row and brings the unbilled month along.
+         */
+        it('a renewal carries a reward month over rather than absorbing it', async () => {
+            await buy(user.id, { productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() });
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+            await payMonthly(friend.id);
+
+            const renewed = await subscriptions.redeemReceipt(user.id, {
+                store: PurchaseStore.Apple,
+                receipt: receipt({
+                    productId: APPLE_MONTHLY,
+                    startedAt: inDays(30).toISOString(),
+                    expiresAt: inDays(60).toISOString(),
+                }),
+            });
+
+            expect(renewed.source).toBe(SubscriptionSource.Purchase);
+            // Sixty billed days plus the calendar month the reward added.
+            expect(renewed.daysRemaining).toBeGreaterThanOrEqual(60 + 28);
+            expect(renewed.daysRemaining).toBeLessThanOrEqual(60 + 31);
+            expect(await ledgerOf(user.id)).toHaveLength(2);
+            expect(await activeRowsOf(user.id)).toHaveLength(1);
         });
 
         it('rewards only the referrer of the friend who paid', async () => {
