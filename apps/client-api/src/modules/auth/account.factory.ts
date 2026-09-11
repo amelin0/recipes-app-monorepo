@@ -4,7 +4,6 @@ import { ReminderType } from '@dns/shared-types';
 
 interface NewAccount {
     email: string;
-    passwordHash?: string | null;
     emailVerified?: boolean;
 }
 
@@ -17,14 +16,18 @@ const pad = (value: number): string => String(value).padStart(2, '0');
  * Lives in the auth module because auth is what creates accounts, and is
  * shared by both entry points so a user made through Google cannot end up
  * with a different starting state than one made with a password.
+ *
+ * Every account starts without a password — a registration's password waits
+ * on its confirmation code (`otp_codes.password_hash`) and reaches the
+ * account only when that code is verified.
  */
-export function newAccountInput({ email, passwordHash = null, emailVerified = false }: NewAccount): CreateAccountInput {
+export function newAccountInput({ email, emailVerified = false }: NewAccount): CreateAccountInput {
     const now = new Date();
 
     return {
         user: {
             email,
-            passwordHash,
+            passwordHash: null,
             emailVerifiedAt: emailVerified ? now : null,
         },
         profile: {

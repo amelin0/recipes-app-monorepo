@@ -23,8 +23,11 @@ export class AuthOtpService {
      * Issues a code, invalidating whatever came before for this flow
      * (sign-up FR-006, password-reset FR-006), and returns the plaintext for
      * the mailer — it is never stored and never leaves this process again.
+     *
+     * `passwordHash` binds a registration's password to this code; without
+     * it the password bound to the replaced code carries over.
      */
-    async issue(userId: string, purpose: OtpPurpose): Promise<string> {
+    async issue(userId: string, purpose: OtpPurpose, passwordHash?: string): Promise<string> {
         const code = this.generator.generateCode();
 
         await this.otpCodeRepository.issue({
@@ -32,9 +35,15 @@ export class AuthOtpService {
             purpose,
             codeHash: await this.generator.hashCode(code),
             expiresAt: new Date(Date.now() + AUTH_POLICY.otp.ttlMinutes * 60_000),
+            passwordHash,
         });
 
         return code;
+    }
+
+    /** The password an unconfirmed sign-up would activate, if one is pending. */
+    pendingPasswordHash(userId: string): Promise<string | null> {
+        return this.otpCodeRepository.findPendingPasswordHash(userId);
     }
 
     /**
@@ -58,14 +67,5 @@ export class AuthOtpService {
         }
 
         return record;
-    }
-
-    /** Checks and spends a code, for a flow whose grant needs no transaction of its own. */
-    async consume(userId: string, purpose: OtpPurpose, code: string): Promise<void> {
-        const record = await this.check(userId, purpose, code);
-
-        // Zero rows: a concurrent request with the same code spent it first,
-        // or a resend replaced it while this one was comparing.
-        if (!(await this.otpCodeRepository.consume(record.id))) throw invalidCodeException();
     }
 }

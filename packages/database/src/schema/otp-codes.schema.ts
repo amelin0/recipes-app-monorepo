@@ -40,6 +40,20 @@ export const otpCodes = pgTable(
         // it was ever entered correctly — sign-up FR-005.
         attempts: integer('attempts').notNull().default(0),
 
+        /**
+         * Sign-up only: bcrypt of the password chosen by the registration this
+         * code was sent for. It becomes `users.password_hash` when — and only
+         * when — THIS code is verified.
+         *
+         * The password lives with the code rather than on the account because
+         * an unverified address is claimable by anyone: writing it to the
+         * account at registration let a second registrant replace the owner's
+         * password while the owner's confirmation was in flight. A resend or a
+         * sign-in that re-issues the code carries it over; a password reset
+         * deletes it with the code. Null for password-reset codes.
+         */
+        passwordHash: text('password_hash'),
+
         expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
         consumedAt: timestamp('consumed_at', { withTimezone: true }),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

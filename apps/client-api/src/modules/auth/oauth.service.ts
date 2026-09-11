@@ -45,18 +45,18 @@ export class OAuthSignInService {
         //    accounts and loses their data.
         const existing = await this.userRepository.findByEmail(email);
         if (existing) {
-            await this.oauthIdentityRepository.create({ userId: existing.id, provider, providerUserId });
-
             // An unverified account becomes verified here: the provider has
             // just asserted ownership of the address, which is exactly what
-            // the emailed code was asking the user to prove.
-            if (!existing.isEmailVerified()) {
-                await this.userRepository.markEmailVerified(existing.id);
-                const refreshed = await this.userRepository.findById(existing.id);
-                return refreshed ?? existing;
-            }
+            // the emailed code was asking the user to prove. Its password, set
+            // by whoever registered the address without proving it, is
+            // dropped in the same transaction — see `linkOAuthIdentity`.
+            const withLink = await this.userRepository.linkOAuthIdentity({
+                userId: existing.id,
+                provider,
+                providerUserId,
+            });
 
-            return existing;
+            return withLink ?? existing;
         }
 
         // 3. Nobody yet. The account starts verified and without a password

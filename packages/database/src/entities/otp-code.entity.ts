@@ -9,6 +9,8 @@ export class OtpCodeEntity {
     readonly userId: string;
     readonly purpose: OtpPurpose;
     readonly codeHash: string;
+    /** The pending sign-up password bound to this code — see the schema. */
+    readonly passwordHash: string | null;
     readonly attempts: number;
     readonly expiresAt: Date;
     readonly consumedAt: Date | null;
@@ -19,6 +21,7 @@ export class OtpCodeEntity {
         this.userId = row.userId;
         this.purpose = row.purpose as OtpPurpose;
         this.codeHash = row.codeHash;
+        this.passwordHash = row.passwordHash;
         this.attempts = row.attempts;
         this.expiresAt = row.expiresAt;
         this.consumedAt = row.consumedAt;

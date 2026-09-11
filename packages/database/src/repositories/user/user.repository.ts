@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
+import { OAuthProvider, OtpPurpose } from '@dns/shared-types';
+
 import { UserEntity } from '../../entities';
 import {
+    oauthIdentities,
     otpCodes,
     passwordResetPermits,
     profiles,
@@ -12,6 +15,7 @@ import {
     userSettings,
 } from '../../schema';
 import { BaseRepository } from '../base.repository';
+import { consumeOtpCode } from '../otp-code/otp-code.repository';
 
 type InsertUser = typeof users.$inferInsert;
 type InsertProfile = typeof profiles.$inferInsert;
@@ -77,12 +81,79 @@ export class UserRepository extends BaseRepository {
         return UserEntity.from(row);
     }
 
-    async markEmailVerified(id: string): Promise<void> {
-        await this.db.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, id));
+    /**
+     * Confirms the address with a sign-up code the caller has just checked,
+     * and activates the password bound to THAT code (sign-up FR-007). One
+     * transaction; null when the code was already spent or replaced, or the
+     * account is already confirmed.
+     *
+     * - The code is spent conditionally, so of two requests carrying it only
+     *   one confirms anything.
+     * - The account is updated only `WHERE email_verified_at IS NULL`. A
+     *   confirmed account's password changes through the reset flow and
+     *   nowhere else — never through a registration that read «unconfirmed»
+     *   a moment before someone else confirmed it.
+     * - A code without a password (issued before passwords moved onto codes,
+     *   or re-issued after a reset cleared them) leaves the current one.
+     */
+    async verifyEmailWithCode(codeId: string): Promise<UserEntity | null> {
+        return this.db.transaction(async tx => {
+            const code = await consumeOtpCode(tx, codeId);
+            if (!code) return null;
+
+            const [row] = await tx
+                .update(users)
+                .set({
+                    emailVerifiedAt: sql`now()`,
+                    updatedAt: sql`now()`,
+                    ...(code.passwordHash ? { passwordHash: code.passwordHash } : {}),
+                })
+                .where(and(eq(users.id, code.userId), isNull(users.emailVerifiedAt)))
+                .returning();
+
+            return row ? UserEntity.from(row) : null;
+        });
     }
 
-    async setPasswordHash(id: string, passwordHash: string): Promise<void> {
-        await this.db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, id));
+    /**
+     * Links a provider identity to an existing account (sign-in FR-006) and,
+     * if the address was still unconfirmed, confirms it — the provider has
+     * just asserted ownership, which is what the emailed code was asking for.
+     *
+     * Confirming this way also drops the account's password and any pending
+     * sign-up code. Nobody who set that password proved they own the address:
+     * a stranger can register a victim's email first, and without this the
+     * victim's «Continue with Google» would confirm an account whose password
+     * the stranger knows. The owner sets one through the reset flow (FR-013).
+     * A confirmed account is untouched — its password was set by the owner.
+     */
+    async linkOAuthIdentity({
+        userId,
+        provider,
+        providerUserId,
+    }: {
+        userId: string;
+        provider: OAuthProvider;
+        providerUserId: string;
+    }): Promise<UserEntity | null> {
+        return this.db.transaction(async tx => {
+            await tx.insert(oauthIdentities).values({ userId, provider, providerUserId });
+
+            const [confirmed] = await tx
+                .update(users)
+                .set({ emailVerifiedAt: sql`now()`, passwordHash: null, updatedAt: sql`now()` })
+                .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)))
+                .returning({ id: users.id });
+
+            if (confirmed) {
+                await tx
+                    .delete(otpCodes)
+                    .where(and(eq(otpCodes.userId, userId), eq(otpCodes.purpose, OtpPurpose.EmailVerification)));
+            }
+
+            const [row] = await tx.select().from(users).where(eq(users.id, userId));
+            return row ? UserEntity.from(row) : null;
+        });
     }
 
     /**

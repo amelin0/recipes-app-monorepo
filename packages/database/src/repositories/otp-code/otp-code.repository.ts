@@ -12,6 +12,12 @@ export interface IssueOtpCode {
     purpose: OtpPurpose;
     codeHash: string;
     expiresAt: Date;
+    /**
+     * Sign-up only: the password to bind to this code. Omitted (or null), the
+     * replacement keeps whatever password the code it replaces carried — a
+     * resend does not know the password and must not drop it.
+     */
+    passwordHash?: string | null;
 }
 
 /**
@@ -41,11 +47,24 @@ export class OtpCodeRepository extends BaseRepository {
      * Consumed and burnt-out codes are kept only so a second attempt can be
      * told apart from a first one; after expiry that distinction is moot and
      * the rows are dead weight.
+     *
+     * One exception: the unconsumed sign-up code that carries a pending
+     * password. Until the address is confirmed that row is the only place the
+     * password exists, and signing in to an unconfirmed account (sign-in
+     * FR-003 — 403 plus a fresh code) checks against it. Sweeping it would
+     * turn «confirm your email» into «wrong password» for anyone who comes
+     * back after the code expired. The unique index keeps it to one row per
+     * unconfirmed account.
      */
     async deleteExpired(before: Date): Promise<number> {
         const deleted = await this.db
             .delete(otpCodes)
-            .where(lt(otpCodes.expiresAt, before))
+            .where(
+                and(
+                    lt(otpCodes.expiresAt, before),
+                    sql`not (${otpCodes.consumedAt} is null and ${otpCodes.passwordHash} is not null)`,
+                ),
+            )
             .returning({ id: otpCodes.id });
 
         return deleted.length;
@@ -66,10 +85,10 @@ export class OtpCodeRepository extends BaseRepository {
      * superseded code cannot be spent after the resend. The attempt counter
      * restarts with the new code.
      */
-    async issue({ userId, purpose, codeHash, expiresAt }: IssueOtpCode): Promise<OtpCodeEntity> {
+    async issue({ userId, purpose, codeHash, expiresAt, passwordHash = null }: IssueOtpCode): Promise<OtpCodeEntity> {
         const [row] = await this.db
             .insert(otpCodes)
-            .values({ userId, purpose, codeHash, expiresAt })
+            .values({ userId, purpose, codeHash, expiresAt, passwordHash })
             .onConflictDoUpdate({
                 target: [otpCodes.userId, otpCodes.purpose],
                 targetWhere: sql`${otpCodes.consumedAt} is null`,
@@ -79,6 +98,7 @@ export class OtpCodeRepository extends BaseRepository {
                     attempts: 0,
                     expiresAt: sql`excluded.expires_at`,
                     createdAt: sql`now()`,
+                    passwordHash: sql`coalesce(excluded.password_hash, ${otpCodes.passwordHash})`,
                 },
             })
             .returning();
@@ -133,9 +153,14 @@ export class OtpCodeRepository extends BaseRepository {
         return row ? OtpCodeEntity.from(row) : null;
     }
 
-    /** Spends a code on its own — see `consumeOtpCode`. */
-    consume(id: string): Promise<OtpCodeEntity | null> {
-        return consumeOtpCode(this.db, id);
+    /**
+     * The password a pending sign-up would activate — what signing in to an
+     * unconfirmed account is checked against. Expiry does not matter here:
+     * the password outlives its code until the address is confirmed.
+     */
+    async findPendingPasswordHash(userId: string): Promise<string | null> {
+        const code = await this.findActive(userId, OtpPurpose.EmailVerification);
+        return code?.passwordHash ?? null;
     }
 
     /** A completed password change voids the outstanding codes of the flow (password-reset FR-005). */
