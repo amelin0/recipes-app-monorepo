@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 
 import { NotificationEvent } from '@dns/shared-types';
 
@@ -104,6 +104,48 @@ export class NotificationRepository extends BaseRepository {
         });
 
         return row !== undefined;
+    }
+
+    /**
+     * Deletes every notification written before `before`, read or not, and
+     * says how many went.
+     *
+     * In batches, unlike the expired-token sweeps beside it. Those tables hold
+     * minutes-to-weeks of rows; this one holds every message ever sent to
+     * every account, and once reminders have an author it grows by the
+     * audience every day. One unbounded `DELETE` would be one transaction
+     * holding every row lock and every byte of WAL at once, on the database
+     * the API is serving from. A batch is its own short statement, so the
+     * work spreads out and a failure part-way keeps what was already done —
+     * the next run picks up from there, since the predicate is only on time.
+     *
+     * Stops on the first short batch. The cutoff is fixed for the whole call,
+     * so rows written meanwhile never qualify and the loop cannot chase them.
+     */
+    async deleteCreatedBefore(before: Date, batchSize: number): Promise<number> {
+        // `LIMIT 0` deletes nothing and is never «short», so it would loop forever.
+        if (!Number.isInteger(batchSize) || batchSize < 1) {
+            throw new RangeError(`batchSize must be a positive integer, got ${batchSize}`);
+        }
+
+        let total = 0;
+
+        for (;;) {
+            const batch = this.db
+                .select({ id: notifications.id })
+                .from(notifications)
+                .where(lt(notifications.createdAt, before))
+                .limit(batchSize);
+
+            const deleted = await this.db
+                .delete(notifications)
+                .where(inArray(notifications.id, batch))
+                .returning({ id: notifications.id });
+
+            total += deleted.length;
+
+            if (deleted.length < batchSize) return total;
+        }
     }
 
     /**

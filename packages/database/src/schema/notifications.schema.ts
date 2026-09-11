@@ -84,7 +84,16 @@ export const notifications = pgTable(
 
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
-    table => [index('notifications_user_created_idx').on(table.userId, table.createdAt)],
+    table => [
+        index('notifications_user_created_idx').on(table.userId, table.createdAt),
+        /**
+         * For the retention sweep, which asks «older than» across every
+         * account. The index above cannot answer that: `user_id` leads, and
+         * Postgres 16 has no skip scan, so without this one every nightly
+         * batch — including the last, empty one — reads the whole table.
+         */
+        index('notifications_created_idx').on(table.createdAt),
+    ],
 );
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
