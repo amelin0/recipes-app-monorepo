@@ -1724,7 +1724,7 @@ pnpm dev:admin-api             # :3001, Swagger /docs
 | Команда                                      | Що                                                                                   |
 | -------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `pnpm --filter @dns/constants test`          | 16 — Atwater, Mifflin-St Jeor, добові норми і БЖВ                                    |
-| `pnpm --filter @dns/validation test`         | 53 — плюс каталог, власна страва, вікно плану, дата і одиниці списку покупок         |
+| `pnpm --filter @dns/validation test`         | 63 — плюс каталог, власна страва, вікно плану, дата і одиниці списку покупок         |
 | `pnpm --filter @dns/api-common test`         | 4 — форма `ApiError`, 500 без витоку                                                 |
 | `pnpm --filter @dns/api-infrastructure test` | 11 — коди та перевірка власності файлів                                              |
 | `pnpm --filter @dns/client-api test:db`      | 212 — плюс підписка в профілі й раціон на денному екрані (треба docker)              |
