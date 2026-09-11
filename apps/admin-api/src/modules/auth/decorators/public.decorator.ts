@@ -1,6 +1,10 @@
 import { SetMetadata } from '@nestjs/common';
 
-export const IS_PUBLIC = 'IS_PUBLIC';
+import { IS_PUBLIC } from '@dns/api-common';
+
+// The key lives in api-common because the throttler reads it too: a public
+// route is throttled by client address, never by a token it happens to carry.
+export { IS_PUBLIC };
 
 /**
  * Opens a route that would otherwise be closed by the global guards.

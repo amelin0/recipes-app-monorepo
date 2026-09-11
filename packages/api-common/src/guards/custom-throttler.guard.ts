@@ -1,24 +1,44 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import { ExecutionContext, Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModuleOptions, ThrottlerRequest, ThrottlerStorage } from '@nestjs/throttler';
+import {
+    InjectThrottlerOptions,
+    InjectThrottlerStorage,
+    ThrottlerGuard,
+    ThrottlerModuleOptions,
+    ThrottlerRequest,
+    ThrottlerStorage,
+} from '@nestjs/throttler';
 
-import { THROTTLE_KEY } from '../decorators';
-import { ThrottleRuleConfig } from '../throttler';
+import { IS_PUBLIC, THROTTLE_KEY } from '../decorators';
+import { THROTTLER_IDENTITY_VERIFIER, ThrottleRuleConfig, ThrottlerIdentityVerifier } from '../throttler';
 
 /**
  * Global rate limiter with per-route overrides.
  *
  * A route decorated with `@SetThrottleKey(ThrottleKey.Login)` gets that rule's
  * ttl/limit from config; everything else falls back to the global default.
+ *
+ * Who a bucket belongs to (see `getTracker`) is decided only from things the
+ * caller cannot choose freely: a token this service signed, or the address
+ * our own nginx saw. Anything the caller can vary per request — an unsigned
+ * `sub`, a header it sets itself — would let it open a fresh bucket for every
+ * request, and the limit would limit nothing.
  */
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
     constructor(
-        options: ThrottlerModuleOptions,
-        storageService: ThrottlerStorage,
+        // Spelled out rather than inherited: the base class's tokens reach a
+        // subclass only through reflect-metadata's prototype walk, and a
+        // constructor that adds its own `@Inject` is exactly where that stops
+        // being something to rely on.
+        @InjectThrottlerOptions() options: ThrottlerModuleOptions,
+        @InjectThrottlerStorage() storageService: ThrottlerStorage,
         reflector: Reflector,
         private readonly configService: ConfigService,
+        @Optional()
+        @Inject(THROTTLER_IDENTITY_VERIFIER)
+        private readonly identityVerifier: ThrottlerIdentityVerifier | null = null,
     ) {
         super(options, storageService, reflector);
     }
@@ -48,36 +68,48 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
         return result;
     }
 
-    protected async getTracker(req: Record<string, unknown>): Promise<string> {
-        const userId = this.extractUserIdFromJwt(req);
-        if (userId) return `user:${userId}`;
+    /**
+     * The bucket a request counts against.
+     *
+     * - **Public routes — always the client address.** Sign-in, sign-up, code
+     *   checks and refresh are what an attacker hammers, and on them a bearer
+     *   token proves nothing about who is knocking: one stolen or throwaway
+     *   account would otherwise buy a private bucket for guessing codes.
+     * - **Everything else — the verified account, if there is one.** Keying an
+     *   authenticated user on their account keeps a carrier NAT, where
+     *   thousands of phones share one address, from rate-limiting all of them
+     *   together. «Verified» is the point: the token's signature is checked
+     *   (`ThrottlerIdentityVerifier`), so a forged `sub` falls through to the
+     *   address like any anonymous request.
+     */
+    protected async getTracker(req: Record<string, unknown>, context?: ExecutionContext): Promise<string> {
+        if (!this.isPublicRoute(context)) {
+            const subject = await this.verifiedSubject(req);
+            if (subject) return `user:${subject}`;
+        }
 
-        const headers = req.headers as Record<string, unknown> | undefined;
-        const realIp = headers?.['x-real-ip'];
-        if (typeof realIp === 'string') return realIp;
-
-        return typeof req.ip === 'string' ? req.ip : 'unknown';
+        return `ip:${clientAddress(req)}`;
     }
 
-    /**
-     * Decodes the JWT without verifying it — the signature check happens later
-     * in the auth guard. Throttling only needs a stable bucket key, and a
-     * forged `sub` can do nothing but consume its own quota.
-     */
-    private extractUserIdFromJwt(req: Record<string, unknown>): string | null {
+    private isPublicRoute(context: ExecutionContext | undefined): boolean {
+        if (!context) return true;
+
+        return (
+            this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, [
+                context.getHandler(),
+                context.getClass(),
+            ]) === true
+        );
+    }
+
+    private async verifiedSubject(req: Record<string, unknown>): Promise<string | null> {
+        if (!this.identityVerifier) return null;
+
         const headers = req.headers as Record<string, unknown> | undefined;
         const authHeader = headers?.authorization;
         if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) return null;
 
-        try {
-            const payloadB64 = authHeader.slice(7).split('.')[1];
-            if (!payloadB64) return null;
-
-            const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as { sub?: unknown };
-            return typeof payload.sub === 'string' ? payload.sub : null;
-        } catch {
-            return null;
-        }
+        return this.identityVerifier.verify(authHeader.slice(7)).catch(() => null);
     }
 
     protected generateKey(context: ExecutionContext, suffix: string, _name: string): string {
@@ -107,4 +139,33 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
         res.header('X-RateLimit-Remaining', String(remaining));
         res.header('X-RateLimit-Reset', String(resetTime));
     }
+}
+
+/**
+ * The client's address, as our own nginx saw it.
+ *
+ * **Assumption this rests on: nothing reaches the API port except that
+ * nginx.** In production the API containers publish their ports on
+ * `127.0.0.1` only (`infra/prod/docker-compose.prod.yml`), so the host's
+ * nginx is the sole way in, and every API vhost (`infra/prod/nginx/dev.api.*`)
+ * sets `proxy_set_header X-Real-IP $remote_addr` — which *replaces* whatever
+ * the client sent with the TCP peer nginx accepted. Break the assumption —
+ * publish the port, or put a proxy in front that passes the header through —
+ * and every request can name its own bucket again.
+ *
+ * Deliberately not the others:
+ * - `X-Forwarded-For` — nginx's `$proxy_add_x_forwarded_for` *appends* to the
+ *   list the client sent, so its first entry is whatever the attacker wrote.
+ * - `req.ip` while the header is present — behind docker's port proxy it is
+ *   the bridge gateway, the same address for every caller.
+ *
+ * Without nginx (a developer's machine) the header is absent and the socket
+ * address is used.
+ */
+function clientAddress(req: Record<string, unknown>): string {
+    const headers = req.headers as Record<string, unknown> | undefined;
+    const realIp = headers?.['x-real-ip'];
+    if (typeof realIp === 'string' && realIp.length > 0) return realIp;
+
+    return typeof req.ip === 'string' ? req.ip : 'unknown';
 }
