@@ -141,13 +141,17 @@ describe('A pending sign-up password', () => {
      * they deadlocked, and Postgres surfaced one of them as a 500.
      */
     it('confirmation by code racing a provider sign-in: no deadlock, the account ends confirmed', async () => {
+        // A fresh address per round rather than a truncate: a full truncate is
+        // seconds on a Docker volume, and ten of them ran this test past its
+        // timeout — after which the loop kept going in the background and broke
+        // the tests that followed.
         for (let round = 0; round < 10; round++) {
-            await truncateAuthTables(ctx.db);
-            await authService.register({ email: EMAIL, password: OWNER_PASSWORD });
+            const email = `race-${round}-${EMAIL}`;
+            await authService.register({ email, password: OWNER_PASSWORD });
 
-            ctx.oauth.willReturn(OAuthProvider.Google, 'owner-google-id', EMAIL);
+            ctx.oauth.willReturn(OAuthProvider.Google, `owner-google-id-${round}`, email);
             const results = await Promise.allSettled([
-                authService.verifyEmail({ email: EMAIL, code: DEV_CODE }),
+                authService.verifyEmail({ email, code: DEV_CODE }),
                 oauthSignIn.signIn({ provider: OAuthProvider.Google, idToken: 'stub' }),
             ]);
 
@@ -157,7 +161,7 @@ describe('A pending sign-up password', () => {
             if (results[0]?.status === 'rejected') {
                 expect(results[0].reason).toBeInstanceOf(BadRequestException);
             }
-            expect((await users.findByEmail(EMAIL))?.isEmailVerified()).toBe(true);
+            expect((await users.findByEmail(email))?.isEmailVerified()).toBe(true);
         }
     });
 
