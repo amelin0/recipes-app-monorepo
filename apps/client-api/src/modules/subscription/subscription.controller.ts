@@ -74,12 +74,17 @@ export class SubscriptionController {
      * The plan is looked up from the store's product id and never taken from
      * the body — otherwise a month could be paid for and a year asked for.
      * Answering with the finished subscription is what makes the confirmation
-     * screen reachable only after payment (FR-012).
+     * screen reachable only after payment (FR-012). A receipt on an account
+     * that already has a subscription is recorded, not refused — the answer is
+     * the subscription the account has once it is applied.
      */
     @Post('receipt')
     @HttpCode(HttpStatus.CREATED)
-    @ApiCreatedResponse({ type: SubscriptionView })
-    @ApiBadRequestResponse({ description: 'Receipt already used, unknown product, or already subscribed.' })
+    @ApiCreatedResponse({
+        type: SubscriptionView,
+        description: 'The account’s subscription after the receipt: the one it opened, or the one that still stands.',
+    })
+    @ApiBadRequestResponse({ description: 'Receipt already used by another account, or unknown product.' })
     async submitReceipt(
         @CurrentUser() user: UserEntity,
         @Body() body: SubmitReceiptInboundDto,
