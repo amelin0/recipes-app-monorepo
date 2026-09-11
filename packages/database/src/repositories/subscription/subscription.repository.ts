@@ -273,24 +273,37 @@ export class SubscriptionRepository extends BaseRepository {
     }
 
     /**
-     * Marks named rows expired. Ids rather than a date predicate: the job has already decided.
+     * Marks named rows expired and returns the ids **this call** changed.
      *
-     * Needs no account lock. It is one conditional statement that only ever
-     * moves a row out of «active», so it cannot collide with the index, and a
-     * row it was handed cannot have come back to life in between: the only
-     * writes that lengthen a row (a reward) sweep lapsed rows first and
-     * lengthen only live ones.
+     * The job read its list a moment earlier, and in that moment a row can
+     * stop qualifying: the owner's own purchase sweeps it (`expireLapsed`), an
+     * overlapping run of the job gets there first, or a referral reward
+     * lengthens it. The conditional `WHERE` re-checks both halves of «lapsed»
+     * — still active, still past `now` — on the row as it is when locked, and
+     * `RETURNING` reports only what matched. The caller tells exactly those
+     * owners, so nobody hears «expired» about a row somebody else already
+     * handled or that is no longer over.
+     *
+     * Needs no account lock: it is one conditional statement that only ever
+     * moves a row out of «active», so it cannot collide with the one-active
+     * index.
      */
-    async markExpired(ids: string[]): Promise<number> {
-        if (ids.length === 0) return 0;
+    async markExpired(ids: string[], now: Date): Promise<string[]> {
+        if (ids.length === 0) return [];
 
         const updated = await this.db
             .update(subscriptions)
             .set({ status: SubscriptionStatus.Expired })
-            .where(and(inArray(subscriptions.id, ids), eq(subscriptions.status, SubscriptionStatus.Active)))
+            .where(
+                and(
+                    inArray(subscriptions.id, ids),
+                    eq(subscriptions.status, SubscriptionStatus.Active),
+                    lte(subscriptions.expiresAt, now),
+                ),
+            )
             .returning({ id: subscriptions.id });
 
-        return updated.length;
+        return updated.map(row => row.id);
     }
 
     /**
