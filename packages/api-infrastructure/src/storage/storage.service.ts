@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { HeadObjectCommand, PutObjectCommand, S3Client, S3ServiceException } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { BadRequestException, Inject, Injectable, PayloadTooLargeException } from '@nestjs/common';
 
 import { StorageScope, UploadGrant } from '@dns/shared-types';
 
+import { StorageErrorCode } from './storage.errors';
 import { STORAGE_CONFIG } from './storage.tokens';
 import { StorageConfig } from './storage.types';
 
@@ -96,6 +97,40 @@ export class StorageService {
 
         if (!key.startsWith(`users/${userId}/${scope}/`)) {
             throw new BadRequestException('File URL does not belong to the current user');
+        }
+
+        return key;
+    }
+
+    /**
+     * `validateOwnership`, plus proof that the bytes actually arrived.
+     *
+     * A grant is issued before the upload happens, so owning a key says
+     * nothing about whether anything sits behind it. A client whose PUT failed
+     * — or that never made one — could otherwise store the URL anyway, and
+     * every viewer would get a broken image. Any URL about to be written into
+     * a row goes through here rather than through `validateOwnership` alone.
+     */
+    async validateUpload(url: string, userId: string, scope: StorageScope): Promise<string> {
+        const key = this.validateOwnership(url, userId, scope);
+
+        try {
+            await this.client.send(new HeadObjectCommand({ Bucket: this.cfg.bucket, Key: key }));
+        } catch (error) {
+            // Only a 404 means "not uploaded". Anything else — the store down,
+            // credentials refused — propagates as a 500: accepting the URL
+            // because the store could not answer would reopen the same hole.
+            // S3 answers a missing key with 403 instead of 404 when the
+            // credentials lack `s3:ListBucket`, which is why minio-init.sh
+            // grants it and why a production policy has to as well.
+            if (error instanceof S3ServiceException && error.$metadata.httpStatusCode === 404) {
+                throw new BadRequestException({
+                    message: 'Nothing was uploaded to this file URL',
+                    code: StorageErrorCode.NotUploaded,
+                });
+            }
+
+            throw error;
         }
 
         return key;
