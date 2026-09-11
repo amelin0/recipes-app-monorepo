@@ -28,13 +28,20 @@ export class NotificationsProducer {
 
     /**
      * Writes one message for one account, in the language that account reads
-     * in **at this moment**.
+     * in **at this moment**, and says whether a row was written.
      *
      * The language is resolved once, here, and the text is then stored: a
      * notification is a record of what was said, so changing the app's
      * language later must not rewrite yesterday's messages (schema comment).
+     *
+     * With `input.dedupeKey` the message is written **at most once** per
+     * account and key — enforced by a unique index, so two callers racing on
+     * the same key end with one row, not two (see `NotificationDedupeKey`).
+     * `false` then means «already said», which is the ordinary outcome of a
+     * retry and not an error. It also means «not written» on a failure, which
+     * is logged here; callers use the answer to count, never to decide.
      */
-    async emit(userId: string, event: NotificationEvent, input: EmitInput = {}): Promise<void> {
+    async emit(userId: string, event: NotificationEvent, input: EmitInput = {}): Promise<boolean> {
         try {
             const language = await this.languageOf(userId);
             const template = notificationTemplate(event, language, {
@@ -45,10 +52,10 @@ export class NotificationsProducer {
                 // A declared-but-not-produced event reached a caller. Worth
                 // seeing in the logs: it is a bug, not a quiet no-op.
                 this.logger.warn({ msg: 'no notification template', event, language });
-                return;
+                return false;
             }
 
-            await this.notifications.create({
+            const written = await this.notifications.createUnlessDuplicate({
                 userId,
                 event,
                 type: template.type,
@@ -57,9 +64,13 @@ export class NotificationsProducer {
                 subtitle: template.subtitle ?? null,
                 actionLabel: template.actionLabel ?? null,
                 actionRoute: template.actionRoute ?? null,
+                dedupeKey: input.dedupeKey ?? null,
             });
+
+            return written !== null;
         } catch (error) {
             this.logger.error({ msg: 'failed to write a notification', event, userId, error });
+            return false;
         }
     }
 
@@ -89,4 +100,10 @@ export class NotificationsProducer {
 export interface EmitInput extends NotificationTemplateInput {
     /** Formatted for the reader's language; use this instead of `subject` for dates. */
     date?: Date;
+    /**
+     * The occurrence this message is about, when it could be produced twice.
+     * Build it with `NotificationDedupeKey` rather than by hand, so one event
+     * cannot end up with two spellings of its key.
+     */
+    dedupeKey?: string;
 }

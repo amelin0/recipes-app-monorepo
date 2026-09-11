@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 
+import { NotificationDedupeKey, NotificationsProducer } from '@dns/api-common';
 import { NotificationEntity, NotificationRepository, UserRepository, schema } from '@dns/database';
 import { NotificationEvent, NotificationType, PurchaseStore, SubscriptionStatus } from '@dns/shared-types';
 
@@ -90,7 +91,9 @@ describe('Notification producers', () => {
         it('still records the request when the inbox write fails', async () => {
             const userId = await register(EMAIL);
             const producer = ctx.moduleRef.get(NotificationRepository);
-            const create = jest.spyOn(producer, 'create').mockRejectedValue(new Error('inbox is down'));
+            const create = jest
+                .spyOn(producer, 'createUnlessDuplicate')
+                .mockRejectedValue(new Error('inbox is down'));
 
             await expect(deletionService.request(userId)).resolves.toBeDefined();
             expect(await deletionService.findActive(userId)).not.toBeNull();
@@ -213,6 +216,50 @@ describe('Notification producers', () => {
             expect(row?.title).toBe('Ви отримали місяць Преміуму');
             // Now that the month exists, the text can name the day it runs to.
             expect(row?.body).toMatch(/\d/);
+        });
+    });
+
+    /**
+     * `dedupe_key` is what makes «at most once» hold under concurrency. The
+     * producer itself never reads the inbox first: these run the writes at
+     * the same moment, which is exactly where a read-then-insert would let
+     * both through.
+     */
+    describe('at most once, per key', () => {
+        const producer = (): NotificationsProducer => ctx.moduleRef.get(NotificationsProducer, { strict: false });
+
+        const emitTwiceAtOnce = (userId: string, dedupeKey?: string): Promise<boolean[]> =>
+            Promise.all([
+                producer().emit(userId, NotificationEvent.ProductVerified, { subject: 'Cheese', dedupeKey }),
+                producer().emit(userId, NotificationEvent.ProductVerified, { subject: 'Cheese', dedupeKey }),
+            ]);
+
+        it('writes one row when two writers race on one key, and says which one wrote it', async () => {
+            const userId = await register(EMAIL);
+
+            const outcomes = await emitTwiceAtOnce(userId, NotificationDedupeKey.productVerified('product-1'));
+
+            expect(outcomes.sort()).toEqual([false, true]);
+            expect(await inboxOf(userId)).toHaveLength(1);
+        });
+
+        it('still tells a second account about the same key', async () => {
+            const first = await register(EMAIL);
+            const second = await register(REFERRER_EMAIL);
+            const key = NotificationDedupeKey.productVerified('product-1');
+
+            await expect(emitTwiceAtOnce(first, key)).resolves.toContain(true);
+            await expect(emitTwiceAtOnce(second, key)).resolves.toContain(true);
+
+            expect(await inboxOf(first)).toHaveLength(1);
+            expect(await inboxOf(second)).toHaveLength(1);
+        });
+
+        it('writes a keyless event every time it is produced', async () => {
+            const userId = await register(EMAIL);
+
+            await expect(emitTwiceAtOnce(userId)).resolves.toEqual([true, true]);
+            expect(await inboxOf(userId)).toHaveLength(2);
         });
     });
 
