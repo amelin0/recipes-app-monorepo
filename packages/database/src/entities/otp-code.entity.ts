@@ -36,13 +36,4 @@ export class OtpCodeEntity {
     isConsumed(): boolean {
         return this.consumedAt !== null;
     }
-
-    hasAttemptsLeft(maxAttempts: number): boolean {
-        return this.attempts < maxAttempts;
-    }
-
-    /** A code is only worth checking while it is fresh, unspent and under the attempt cap. */
-    isUsable(maxAttempts: number, now: Date = new Date()): boolean {
-        return !this.isExpired(now) && !this.isConsumed() && this.hasAttemptsLeft(maxAttempts);
-    }
 }
