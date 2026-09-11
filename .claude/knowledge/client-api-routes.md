@@ -291,10 +291,21 @@ AND між групами. Причина — в ADR-0006.
 (`PurchasesService`) і stub, який бере чек на віру, коли ключів немає. Та
 сама домовленість, що й з OAuth.
 
-Коди помилок: `subscription.receipt-already-used`,
-`subscription.unknown-product`, `subscription.unknown-referral-code`,
+**`POST /subscription/receipt` не відповідає `already-subscribed`** (з
+2026-09-11): магазин уже списав гроші, тож кожна перевірена транзакція
+записується (`store_transactions`), а відповідь — підписка акаунта після
+чека: рядок, який чек відкрив (апгрейд, продовження, покупка поверх
+безкоштовного місяця — із перенесенням неоплаченого залишку), або той, що
+встояв, бо закінчується пізніше. Той самий чек удруге (зокрема одночасно)
+на тому самому акаунті — та сама підписка; на іншому —
+`receipt-already-used`. `unknown-product` теж записується, а повтор
+відповідає так само. Правило — у paywall plan.
+
+Коди помилок: `subscription.receipt-already-used` і
+`subscription.unknown-product` (чек); `subscription.unknown-referral-code`,
 `subscription.own-referral-code`, `subscription.already-redeemed`,
-`subscription.already-subscribed`.
+`subscription.already-subscribed` (код). Погашення коду — одна
+транзакція: відмова `already-subscribed` код не витрачає.
 
 ## content ✅
 

@@ -11,7 +11,8 @@ V1 цього домену не мав — усе тут нове.
 ```
 subscription_plans        + subscription_plan_translations   2 плани з міграції
 plan_features             + plan_feature_translations        5 можливостей
-subscriptions             (чек: копії цін, id транзакції унікальний)
+subscriptions             (право доступу: копії цін, id транзакції унікальний)
+store_transactions        (журнал усіх перевірених транзакцій магазину, unique (store, transaction_id))
 referral_codes            (один код на акаунт, назавжди)
 referral_redemptions      (PK на тому, хто гасить; rewarded_at — місяць рефереру видано)
 profiles.paywall_seen_at  («Пропустити»)
@@ -32,6 +33,16 @@ profiles.paywall_seen_at  («Пропустити»)
 **`unique (user_id) where status = 'active'`** — одна жива підписка на
 акаунт, гарантована базою.
 
+**Кожен запис у підписки акаунта — одна транзакція під тим самим
+блокуванням акаунта** (`pg_advisory_xact_lock`): покупка
+(`SubscriptionRepository.redeemReceipt`), погашення коду
+(`redeemReferralCode`) і винагорода рефереру (`grantReferralReward`).
+Власник чека вирішується вставкою в журнал `ON CONFLICT DO NOTHING`, а не
+пошуком. Чек на акаунті з живою підпискою не відхиляється: замінює рядок,
+якщо закінчується пізніше за оплачене магазином (неоплачене — безкоштовний
+місяць, місяць винагороди — переноситься), інакше лише записується.
+Деталі — «Конкурентність» і `POST /subscription/receipt` у paywall plan.
+
 ## Ендпоінти
 
 | Method | Path                                  |
@@ -47,16 +58,17 @@ profiles.paywall_seen_at  («Пропустити»)
 Коди помилок: `subscription.receipt-already-used`,
 `subscription.unknown-product`, `subscription.unknown-referral-code`,
 `subscription.own-referral-code`, `subscription.already-redeemed`,
-`subscription.already-subscribed`.
+`subscription.already-subscribed` (з 2026-09-11 — лише на погашення коду,
+не на чек).
 
 ## Дві пастки, які вже виправлені
 
 1. **Чек із минулим періодом** (відновлення простроченої підписки) валив
    сервіс: він створював рядок і читав його назад через `findActive`, фільтр
-   якого цей рядок ховає. `create` тепер повертає записане.
+   якого цей рядок ховає. Тепер записаний рядок читається назад за id.
 2. **Прострочений рядок зі статусом `active`** назавжди блокував нову
-   покупку через частковий унікальний індекс. `expireLapsed` підмітає такі
-   рядки в момент покупки.
+   покупку через частковий унікальний індекс. Транзакції покупки,
+   погашення й винагороди підмітають такі рядки свого акаунта першими.
 
 Обидві знайшли тести.
 
