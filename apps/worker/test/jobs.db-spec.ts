@@ -1,4 +1,4 @@
-import { eq, like, sql } from 'drizzle-orm';
+import { and, eq, like, lte, sql } from 'drizzle-orm';
 
 import { NOTIFICATION_RETENTION_DAYS } from '@dns/constants';
 import { NotificationRepository, SubscriptionRepository, schema } from '@dns/database';
@@ -173,7 +173,7 @@ describe('background jobs', () => {
 
         /**
          * The job reads its list, then writes. A purchase landing in between
-         * sweeps the lapsed row itself (`expireLapsed`) and opens a new one —
+         * sweeps the lapsed row itself and opens a new one —
          * and the old job then told this person «your subscription expired»
          * a second after they paid. The interleaving is forced here rather
          * than hoped for: the read is wrapped so the purchase happens right
@@ -188,7 +188,19 @@ describe('background jobs', () => {
             const read = jest.spyOn(subscriptions, 'findLapsed').mockImplementationOnce(async now => {
                 const lapsed = await findLapsed(now);
 
-                await subscriptions.expireLapsed(userId);
+                // What a purchase does to the lapsed row inside its own
+                // transaction — written directly, since that sweep is no longer
+                // a method of its own.
+                await context.db
+                    .update(schema.subscriptions)
+                    .set({ status: SubscriptionStatus.Expired })
+                    .where(
+                        and(
+                            eq(schema.subscriptions.userId, userId),
+                            eq(schema.subscriptions.status, SubscriptionStatus.Active),
+                            lte(schema.subscriptions.expiresAt, new Date()),
+                        ),
+                    );
                 await giveSubscription(context, userId, { expiresIn: 30 * DAY, transactionId: `txn-new-${userId}` });
 
                 return lapsed;
