@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import { NotificationsProducer } from '@dns/api-common';
+import { NotificationDedupeKey, NotificationsProducer } from '@dns/api-common';
 import { PurchasesService } from '@dns/api-infrastructure/purchases';
 import { REFERRAL_CODE_LENGTH, REFERRAL_REWARD } from '@dns/constants';
 import {
@@ -326,8 +326,11 @@ export class SubscriptionService {
             expiresAt: reward.expiresAt,
         });
 
+        // One invitation earns one month and one message: the grant is already
+        // claimed once per friend, and the key makes the message hold to that too.
         await this.notifications.emit(reward.referrerUserId, NotificationEvent.ReferralRewarded, {
             date: reward.expiresAt,
+            dedupeKey: NotificationDedupeKey.referralRewarded(buyerUserId),
         });
     }
 
