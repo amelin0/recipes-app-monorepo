@@ -32,6 +32,13 @@ export interface CreateAccountInput {
     profile: Omit<InsertProfile, 'userId'>;
     settings: Omit<InsertUserSettings, 'userId'>;
     reminders: Omit<InsertUserReminder, 'userId'>[];
+    /**
+     * An account made through Apple or Google is created WITH its identity,
+     * in the same transaction. Otherwise a concurrent sign-in of the same
+     * person could see the account without the link, and a crash in between
+     * would leave an account its provider does not lead back to.
+     */
+    oauthIdentity?: { provider: OAuthProvider; providerUserId: string };
 }
 
 @Injectable()
@@ -59,10 +66,20 @@ export class UserRepository extends BaseRepository {
      * the inserts across repositories would put the transaction boundary
      * somewhere it cannot be enforced.
      */
-    async createAccount({ user, profile, settings, reminders }: CreateAccountInput): Promise<UserEntity> {
+    async createAccount({
+        user,
+        profile,
+        settings,
+        reminders,
+        oauthIdentity,
+    }: CreateAccountInput): Promise<UserEntity> {
         return this.db.transaction(async tx => {
             const [row] = await tx.insert(users).values(user).returning();
             if (!row) throw new Error('Failed to insert user');
+
+            if (oauthIdentity) {
+                await tx.insert(oauthIdentities).values({ ...oauthIdentity, userId: row.id });
+            }
 
             await tx.insert(profiles).values({ ...profile, userId: row.id });
             await tx.insert(userSettings).values({ ...settings, userId: row.id });

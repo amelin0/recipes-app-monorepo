@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { compare, hash } from 'bcryptjs';
 
+import { isUniqueViolation } from '@dns/api-common';
 import { AUTH_POLICY } from '@dns/constants';
 import { UserEntity, UserRepository } from '@dns/database';
 import { AuthTokens, OtpPurpose } from '@dns/shared-types';
@@ -136,7 +137,21 @@ export class AuthService {
         const existing = await this.userRepository.findByEmail(email);
         if (existing) return this.unverifiedOrConflict(existing);
 
-        return this.userRepository.createAccount(newAccountInput({ email }));
+        try {
+            return await this.userRepository.createAccount(newAccountInput({ email }));
+        } catch (error) {
+            if (!isUniqueViolation(error)) throw error;
+
+            // A double-tapped «Sign up»: the other request inserted the same
+            // address first and `users_email_unique` turned this one away.
+            // Carry on with the row it created, exactly as a later
+            // registration over an unconfirmed address would — rather than
+            // answering the second tap with a 500.
+            const winner = await this.userRepository.findByEmail(email);
+            if (!winner) throw error;
+
+            return this.unverifiedOrConflict(winner);
+        }
     }
 
     private unverifiedOrConflict(user: UserEntity): UserEntity {
