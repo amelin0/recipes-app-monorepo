@@ -116,8 +116,8 @@ export class AdminTokenService {
 
     /**
      * Every session of one account — sign-out-everywhere (FR-007).
-     * Deactivation revokes inside `AdminRepository.setActive` instead, in the
-     * same transaction that flips the flag.
+     * Deactivation revokes inside `AdminRepository.updateAccess` instead, in
+     * the same transaction that flips the flag.
      */
     revokeAllForAdmin(adminId: string): Promise<void> {
         return this.refreshTokenRepository.deleteAllForAdmin(adminId);

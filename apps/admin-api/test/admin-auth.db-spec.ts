@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 
 import { ADMIN_AUTH_POLICY } from '@dns/constants';
@@ -12,6 +12,7 @@ import {
 } from '@dns/database';
 import { AdminRole } from '@dns/shared-types';
 
+import { AdminAuthErrorCode } from '../src/modules/auth/auth.errors';
 import { AdminAuthService } from '../src/modules/auth/auth.service';
 import { AdminTokenService } from '../src/modules/auth/token.service';
 
@@ -532,10 +533,124 @@ describe('admin auth', () => {
             const admin = await createAdmin();
             expect(admin.isSuperAdmin()).toBe(false);
 
-            await adminRepository.setRole(admin.id, AdminRole.SuperAdmin);
+            await authService.updateAccess(admin.id, { role: AdminRole.SuperAdmin }, null);
 
             const reloaded = await adminRepository.findById(admin.id);
             expect(reloaded?.isSuperAdmin()).toBe(true);
+        });
+    });
+
+    describe('super admins', () => {
+        const createSuperAdmin = (email: string): Promise<AdminEntity> =>
+            createAdmin({ email, role: AdminRole.SuperAdmin });
+
+        it('lets one SUPER_ADMIN demote another while one remains', async () => {
+            const alice = await createSuperAdmin('alice@rationfit.com');
+            const bob = await createSuperAdmin('bob@rationfit.com');
+
+            const demoted = await authService.updateAccess(bob.id, { role: AdminRole.Admin }, alice.id);
+
+            expect(demoted.isSuperAdmin()).toBe(false);
+            await expect(countActiveSuperAdmins(context)).resolves.toBe(1);
+        });
+
+        it('refuses to take away the last active SUPER_ADMIN, and names why', async () => {
+            const alice = await createSuperAdmin('alice@rationfit.com');
+
+            // The system path — no actor to trip the self-change rule — so
+            // only the invariant itself stands in the way.
+            for (const change of [{ role: AdminRole.Admin }, { isActive: false }]) {
+                const error = await authService.updateAccess(alice.id, change, null).catch((caught: unknown) => caught);
+
+                expect(error).toBeInstanceOf(ConflictException);
+                expect((error as ConflictException).getResponse()).toMatchObject({
+                    code: AdminAuthErrorCode.LastSuperAdmin,
+                });
+            }
+
+            await expect(countActiveSuperAdmins(context)).resolves.toBe(1);
+        });
+
+        it('refuses to change your own access', async () => {
+            const alice = await createSuperAdmin('alice@rationfit.com');
+            await createSuperAdmin('bob@rationfit.com');
+
+            await expect(authService.updateAccess(alice.id, { isActive: false }, alice.id)).rejects.toThrow(
+                ForbiddenException,
+            );
+        });
+
+        it('refuses an actor who was demoted after the guard let them in', async () => {
+            const alice = await createSuperAdmin('alice@rationfit.com');
+            const bob = await createSuperAdmin('bob@rationfit.com');
+            const carol = await createSuperAdmin('carol@rationfit.com');
+
+            await authService.updateAccess(bob.id, { role: AdminRole.Admin }, alice.id);
+
+            // Bob's request was authorised on the role he had when it arrived.
+            // Two SUPER_ADMINs would remain after it, so only the re-check of
+            // the actor under the lock stands between it and Carol.
+            await expect(authService.updateAccess(carol.id, { isActive: false }, bob.id)).rejects.toThrow(
+                ForbiddenException,
+            );
+
+            const reloaded = await adminRepository.findById(carol.id);
+            expect(reloaded?.isSuperAdmin() && reloaded.canSignIn()).toBe(true);
+        });
+
+        it.each([
+            ['demote', { role: AdminRole.Admin }],
+            ['deactivate', { isActive: false }],
+        ])('leaves one standing when two SUPER_ADMINs %s each other at once', async (_name, change) => {
+            for (let round = 0; round < 5; round++) {
+                await truncateAdminTables(context.db);
+                const alice = await createSuperAdmin('alice@rationfit.com');
+                const bob = await createSuperAdmin('bob@rationfit.com');
+
+                // Before the fix both succeeded: each request saw the other
+                // account still in charge, and the organisation was left with
+                // nobody who could manage staff.
+                const results = await Promise.allSettled([
+                    authService.updateAccess(bob.id, change, alice.id),
+                    authService.updateAccess(alice.id, change, bob.id),
+                ]);
+
+                const fulfilled = results.filter(result => result.status === 'fulfilled');
+                const rejected = results.filter(
+                    (result): result is PromiseRejectedResult => result.status === 'rejected',
+                );
+
+                expect(fulfilled).toHaveLength(1);
+                expect(rejected).toHaveLength(1);
+                // The loser waited for the winner and found itself the last.
+                expect(rejected[0]?.reason).toBeInstanceOf(ConflictException);
+                expect((rejected[0]?.reason as ConflictException).getResponse()).toMatchObject({
+                    code: AdminAuthErrorCode.LastSuperAdmin,
+                });
+
+                await expect(countActiveSuperAdmins(context)).resolves.toBe(1);
+            }
+        });
+
+        it('never empties the role in a crossfire of three', async () => {
+            for (let round = 0; round < 5; round++) {
+                await truncateAdminTables(context.db);
+                const alice = await createSuperAdmin('alice@rationfit.com');
+                const bob = await createSuperAdmin('bob@rationfit.com');
+                const carol = await createSuperAdmin('carol@rationfit.com');
+
+                // A demotes B, B deactivates C, C demotes A — all at once. Which
+                // ones win depends on the interleaving; that someone is left
+                // in charge must not.
+                const results = await Promise.allSettled([
+                    authService.updateAccess(bob.id, { role: AdminRole.Admin }, alice.id),
+                    authService.updateAccess(carol.id, { isActive: false }, bob.id),
+                    authService.updateAccess(alice.id, { role: AdminRole.Admin }, carol.id),
+                ]);
+
+                expect(results.some(result => result.status === 'fulfilled')).toBe(true);
+                await expect(countActiveSuperAdmins(context)).resolves.toBeGreaterThanOrEqual(1);
+            }
         });
     });
 });
@@ -554,6 +669,13 @@ async function backdateRotation(context: AdminTestContext, refreshToken: string)
     await context.db.execute(
         sql`UPDATE admin_refresh_tokens SET rotated_at = now() - interval '1 hour' WHERE id = ${jtiOf(refreshToken)}`,
     );
+}
+
+async function countActiveSuperAdmins(context: AdminTestContext): Promise<number> {
+    const [row] = await context.db.execute<{ total: number }>(
+        sql`SELECT count(*)::int AS total FROM admins WHERE role = 'super_admin' AND is_active`,
+    );
+    return row?.total ?? 0;
 }
 
 /** Every session row the account holds, spent or live. */

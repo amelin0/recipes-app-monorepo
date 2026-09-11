@@ -1,12 +1,19 @@
-import { Body, Controller, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch } from '@nestjs/common';
-import { ApiBearerAuth, ApiForbiddenResponse, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import {
+    ApiBearerAuth,
+    ApiConflictResponse,
+    ApiForbiddenResponse,
+    ApiNoContentResponse,
+    ApiNotFoundResponse,
+    ApiOkResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import { AdminEntity, AdminRepository } from '@dns/database';
 import { AdminRole } from '@dns/shared-types';
 
-import { AdminAuthErrorCode } from './auth.errors';
 import { AdminAuthService } from './auth.service';
 import { CurrentAdmin, Roles } from './decorators';
 import { AdminProfileView } from './dto';
@@ -48,29 +55,21 @@ export class AdminsController {
     @Patch(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiNoContentResponse({ description: 'Deactivating also ends every session the account holds.' })
-    @ApiForbiddenResponse({ description: 'Requires SUPER_ADMIN, or an attempt to lock yourself out.' })
+    @ApiForbiddenResponse({
+        description: 'Requires SUPER_ADMIN — still, at the moment of the change — or an attempt to lock yourself out.',
+    })
+    @ApiNotFoundResponse({ description: 'No such staff account.' })
+    @ApiConflictResponse({
+        description: 'The change would leave no other active SUPER_ADMIN (`admin-auth.last-super-admin`).',
+    })
     async update(
-        @Param('id') id: string,
+        @Param('id', ParseUUIDPipe) id: string,
         @Body() body: UpdateAdminInboundDto,
         @CurrentAdmin() actor: AdminEntity,
     ): Promise<void> {
-        // Deactivating yourself, or demoting yourself, is how an organisation
-        // ends up with no SUPER_ADMIN and no way back in short of a database
-        // console. The rule is narrow on purpose: it stops the accident, not
-        // the deliberate handover, which is done from the other account.
-        if (id === actor.id) {
-            throw new ForbiddenException({
-                message: 'You cannot change your own role or active state',
-                code: AdminAuthErrorCode.Forbidden,
-            });
-        }
-
-        if (body.role !== undefined) {
-            await this.adminRepository.setRole(id, body.role);
-        }
-
-        if (body.isActive !== undefined) {
-            await this.authService.setActive(id, body.isActive);
-        }
+        // Role and active state change together, in one locked transaction —
+        // two separate writes would let a concurrent request see, and act on,
+        // the state between them.
+        await this.authService.updateAccess(id, body, actor.id);
     }
 }

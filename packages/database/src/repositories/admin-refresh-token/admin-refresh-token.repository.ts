@@ -46,7 +46,7 @@ export type AdminRefreshRotation =
  * **One rule carries every method that writes:** it opens a transaction and
  * locks the owning `admins` row `FOR UPDATE` before touching this table.
  * Issuing, rotating, logging out, logging out everywhere, deactivating
- * (`AdminRepository.setActive`) — all of them. That single lock is what
+ * (`AdminRepository.updateAccess`) — all of them. That single lock is what
  * turns «a revocation racing an in-flight refresh» into two transactions that
  * run one after the other:
  *
@@ -203,7 +203,7 @@ export class AdminRefreshTokenRepository extends BaseRepository {
 
     /**
      * Every session of one account — sign-out-everywhere (FR-007). Deactivation
-     * does the same inside `AdminRepository.setActive`, which already holds
+     * does the same inside `AdminRepository.updateAccess`, which already holds
      * the lock.
      */
     async deleteAllForAdmin(adminId: string): Promise<void> {

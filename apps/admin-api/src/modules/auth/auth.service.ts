@@ -1,12 +1,12 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { compare, hash } from 'bcryptjs';
 
 import { ADMIN_AUTH_POLICY } from '@dns/constants';
-import { AdminEntity, AdminLoginAttemptRepository, AdminRepository } from '@dns/database';
+import { AdminAccessChange, AdminEntity, AdminLoginAttemptRepository, AdminRepository } from '@dns/database';
 import { AdminRole } from '@dns/shared-types';
 import { AdminLoginInput } from '@dns/validation';
 
-import { invalidCredentialsException } from './auth.errors';
+import { AdminAuthErrorCode, invalidCredentialsException } from './auth.errors';
 import { AttemptContext } from './auth.types';
 import { AdminTokenPair, AdminTokenService } from './token.service';
 
@@ -101,11 +101,65 @@ export class AdminAuthService implements OnModuleInit {
     }
 
     /**
-     * Revokes an account (sign-in FR-008). The flag and the account's refresh
-     * tokens change in one locked transaction — see `AdminRepository.setActive`.
+     * A SUPER_ADMIN changing another account's role or active state
+     * (sign-in FR-008, FR-011).
+     *
+     * Two rules, and neither is checked here against rows read earlier —
+     * both are decided inside `AdminRepository.updateAccess`, with every
+     * active SUPER_ADMIN locked:
+     *
+     * - the change must leave at least one other active SUPER_ADMIN, or
+     *   two of them demoting each other at once leave nobody who can manage
+     *   staff short of a database console;
+     * - the actor must still be an active SUPER_ADMIN when the rows are locked,
+     *   not merely when the guard looked.
+     *
+     * `actorId: null` is the system path — provisioning and tests — and waives
+     * only the second rule.
+     */
+    async updateAccess(targetId: string, change: AdminAccessChange, actorId: string | null): Promise<AdminEntity> {
+        // Deactivating yourself, or demoting yourself, is how an organisation
+        // ends up with no SUPER_ADMIN and no way back in short of a database
+        // console. The rule is narrow on purpose: it stops the accident, not
+        // the deliberate handover, which is done from the other account. A
+        // comparison of two inputs, so it needs no lock.
+        if (actorId !== null && targetId === actorId) {
+            throw new ForbiddenException({
+                message: 'You cannot change your own role or active state',
+                code: AdminAuthErrorCode.Forbidden,
+            });
+        }
+
+        const result = await this.adminRepository.updateAccess(targetId, change, actorId);
+
+        switch (result.outcome) {
+            case 'updated':
+                return result.admin;
+            case 'not-found':
+                throw new NotFoundException({
+                    message: 'No such staff account',
+                    code: AdminAuthErrorCode.AdminNotFound,
+                });
+            case 'last-super-admin':
+                throw new ConflictException({
+                    message: 'At least one other active super admin must remain',
+                    code: AdminAuthErrorCode.LastSuperAdmin,
+                });
+            case 'actor-not-allowed':
+                throw new ForbiddenException({
+                    message: 'Requires an active super admin',
+                    code: AdminAuthErrorCode.Forbidden,
+                });
+        }
+    }
+
+    /**
+     * Revokes or restores an account from the system path (sign-in FR-008).
+     * The flag and the account's refresh tokens change in one locked
+     * transaction — see `AdminRepository.updateAccess`.
      */
     async setActive(adminId: string, isActive: boolean): Promise<void> {
-        await this.adminRepository.setActive(adminId, isActive);
+        await this.updateAccess(adminId, { isActive }, null);
     }
 
     /**
