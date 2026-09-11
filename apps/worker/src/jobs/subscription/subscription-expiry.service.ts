@@ -19,9 +19,9 @@ const DAY_MS = 86_400_000;
  *
  * A subscription's end is the one thing in this system that happens without
  * anybody doing anything, so it is the one thing an HTTP request cannot
- * notice. `SubscriptionRepository.expireLapsed` sweeps a single account at the
- * moment it tries to buy again — enough to keep the unique index honest, and
- * no help at all to the person whose premium quietly stopped.
+ * notice. The purchase and redemption transactions sweep the single account
+ * they write to — enough to keep the unique index honest, and no help at all
+ * to the person whose premium quietly stopped.
  */
 @Injectable()
 export class SubscriptionExpiryService {

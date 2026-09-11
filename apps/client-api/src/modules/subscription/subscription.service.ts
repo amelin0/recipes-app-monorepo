@@ -14,13 +14,7 @@ import {
     SubscriptionPlanEntity,
     SubscriptionRepository,
 } from '@dns/database';
-import {
-    BillingPeriod,
-    NotificationEvent,
-    PurchaseStore,
-    SubscriptionSource,
-    SubscriptionStatus,
-} from '@dns/shared-types';
+import { BillingPeriod, NotificationEvent } from '@dns/shared-types';
 import { SubmitReceiptInput } from '@dns/validation';
 
 import { ReaderLanguageService } from '../catalog/reader-language.service';
@@ -118,79 +112,85 @@ export class SubscriptionService {
      * **The plan comes from the store's product id, never from the client.**
      * A body that named its own plan would let somebody pay for a month and
      * ask for a year.
+     *
+     * **A verified receipt is never refused for «already subscribed».** The
+     * store has charged by the time it reaches us, so the transaction is always
+     * recorded, and the answer is the subscription the account has once it is
+     * applied: the one this receipt opened, or the one that still stands
+     * because it ends later. Which one wins, and why, is the repository's
+     * `redeemReceipt` — one transaction under the account lock, which is also
+     * what makes a receipt submitted twice at once a retry rather than a 500.
      */
     async redeemReceipt(userId: string, input: SubmitReceiptInput): Promise<SubscriptionEntity> {
         const verified = await this.purchases.verify(input);
+        const language = await this.language.of(userId);
 
-        const existing = await this.subscriptions.findByTransaction(verified.transactionId);
-        if (existing) {
-            // Replaying a receipt on a second account would buy a second
-            // subscription with one payment; on the same account it is the
-            // client retrying, which is not an error.
-            if (existing.userId !== userId) {
-                throw new BadRequestException({
-                    message: 'This receipt has already been used',
-                    code: SubscriptionErrorCode.ReceiptAlreadyUsed,
-                });
-            }
+        const outcome = await this.subscriptions.redeemReceipt(userId, verified, language);
 
-            // The retry is also the retry of a reward that failed the first
-            // time round. Granting is idempotent, so when it already landed
-            // this costs one update that matches nothing.
-            await this.rewardReferrer(userId);
-
-            return this.readBack(userId);
+        if (outcome.kind === 'used-elsewhere') {
+            // One payment would otherwise buy a subscription per account.
+            throw new BadRequestException({
+                message: 'This receipt has already been used',
+                code: SubscriptionErrorCode.ReceiptAlreadyUsed,
+            });
         }
 
-        const language = await this.language.of(userId);
-        const plans = await this.subscriptions.findPlans(language);
-        const plan = plans.find(candidate =>
-            verified.store === PurchaseStore.Apple
-                ? candidate.appleProductId === verified.productId
-                : candidate.googleProductId === verified.productId,
-        );
+        if (outcome.kind === 'unknown-product') {
+            // Recorded all the same — somebody paid for this. An error, not a
+            // warning: it means the plan table and the store catalogue disagree.
+            this.logger.error({
+                msg: 'a verified receipt names a product no plan matches',
+                userId,
+                store: verified.store,
+                productId: verified.productId,
+                transactionId: verified.transactionId,
+            });
 
-        if (!plan) {
             throw new BadRequestException({
                 message: 'The receipt names a product this server does not sell',
                 code: SubscriptionErrorCode.UnknownProduct,
             });
         }
 
-        await this.close(userId);
-
-        const row = await this.subscriptions.create({
-            userId,
-            planId: plan.id,
-            source: verified.isTrial ? SubscriptionSource.Trial : SubscriptionSource.Purchase,
-            status: SubscriptionStatus.Active,
-            startedAt: verified.startedAt,
-            expiresAt: verified.expiresAt,
-            // A trial charges nothing now; the price is what the plan will
-            // cost when it converts, and the receipt is the record of that.
-            pricePaidCents: verified.isTrial ? 0 : plan.priceCents,
-            fullPriceCents: plan.fullPriceCents,
-            currency: plan.currency,
-            store: verified.store,
-            storeTransactionId: verified.transactionId,
-        });
+        if (outcome.kind === 'recorded') {
+            this.logger.log({
+                msg: 'recorded a receipt that leaves the subscription as it is',
+                userId,
+                store: verified.store,
+                transactionId: verified.transactionId,
+                standingSubscriptionId: outcome.subscription.id,
+            });
+        }
 
         await this.dismissPaywall(userId);
 
-        // After the row exists, and never inside its transaction: the purchase
-        // is what must survive, the message about it is not.
-        await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, { date: row.expiresAt });
+        // After the commit, and only when this receipt is what switched the
+        // subscription on: a retry, or a receipt that changed nothing, has
+        // nothing new to announce. The purchase is what must survive; the
+        // message about it is not.
+        if (outcome.kind === 'opened') {
+            await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, {
+                date: outcome.subscription.expiresAt,
+            });
+        }
 
-        // Same placement, same reason: the buyer's subscription exists by now
-        // and does not depend on what happens to somebody else's.
+        // Every recorded receipt, a retry included: the retry is also the
+        // retry of a reward that failed the first time round. Granting is
+        // idempotent, so when it already landed this costs one update that
+        // matches nothing — and it runs after the buyer's commit, so it can
+        // never take the buyer's purchase down with it.
         await this.rewardReferrer(userId);
 
-        return SubscriptionEntity.from({
-            ...row,
-            planSlug: plan.slug,
-            planName: plan.name,
-            planPeriod: plan.period,
-        });
+        if (!outcome.subscription) {
+            // A retry of a receipt that opened nothing, on an account with
+            // nothing live left: there is no subscription to answer with.
+            throw new BadRequestException({
+                message: 'This receipt has already been used',
+                code: SubscriptionErrorCode.ReceiptAlreadyUsed,
+            });
+        }
+
+        return outcome.subscription;
     }
 
     /** What a code gives, without spending it (FR-008). */
@@ -222,26 +222,42 @@ export class SubscriptionService {
 
         const startedAt = new Date();
 
-        await this.close(userId);
+        // The redemption and the month are one transaction: either both are
+        // written or neither. The checks above are for a friendly answer; the
+        // rules themselves — one code per account, one live subscription — are
+        // the primary key and the index the repository writes against.
+        const outcome = await this.subscriptions.redeemReferralCode(
+            {
+                redeemerUserId: userId,
+                referrerUserId,
+                code,
+                plan: { id: plan.id, priceCents: plan.priceCents, currency: plan.currency },
+                startedAt,
+                expiresAt: addMonths(startedAt, REFERRAL_REWARD.freeMonths),
+            },
+            language,
+        );
 
-        const row = await this.subscriptions.create({
-            userId,
-            planId: plan.id,
-            source: SubscriptionSource.Referral,
-            status: SubscriptionStatus.Active,
-            startedAt,
-            expiresAt: addMonths(startedAt, REFERRAL_REWARD.freeMonths),
-            pricePaidCents: 0,
-            fullPriceCents: plan.priceCents,
-            currency: plan.currency,
-            referralCode: code,
-            store: PurchaseStore.None,
-        });
+        if (outcome.kind === 'already-redeemed') {
+            throw new BadRequestException({
+                message: 'This account has already redeemed a referral code',
+                code: SubscriptionErrorCode.AlreadyRedeemed,
+            });
+        }
 
-        await this.subscriptions.recordRedemption(userId, referrerUserId, code);
+        if (outcome.kind === 'already-subscribed') {
+            throw new BadRequestException({
+                message: 'This account already has an active subscription',
+                code: SubscriptionErrorCode.AlreadySubscribed,
+            });
+        }
+
         await this.dismissPaywall(userId);
 
-        await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, { date: row.expiresAt });
+        // Both after the commit, and only on the path that wrote something.
+        await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, {
+            date: outcome.subscription.expiresAt,
+        });
 
         // The referrer is the one who otherwise never finds out: their screen
         // shows a number that moves with nothing to explain it. Nothing is
@@ -249,12 +265,7 @@ export class SubscriptionService {
         // and rewarding it would pay out for every account anyone cares to make.
         await this.notifications.emit(referrerUserId, NotificationEvent.ReferralRedeemed);
 
-        return SubscriptionEntity.from({
-            ...row,
-            planSlug: plan.slug,
-            planName: plan.name,
-            planPeriod: plan.period,
-        });
+        return outcome.subscription;
     }
 
     /**
@@ -346,43 +357,6 @@ export class SubscriptionService {
         }
 
         return referrerUserId;
-    }
-
-    /**
-     * A subscription already in hand means there is nothing to sell.
-     *
-     * Sweeping lapsed rows first is what makes buying again possible: the
-     * database allows one row marked active per account, and a subscription
-     * whose date has passed is only still marked so because nobody has looked
-     * at it since.
-     */
-    private async close(userId: string): Promise<void> {
-        await this.subscriptions.expireLapsed(userId);
-
-        const language = await this.language.of(userId);
-        const active = await this.subscriptions.findActive(userId, language);
-
-        if (active) {
-            throw new BadRequestException({
-                message: 'This account already has an active subscription',
-                code: SubscriptionErrorCode.AlreadySubscribed,
-            });
-        }
-    }
-
-    /** Used only where a live row is certain: answering a replayed receipt. */
-    private async readBack(userId: string): Promise<SubscriptionEntity> {
-        const language = await this.language.of(userId);
-        const active = await this.subscriptions.findActive(userId, language);
-
-        if (!active) {
-            throw new BadRequestException({
-                message: 'This receipt has already been used',
-                code: SubscriptionErrorCode.ReceiptAlreadyUsed,
-            });
-        }
-
-        return active;
     }
 
     private async mintCode(userId: string): Promise<string> {
