@@ -148,11 +148,13 @@ test('a malformed reply email is rejected', () => {
     assert.equal(parsed.error?.errors[0]?.path.join('.'), 'replyEmail');
 });
 
-test('a blank reply email is rejected — no email means leaving the field out', () => {
-    // Current behaviour: `optional()` admits only an absent key. A form that
-    // posts its empty input as-is gets a 422 instead of a ticket without a
-    // reply address.
-    assert.equal(createFeedbackSchema.safeParse({ ...ticket, replyEmail: '' }).success, false);
-    assert.equal(createFeedbackSchema.safeParse({ ...ticket, replyEmail: '   ' }).success, false);
-    assert.equal(createFeedbackSchema.safeParse({ ...ticket, replyEmail: null }).success, false);
+test('a blank reply email reads as no email, not as a malformed one', () => {
+    // The form posts an untouched input as `''`; FR-006 makes the field
+    // optional, so that has to mean «no reply address», not a 422.
+    for (const blank of ['', '   ', null]) {
+        const parsed = createFeedbackSchema.safeParse({ ...ticket, replyEmail: blank });
+
+        assert.equal(parsed.success, true);
+        assert.equal(parsed.data?.replyEmail, undefined);
+    }
 });
