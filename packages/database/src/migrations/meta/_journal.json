@@ -169,6 +169,13 @@
       "when": 1789156147220,
       "tag": "0023_fancy_rattler",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789156250303,
+      "tag": "0024_motionless_mystique",
+      "breakpoints": true
     }
   ]
 }
