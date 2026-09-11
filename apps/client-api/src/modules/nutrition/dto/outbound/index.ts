@@ -1,1 +1,8 @@
-export { DailySliceView, DailyTotalsView, MealLogEntryView, NutritionGoalView } from './daily-slice.view';
+export {
+    DailyPlanItemView,
+    DailyPlanSlotView,
+    DailySliceView,
+    DailyTotalsView,
+    MealLogEntryView,
+    NutritionGoalView,
+} from './daily-slice.view';

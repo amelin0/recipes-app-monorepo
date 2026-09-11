@@ -25,5 +25,7 @@ import { MealPlanService } from './meal-plan.service';
     ],
     controllers: [MealPlanController],
     providers: [MealPlanService],
+    // The tracking screen lists today's planned dishes (daily-tracking FR-006a).
+    exports: [MealPlanService],
 })
 export class MealPlanModule {}

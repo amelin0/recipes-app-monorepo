@@ -149,6 +149,20 @@ export class MealPlanService {
         }).then(days => days.filter(day => input.targetDates.includes(day.date)));
     }
 
+    /**
+     * One day's slots and nothing else — what the tracking screen lists under
+     * «Раціон на сьогодні» (daily-tracking FR-006a). Built by the same code the
+     * plan tab uses, so a dish reads the same on both screens.
+     */
+    async slotsOn(userId: string, date: string): Promise<PlanSlot[]> {
+        const [items, language] = await Promise.all([
+            this.plan.findRange(userId, date, date),
+            this.language.of(userId),
+        ]);
+
+        return slotsOf(date, items, await this.recipesById(items, userId, language));
+    }
+
     private async day(userId: string, date: string): Promise<PlanDay> {
         const [days] = await this.range(userId, { from: date, to: date });
         if (!days) throw new Error('Failed to assemble the plan day');
@@ -173,20 +187,7 @@ export class MealPlanService {
         goal: NutritionGoalEntity | null,
         importsIntoShoppingList: boolean,
     ): PlanDay {
-        const ofDay = items.filter(item => item.planDate === date);
-
-        const slots = SLOTS.map(slot => ({
-            slot,
-            items: ofDay
-                .filter(item => item.slot === slot)
-                .flatMap(item => {
-                    const recipe = recipes.get(item.recipeId);
-                    // A dish this account can no longer see is dropped rather
-                    // than rendered blank. The foreign key cascades, so this is
-                    // the narrow window between a delete and this read.
-                    return recipe ? [{ id: item.id, recipe }] : [];
-                }),
-        }));
+        const slots = slotsOf(date, items, recipes);
 
         // One planned item is one serving, so the day sums the per-serving
         // figures — the same numbers the card in the picker showed.
@@ -223,6 +224,24 @@ export class MealPlanService {
             outcome: outcomeFor(planned.calories, goal),
         };
     }
+}
+
+/** The four slots of one day with the dishes planned into them. */
+function slotsOf(date: string, items: MealPlanItemEntity[], recipes: Map<string, RecipeEntity>): PlanSlot[] {
+    const ofDay = items.filter(item => item.planDate === date);
+
+    return SLOTS.map(slot => ({
+        slot,
+        items: ofDay
+            .filter(item => item.slot === slot)
+            .flatMap(item => {
+                const recipe = recipes.get(item.recipeId);
+                // A dish this account can no longer see is dropped rather
+                // than rendered blank. The foreign key cascades, so this is
+                // the narrow window between a delete and this read.
+                return recipe ? [{ id: item.id, recipe }] : [];
+            }),
+    }));
 }
 
 /**

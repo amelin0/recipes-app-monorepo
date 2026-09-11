@@ -1,11 +1,12 @@
 import { NotFoundException } from '@nestjs/common';
 
 import { DAILY_STEPS_TARGET_DEFAULT } from '@dns/constants';
-import { UserEntity, UserRepository } from '@dns/database';
-import { MealSlot } from '@dns/shared-types';
+import { MealLogEntryEntity, UserEntity, UserRepository, schema } from '@dns/database';
+import { ContentSource, MealSlot } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
-import { NutritionService } from '../src/modules/nutrition/nutrition.service';
+import { MealPlanService } from '../src/modules/meal-plan/meal-plan.service';
+import { DailyPlanItem, NutritionService } from '../src/modules/nutrition/nutrition.service';
 
 import { truncateAuthTables } from './support/db';
 import { AuthTestContext, createAuthTestContext } from './support/testing-module';
@@ -35,6 +36,7 @@ describe('Nutrition', () => {
     let ctx: AuthTestContext;
     let authService: AuthService;
     let nutrition: NutritionService;
+    let mealPlan: MealPlanService;
     let users: UserRepository;
     let user: UserEntity;
 
@@ -42,6 +44,7 @@ describe('Nutrition', () => {
         ctx = await createAuthTestContext();
         authService = ctx.moduleRef.get(AuthService);
         nutrition = ctx.moduleRef.get(NutritionService);
+        mealPlan = ctx.moduleRef.get(MealPlanService);
         users = ctx.moduleRef.get(UserRepository);
     });
 
@@ -227,6 +230,107 @@ describe('Nutrition', () => {
             expect((await nutrition.getDay(user.id, yesterday)).totals.waterMl).toBe(0);
             expect((await nutrition.getDay(user.id, yesterday)).steps).toBe(9000);
             expect((await nutrition.getDay(user.id, DATE)).steps).toBe(0);
+        });
+    });
+
+    describe('planned dishes', () => {
+        /** A catalogue dish, written straight to the schema — the same helper the plan suite uses. */
+        const seedRecipe = async (title: string): Promise<string> => {
+            const [recipe] = await ctx.db
+                .insert(schema.recipes)
+                .values({
+                    source: ContentSource.Global,
+                    servings: 1,
+                    totalWeightG: '300.00',
+                    calories: 450,
+                    proteinG: '20.00',
+                    fatsG: '10.00',
+                    carbsG: '40.00',
+                    cookTimeMinutes: 20,
+                })
+                .returning();
+
+            const recipeId = (recipe as { id: string }).id;
+            await ctx.db.insert(schema.recipeTranslations).values({ recipeId, language: 'uk', title });
+
+            return recipeId;
+        };
+
+        const logEaten = (recipeId: string | undefined, slot: MealSlot): Promise<MealLogEntryEntity> =>
+            nutrition.logMeal(user.id, DATE, {
+                slot,
+                recipeId,
+                dishName: 'Сирники',
+                portions: 1,
+                eatenFraction: 1,
+                perPortion: { calories: 450, proteinG: 20, fatsG: 10, carbsG: 40, weightG: 300 },
+            });
+
+        const itemsIn = async (slot: MealSlot): Promise<DailyPlanItem[]> => {
+            const day = await nutrition.getDay(user.id, DATE);
+            return day.plan.find(candidate => candidate.slot === slot)?.items ?? [];
+        };
+
+        it('lists all four slots, empty ones included', async () => {
+            const day = await nutrition.getDay(user.id, DATE);
+
+            expect(day.plan.map(slot => slot.slot)).toEqual([
+                MealSlot.Breakfast,
+                MealSlot.Lunch,
+                MealSlot.Dinner,
+                MealSlot.Snack,
+            ]);
+            expect(day.plan.every(slot => slot.items.length === 0)).toBe(true);
+        });
+
+        it('carries the planned dish and marks it eaten by the entry that logged it', async () => {
+            const recipeId = await seedRecipe('Сирники');
+            await mealPlan.addItem(user.id, DATE, { slot: MealSlot.Breakfast, recipeId });
+
+            const [before] = await itemsIn(MealSlot.Breakfast);
+            expect(before?.recipe.title).toBe('Сирники');
+            expect(before?.eatenEntryId).toBeNull();
+
+            const entry = await logEaten(recipeId, MealSlot.Breakfast);
+            expect((await itemsIn(MealSlot.Breakfast))[0]?.eatenEntryId).toBe(entry.id);
+
+            // Unmarking is deleting the entry — the mark follows the log, and the ring with it.
+            await nutrition.deleteMeal(user.id, entry.id);
+            expect((await itemsIn(MealSlot.Breakfast))[0]?.eatenEntryId).toBeNull();
+            expect((await nutrition.getDay(user.id, DATE)).totals.calories).toBe(0);
+        });
+
+        it('needs one entry per planned serving', async () => {
+            const recipeId = await seedRecipe('Сирники');
+            await mealPlan.addItem(user.id, DATE, { slot: MealSlot.Lunch, recipeId });
+            await mealPlan.addItem(user.id, DATE, { slot: MealSlot.Lunch, recipeId });
+
+            const entry = await logEaten(recipeId, MealSlot.Lunch);
+
+            const items = await itemsIn(MealSlot.Lunch);
+            expect(items.map(item => item.eatenEntryId)).toEqual([entry.id, null]);
+        });
+
+        it('is not settled by the same dish in another slot, or by an entry with no recipe', async () => {
+            const recipeId = await seedRecipe('Сирники');
+            await mealPlan.addItem(user.id, DATE, { slot: MealSlot.Lunch, recipeId });
+
+            await logEaten(recipeId, MealSlot.Dinner);
+            await logEaten(undefined, MealSlot.Lunch);
+
+            expect((await itemsIn(MealSlot.Lunch))[0]?.eatenEntryId).toBeNull();
+            // Both still count: eating off-plan is eating.
+            const day = await nutrition.getDay(user.id, DATE);
+            expect(day.meals).toHaveLength(2);
+            expect(day.totals.calories).toBe(900);
+        });
+
+        it('shows only this day’s plan', async () => {
+            const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+            const recipeId = await seedRecipe('Сирники');
+            await mealPlan.addItem(user.id, tomorrow, { slot: MealSlot.Dinner, recipeId });
+
+            expect(await itemsIn(MealSlot.Dinner)).toHaveLength(0);
         });
     });
 });
