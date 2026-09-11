@@ -2,7 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 
 import { StorageErrorCode, StorageService } from '@dns/api-infrastructure/storage';
 import { MEAL_REMINDER_DEFAULTS, USER_SETTINGS_DEFAULTS, WEIGH_IN_PERIODICITY_DAYS_DEFAULT } from '@dns/constants';
-import { UserEntity, UserRepository } from '@dns/database';
+import { ProfileRepository, UserEntity, UserRepository } from '@dns/database';
 import { OAuthProvider, ReminderType, StorageScope, Theme } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -12,7 +12,7 @@ import { ProfileService } from '../src/modules/user/profile.service';
 import { RemindersService } from '../src/modules/user/reminders.service';
 
 import { truncateAuthTables } from './support/db';
-import { grantOnly, upload } from './support/storage';
+import { grantOnly, isStored, upload } from './support/storage';
 import { AuthTestContext, createAuthTestContext } from './support/testing-module';
 
 const EMAIL = 'profile@example.com';
@@ -156,6 +156,63 @@ describe('User domain', () => {
             const { profile } = await profileService.getAggregate(user);
             expect(profile.photoUrl).toBeNull();
             expect(profile.name).toBeNull();
+        });
+
+        it('deletes the replaced photo once the row points at the new one', async () => {
+            const first = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            const second = await upload(storage, user.id, StorageScope.ProfilePhoto);
+
+            await profileService.updateProfile(user, { photoUrl: first });
+            const profile = await profileService.updateProfile(user, { photoUrl: second });
+
+            expect(profile.photoUrl).toBe(second);
+            expect(await isStored(storage, first, user.id, StorageScope.ProfilePhoto)).toBe(false);
+            expect(await isStored(storage, second, user.id, StorageScope.ProfilePhoto)).toBe(true);
+        });
+
+        it('deletes the photo when it is cleared', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+
+            const profile = await profileService.updateProfile(user, { photoUrl: null });
+
+            expect(profile.photoUrl).toBeNull();
+            expect(await isStored(storage, photoUrl, user.id, StorageScope.ProfilePhoto)).toBe(false);
+        });
+
+        it('keeps the photo when the form re-sends the one it already shows', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+
+            const profile = await profileService.updateProfile(user, { name: 'Олег', photoUrl });
+
+            expect(profile.name).toBe('Олег');
+            expect(profile.photoUrl).toBe(photoUrl);
+            expect(await isStored(storage, photoUrl, user.id, StorageScope.ProfilePhoto)).toBe(true);
+        });
+
+        it('saves a new name even when the photo it re-sends has gone from the store', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+            await storage.discardReplaced(photoUrl, null, user.id, StorageScope.ProfilePhoto);
+
+            // The URL is the row's own; re-checking it would lock the user
+            // out of editing their name over a file they cannot see.
+            const profile = await profileService.updateProfile(user, { name: 'Олег', photoUrl });
+
+            expect(profile.name).toBe('Олег');
+        });
+
+        it('never deletes a file the old URL did not hold as this user’s profile photo', async () => {
+            // A row written before the checks existed, pointing at one of the
+            // user's support attachments — which a ticket still references.
+            const attachment = await upload(storage, user.id, StorageScope.Feedback);
+            await ctx.moduleRef.get(ProfileRepository).update(user.id, { photoUrl: attachment });
+
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+
+            expect(await isStored(storage, attachment, user.id, StorageScope.Feedback)).toBe(true);
         });
     });
 

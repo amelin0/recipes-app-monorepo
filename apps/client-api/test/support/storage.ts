@@ -1,4 +1,6 @@
-import { StorageService } from '@dns/api-infrastructure/storage';
+import { BadRequestException } from '@nestjs/common';
+
+import { StorageErrorCode, StorageService } from '@dns/api-infrastructure/storage';
 import { StorageScope, UploadGrant } from '@dns/shared-types';
 
 /** Contents do not matter; the store checks the signed length, not the bytes. */
@@ -32,4 +34,21 @@ export async function upload(storage: StorageService, userId: string, scope: Sto
     }
 
     return grant.publicUrl;
+}
+
+/** Whether the object behind an owned URL is still in the store. */
+export async function isStored(
+    storage: StorageService,
+    url: string,
+    userId: string,
+    scope: StorageScope,
+): Promise<boolean> {
+    try {
+        await storage.validateUpload(url, userId, scope);
+        return true;
+    } catch (error) {
+        const code = error instanceof BadRequestException ? (error.getResponse() as { code?: unknown }).code : null;
+        if (code === StorageErrorCode.NotUploaded) return false;
+        throw error;
+    }
 }
