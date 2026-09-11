@@ -447,9 +447,11 @@ describe('admin auth', () => {
         it('does not open a session for an account deactivated during sign-in', async () => {
             const admin = await createAdmin();
 
-            // The same stand-in, this time in front of the sign-in's session
-            // write — which comes after ~250 ms of bcrypt on an `is_active`
-            // it read before.
+            // The same stand-in, this time in front of a sign-in. It queues at
+            // its journal insert (the FK check wants a share lock on the same
+            // row) or at its session write; either way it has already read
+            // `is_active = true`, and only the re-check under the lock at the
+            // session write can refuse it.
             let login!: Promise<unknown>;
             await context.db.transaction(async tx => {
                 await tx.execute(sql`SELECT id FROM admins WHERE id = ${admin.id} FOR UPDATE`);
