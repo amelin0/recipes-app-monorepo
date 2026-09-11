@@ -66,10 +66,12 @@ export class AdminRecipeService {
      * What *should* happen to a planned dish is an open product question (see
      * the spec). Until it is answered the safe reading is to refuse: an editor
      * can be told and choose, whereas a user whose Tuesday quietly emptied
-     * cannot.
+     * cannot. The check and the delete are one locked transaction in the
+     * repository — checked here, a plan added in between would be deleted
+     * along with the dish.
      */
     async deleteMany(ids: string[]): Promise<number> {
-        const planned = await this.recipeRepository.findPlanned(ids);
+        const { deleted, planned } = await this.recipeRepository.deleteUnlessPlanned(ids);
 
         if (planned.length > 0) {
             throw new ConflictException({
@@ -79,7 +81,7 @@ export class AdminRecipeService {
             });
         }
 
-        return this.recipeRepository.deleteMany(ids);
+        return deleted;
     }
 
     /**

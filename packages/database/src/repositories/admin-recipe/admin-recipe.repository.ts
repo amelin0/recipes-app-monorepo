@@ -364,48 +364,66 @@ export class AdminRecipeRepository extends BaseRepository {
     }
 
     /**
-     * Removes catalogue dishes by id, and reports how many actually went.
+     * Removes catalogue dishes by id — all of them, or none if any is in
+     * somebody's meal plan.
      *
-     * `source = 'global'` in the WHERE, so no request can reach somebody's own
-     * dish through this route however the ids were obtained.
-     */
-    async deleteMany(ids: string[]): Promise<number> {
-        if (ids.length === 0) return 0;
-
-        const deleted = await this.db
-            .delete(recipes)
-            .where(and(inArray(recipes.id, ids), eq(recipes.source, ContentSource.Global)))
-            .returning({ id: recipes.id });
-
-        return deleted.length;
-    }
-
-    /**
-     * Which of these dishes somebody has already planned a meal around.
+     * The product decision about what deleting a planned dish should do is
+     * still open (see the spec), so until it is made the answer is to refuse
+     * rather than silently empty somebody's week: `meal_plan_items` cascades
+     * from `recipes`, so a delete that got through would take the plan rows
+     * with it and nobody would be told.
      *
-     * The product decision about what deleting such a dish should do is still
-     * open (see the spec), so until it is made the service refuses rather than
-     * silently emptying somebody's week.
+     * **Why the lock.** Checking for plans and then deleting were two
+     * statements, and a user could plan the dish in between — the check saw
+     * nothing, the delete cascaded, and their Tuesday quietly emptied. So the
+     * dishes are locked `FOR UPDATE` first, in id order (two overlapping
+     * deletes then queue instead of deadlocking), and only then checked.
+     *
+     * `FOR UPDATE` specifically, and not the weaker `FOR NO KEY UPDATE`: the
+     * foreign-key check that guards every insert into `meal_plan_items` takes
+     * `FOR KEY SHARE` on the referenced recipe, and only `FOR UPDATE` (or a
+     * delete) conflicts with that. With it, the two orders are both safe:
+     *
+     * - a plan insert **already in flight** holds its `KEY SHARE` lock, so the
+     *   lock here waits for it to commit — and the check, a fresh statement
+     *   under READ COMMITTED, then sees the new plan row and refuses;
+     * - a plan insert **arriving after** the lock waits on it; if this
+     *   deletes, the insert's foreign-key check finds the dish gone and fails
+     *   (23503) — the user's request errors instead of their plan silently
+     *   losing a row. If this refuses, the insert proceeds.
+     *
+     * `source = 'global'` in the lock's WHERE, so no request can reach
+     * somebody's own dish through this route however the ids were obtained.
      */
-    async findPlanned(ids: string[]): Promise<string[]> {
-        if (ids.length === 0) return [];
+    async deleteUnlessPlanned(ids: string[]): Promise<{ deleted: number; planned: string[] }> {
+        if (ids.length === 0) return { deleted: 0, planned: [] };
 
-        const rows = await this.db
-            .select({ id: recipes.id })
-            .from(recipes)
-            .where(
-                and(
-                    inArray(recipes.id, ids),
-                    exists(
-                        this.db
-                            .select({ one: sql`1` })
-                            .from(mealPlanItems)
-                            .where(eq(mealPlanItems.recipeId, recipes.id)),
-                    ),
-                ),
-            );
+        return this.db.transaction(async tx => {
+            const locked = await tx
+                .select({ id: recipes.id })
+                .from(recipes)
+                .where(and(inArray(recipes.id, ids), eq(recipes.source, ContentSource.Global)))
+                .orderBy(asc(recipes.id))
+                .for('update');
 
-        return rows.map(row => row.id);
+            if (locked.length === 0) return { deleted: 0, planned: [] };
+
+            const lockedIds = locked.map(row => row.id);
+
+            const planned = await tx
+                .selectDistinct({ id: mealPlanItems.recipeId })
+                .from(mealPlanItems)
+                .where(inArray(mealPlanItems.recipeId, lockedIds));
+
+            if (planned.length > 0) return { deleted: 0, planned: planned.map(row => row.id) };
+
+            const deleted = await tx
+                .delete(recipes)
+                .where(inArray(recipes.id, lockedIds))
+                .returning({ id: recipes.id });
+
+            return { deleted: deleted.length, planned: [] };
+        });
     }
 
     private async writeChildren(tx: DrizzleDB, recipeId: string, input: WriteRecipeInput): Promise<void> {
