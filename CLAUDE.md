@@ -141,6 +141,34 @@ between them, and do not "align" one to the other without asking.
 - Zonal commands inside `docs/`: `/new-spec`, `/new-plan`, `/new-adr`, `/new-runbook`
 - See `docs/CLAUDE.md` for the rules
 
+## Handoff
+
+`HANDOFF.md` is the **index** of the backend work journal; the journal itself
+lives in `handoff/`. `docs/` says what the product must do — the journal says
+what was built, why it was built that way, and what is still wrong.
+
+| Write it here | What goes in |
+|---|---|
+| `handoff/decisions.md` | a decision the owner made, dated — and where it is reflected |
+| `handoff/next.md` | work in flight (branch, PR, state) and the candidates after it |
+| `handoff/slices-*.md` | a finished slice: its commits, the decisions inside it, what is worth knowing |
+| `handoff/debts.md` | a debt that outlives the slice that created it |
+| `handoff/race-audit.md` | concurrency findings and their status |
+| `handoff/environment-traps.md` | something that cost time and will cost it again |
+| `handoff/deviations.md` | a deliberate departure from the plan |
+| `handoff/verifying-locally.md` | how to run it, and the test counts |
+
+Rules:
+
+1. **Update it as things happen** — a decision when it is made, a branch when
+   it opens — not only when a slice ends. A decision that lives only in a chat
+   is lost.
+2. **Bump «Останнє оновлення» in `HANDOFF.md`** with every such change.
+3. **Keep the index short.** It links; it does not retell. When a part passes
+   roughly 600 lines, split it rather than let it grow.
+4. Write in the journal's voice: what was decided and **why**, what broke and
+   how it was found. Not a changelog — git already has one.
+
 ## Knowledge
 
 See `.claude/knowledge/` for project context:
