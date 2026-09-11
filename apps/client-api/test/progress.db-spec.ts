@@ -291,6 +291,41 @@ describe('Progress', () => {
             expect((await profileOf()).heightCm).toBe(178);
         });
 
+        it('hands the profile back to the previous reading when the latest is deleted', async () => {
+            await progress.record(user.id, BodyMetric.Weight, { value: 82, measuredOn: daysAgo(3) });
+            const latest = await progress.record(user.id, BodyMetric.Weight, { value: 85, measuredOn: today() });
+            expect((await profileOf()).weightKg).toBe(85);
+
+            await progress.remove(user.id, latest.id);
+
+            expect((await profileOf()).weightKg).toBe(82);
+        });
+
+        it('keeps the profile weight when the only reading is deleted', async () => {
+            await onboarding.saveStep(await profileOf(), { weightKg: 80 });
+            const only = await progress.record(user.id, BodyMetric.Weight, { value: 83 });
+
+            await progress.remove(user.id, only.id);
+
+            // Nothing better to fall back to: the questionnaire answer the
+            // reading replaced is not stored anywhere else, and a null weight
+            // would take the recommendation away.
+            expect((await profileOf()).weightKg).toBe(83);
+        });
+
+        it('ends on the latest surviving reading when deletes and records race', async () => {
+            const old = await progress.record(user.id, BodyMetric.Weight, { value: 80, measuredOn: daysAgo(10) });
+            const newest = await progress.record(user.id, BodyMetric.Weight, { value: 84, measuredOn: daysAgo(1) });
+
+            await Promise.all([
+                progress.remove(user.id, newest.id),
+                progress.record(user.id, BodyMetric.Weight, { value: 82, measuredOn: daysAgo(5) }),
+                progress.remove(user.id, old.id),
+            ]);
+
+            expect((await profileOf()).weightKg).toBe(82);
+        });
+
         it('removes a reading and refuses to remove one that is not yours', async () => {
             const mine = await progress.record(user.id, BodyMetric.Waist, { value: 88 });
             const stranger = await register(OTHER_EMAIL);

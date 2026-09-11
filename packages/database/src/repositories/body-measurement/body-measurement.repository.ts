@@ -107,14 +107,32 @@ export class BodyMeasurementRepository extends BaseRepository {
         return row ? BodyMeasurementEntity.from(row) : null;
     }
 
-    /** Scoped by owner as well as id, so one account cannot delete another's reading. */
+    /**
+     * Scoped by owner as well as id, so one account cannot delete another's
+     * reading.
+     *
+     * Deleting the latest weight or height hands the profile back to the one
+     * before it, in the same transaction and under the same lock as `record` —
+     * otherwise the recommendation would go on being computed from a reading
+     * that no longer exists. The lock is taken before the delete because the
+     * metric is not known until the row comes back.
+     */
     async delete(userId: string, id: string): Promise<boolean> {
-        const deleted = await this.db
-            .delete(bodyMeasurements)
-            .where(and(eq(bodyMeasurements.id, id), eq(bodyMeasurements.userId, userId)))
-            .returning({ id: bodyMeasurements.id });
+        return this.db.transaction(async tx => {
+            await lockProfile(tx, userId);
 
-        return deleted.length > 0;
+            const [deleted] = await tx
+                .delete(bodyMeasurements)
+                .where(and(eq(bodyMeasurements.id, id), eq(bodyMeasurements.userId, userId)))
+                .returning({ metric: bodyMeasurements.metric });
+
+            if (!deleted) return false;
+
+            const column = PROFILE_COLUMN[deleted.metric as BodyMetric];
+            if (column) await followLatest(tx, userId, deleted.metric as BodyMetric, column);
+
+            return true;
+        });
     }
 }
 
