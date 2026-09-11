@@ -112,11 +112,17 @@ export class UserRepository extends BaseRepository {
      *   a moment before someone else confirmed it.
      * - A code without a password (issued before passwords moved onto codes,
      *   or re-issued after a reset cleared them) leaves the current one.
+     * - The user row is locked BEFORE the code, the same user-first order as
+     *   `linkOAuthIdentity` and `resetPasswordWithPermit`, which touch both
+     *   too. Code first here would deadlock against a provider sign-in
+     *   confirming the same account at the same moment.
      */
-    async verifyEmailWithCode(codeId: string): Promise<UserEntity | null> {
+    async verifyEmailWithCode({ userId, codeId }: { userId: string; codeId: string }): Promise<UserEntity | null> {
         return this.db.transaction(async tx => {
+            await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('no key update');
+
             const code = await consumeOtpCode(tx, codeId);
-            if (!code) return null;
+            if (!code || code.userId !== userId) return null;
 
             const [row] = await tx
                 .update(users)
@@ -125,7 +131,7 @@ export class UserRepository extends BaseRepository {
                     updatedAt: sql`now()`,
                     ...(code.passwordHash ? { passwordHash: code.passwordHash } : {}),
                 })
-                .where(and(eq(users.id, code.userId), isNull(users.emailVerifiedAt)))
+                .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)))
                 .returning();
 
             return row ? UserEntity.from(row) : null;

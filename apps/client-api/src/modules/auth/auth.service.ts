@@ -98,7 +98,7 @@ export class AuthService {
         // bound to this code, together. Null: a concurrent request spent the
         // code first, a resend replaced it, or the account got confirmed some
         // other way in the meantime.
-        const verified = await this.userRepository.verifyEmailWithCode(record.id);
+        const verified = await this.userRepository.verifyEmailWithCode({ userId: user.id, codeId: record.id });
         if (!verified) throw invalidCodeException();
 
         return this.tokenService.issuePair(verified);

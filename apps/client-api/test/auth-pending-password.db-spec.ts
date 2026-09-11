@@ -136,6 +136,31 @@ describe('A pending sign-up password', () => {
         );
     });
 
+    /**
+     * Both paths touch the account row and its code. Taken in opposite orders
+     * they deadlocked, and Postgres surfaced one of them as a 500.
+     */
+    it('confirmation by code racing a provider sign-in: no deadlock, the account ends confirmed', async () => {
+        for (let round = 0; round < 10; round++) {
+            await truncateAuthTables(ctx.db);
+            await authService.register({ email: EMAIL, password: OWNER_PASSWORD });
+
+            ctx.oauth.willReturn(OAuthProvider.Google, 'owner-google-id', EMAIL);
+            const results = await Promise.allSettled([
+                authService.verifyEmail({ email: EMAIL, code: DEV_CODE }),
+                oauthSignIn.signIn({ provider: OAuthProvider.Google, idToken: 'stub' }),
+            ]);
+
+            // The provider sign-in always succeeds; the code either wins or is
+            // refused as spent — never a server error.
+            expect(results[1]?.status).toBe('fulfilled');
+            if (results[0]?.status === 'rejected') {
+                expect(results[0].reason).toBeInstanceOf(BadRequestException);
+            }
+            expect((await users.findByEmail(EMAIL))?.isEmailVerified()).toBe(true);
+        }
+    });
+
     it('still lets the registrant sign in to an unconfirmed account and get a fresh code (sign-in FR-003)', async () => {
         await authService.register({ email: EMAIL, password: OWNER_PASSWORD });
 
