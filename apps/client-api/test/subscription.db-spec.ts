@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 
-import { UserEntity, UserRepository } from '@dns/database';
+import { SubscriptionRepository, UserEntity, UserRepository, schema } from '@dns/database';
 import { BillingPeriod, PurchaseStore, SubscriptionSource, SubscriptionStatus } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
@@ -12,6 +13,7 @@ import { AuthTestContext, createAuthTestContext } from './support/testing-module
 const EMAIL = 'buyer@example.com';
 const OTHER_EMAIL = 'friend@example.com';
 const THIRD_EMAIL = 'third@example.com';
+const FOURTH_EMAIL = 'fourth@example.com';
 const PASSWORD = 'passw0rd';
 
 const APPLE_ANNUAL = 'com.rationfit.application.annual';
@@ -34,6 +36,7 @@ describe('Subscription', () => {
     let ctx: AuthTestContext;
     let authService: AuthService;
     let subscriptions: SubscriptionService;
+    let subscriptionRepository: SubscriptionRepository;
     let users: UserRepository;
     let user: UserEntity;
 
@@ -41,6 +44,7 @@ describe('Subscription', () => {
         ctx = await createAuthTestContext();
         authService = ctx.moduleRef.get(AuthService);
         subscriptions = ctx.moduleRef.get(SubscriptionService);
+        subscriptionRepository = ctx.moduleRef.get(SubscriptionRepository);
         users = ctx.moduleRef.get(UserRepository);
     });
 
@@ -209,7 +213,7 @@ describe('Subscription', () => {
 
             expect(first.code).toHaveLength(8);
             expect(second.code).toBe(first.code);
-            expect(first.stats).toEqual({ invited: 0, converted: 0 });
+            expect(first.stats).toEqual({ invited: 0, converted: 0, rewarded: 0 });
             expect(first.monthsEarned).toBe(0);
         });
 
@@ -250,16 +254,22 @@ describe('Subscription', () => {
             expect(granted.daysRemaining).toBeGreaterThan(27);
         });
 
-        it('counts the invitation, and counts it as converted once they subscribe', async () => {
+        /**
+         * The old count joined the redeemer's subscription rows, so the free
+         * month the code itself grants made every redemption «converted» on
+         * the spot. With the reward now real, that would pay a month for every
+         * account anybody cared to register.
+         */
+        it('counts the invitation, but not as converted — the free month is not a payment', async () => {
             const owner = await subscriptions.referral(user.id);
             const friend = await register(OTHER_EMAIL);
 
             await subscriptions.redeemCode(friend.id, owner.code);
 
             const overview = await subscriptions.referral(user.id);
-            expect(overview.stats.invited).toBe(1);
-            expect(overview.stats.converted).toBe(1);
-            expect(overview.monthsEarned).toBe(1);
+            expect(overview.stats).toEqual({ invited: 1, converted: 0, rewarded: 0 });
+            expect(overview.monthsEarned).toBe(0);
+            expect((await subscriptions.state(user.id)).subscription).toBeNull();
         });
 
         it('refuses an unknown code, and one’s own', async () => {
@@ -280,6 +290,239 @@ describe('Subscription', () => {
             await expect(subscriptions.describeCode(friend.id, second.code)).rejects.toBeInstanceOf(
                 BadRequestException,
             );
+        });
+    });
+
+    /**
+     * The referrer's month (referral FR-006): granted when somebody they
+     * invited first pays, once per invitation, and never at the cost of the
+     * purchase that earned it.
+     */
+    describe('the referrer’s reward', () => {
+        const REWARD_TERMS = {
+            planSlug: 'monthly',
+            extend: (from: Date) => new Date(from.getTime() + 30 * 86_400_000),
+        };
+
+        /**
+         * Six weeks ago, as far as the database can tell: the free month the
+         * code gave has run out (and the nightly job has marked it), which is
+         * the only way a redeemer can buy — while it runs, they already have a
+         * subscription.
+         */
+        const lapseFreeMonth = async (userId: string): Promise<void> => {
+            await ctx.db
+                .update(schema.subscriptions)
+                .set({ startedAt: inDays(-42), expiresAt: inDays(-11), status: SubscriptionStatus.Expired })
+                .where(eq(schema.subscriptions.userId, userId));
+            await ctx.db
+                .update(schema.referralRedemptions)
+                .set({ redeemedAt: inDays(-42) })
+                .where(eq(schema.referralRedemptions.redeemerUserId, userId));
+        };
+
+        /** Somebody who redeemed `referrerId`'s code and whose free month is over. */
+        const invitedFriend = async (referrerId: string, email: string): Promise<UserEntity> => {
+            const { code } = await subscriptions.referral(referrerId);
+            const friend = await register(email);
+
+            await subscriptions.redeemCode(friend.id, code);
+            await lapseFreeMonth(friend.id);
+
+            return friend;
+        };
+
+        const payMonthly = (userId: string, overrides: Record<string, unknown> = {}): Promise<void> =>
+            buy(userId, { productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString(), ...overrides });
+
+        const setMonthlyOnSale = async (onSale: boolean): Promise<void> => {
+            await ctx.db
+                .update(schema.subscriptionPlans)
+                .set({ isActive: onSale })
+                .where(eq(schema.subscriptionPlans.slug, 'monthly'));
+        };
+
+        it('gives a referrer with no subscription a month on the monthly plan', async () => {
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+
+            await payMonthly(friend.id);
+
+            const granted = (await subscriptions.state(user.id)).subscription;
+            expect(granted?.source).toBe(SubscriptionSource.Referral);
+            expect(granted?.planSlug).toBe('monthly');
+            expect(granted?.store).toBe(PurchaseStore.None);
+            expect(granted?.pricePaidCents).toBe(0);
+            expect(granted?.daysRemaining).toBeGreaterThanOrEqual(28);
+            expect(granted?.daysRemaining).toBeLessThanOrEqual(31);
+
+            const overview = await subscriptions.referral(user.id);
+            expect(granted?.referralCode).toBe(overview.code);
+            expect(overview.stats).toEqual({ invited: 1, converted: 1, rewarded: 1 });
+            expect(overview.monthsEarned).toBe(1);
+        });
+
+        it('lengthens a live subscription by a calendar month — 31 January becomes the end of February', async () => {
+            const year = new Date().getUTCFullYear() + 1;
+            const endOfJanuary = new Date(Date.UTC(year, 0, 31, 12));
+            const endOfFebruary = new Date(Date.UTC(year, 2, 0, 12));
+
+            await buy(user.id, { expiresAt: endOfJanuary.toISOString() });
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+
+            await payMonthly(friend.id);
+
+            const lengthened = (await subscriptions.state(user.id)).subscription;
+            // The same row, still the annual plan the referrer paid for — only
+            // its end has moved.
+            expect(lengthened?.planSlug).toBe('annual');
+            expect(lengthened?.source).toBe(SubscriptionSource.Purchase);
+            expect(lengthened?.expiresAt.toISOString()).toBe(endOfFebruary.toISOString());
+        });
+
+        it('rewards nothing for a trial', async () => {
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+
+            await buy(friend.id, { isTrial: true, expiresAt: inDays(7).toISOString() });
+
+            expect((await subscriptions.state(user.id)).subscription).toBeNull();
+            expect((await subscriptions.referral(user.id)).stats).toEqual({ invited: 1, converted: 0, rewarded: 0 });
+        });
+
+        it('rewards nothing for a purchase made before the code was redeemed', async () => {
+            const { code } = await subscriptions.referral(user.id);
+            const friend = await register(OTHER_EMAIL);
+
+            // Already a customer, lapsed, then took a friend's free month.
+            await buy(friend.id, { startedAt: inDays(-400).toISOString(), expiresAt: inDays(-30).toISOString() });
+            await subscriptions.redeemCode(friend.id, code);
+
+            expect((await subscriptions.state(user.id)).subscription).toBeNull();
+            expect((await subscriptions.referral(user.id)).stats).toEqual({ invited: 1, converted: 0, rewarded: 0 });
+        });
+
+        it('rewards a friend once, however often they pay or the receipt is replayed', async () => {
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+            const first = receipt({ productId: APPLE_MONTHLY, expiresAt: inDays(30).toISOString() });
+
+            await subscriptions.redeemReceipt(friend.id, { store: PurchaseStore.Apple, receipt: first });
+            const once = (await subscriptions.state(user.id)).subscription;
+
+            await subscriptions.redeemReceipt(friend.id, { store: PurchaseStore.Apple, receipt: first });
+
+            // A second, later purchase by the same friend earns nothing either.
+            await ctx.db
+                .update(schema.subscriptions)
+                .set({ expiresAt: inDays(-1) })
+                .where(eq(schema.subscriptions.userId, friend.id));
+            await payMonthly(friend.id);
+
+            const after = (await subscriptions.state(user.id)).subscription;
+            expect(after?.id).toBe(once?.id);
+            expect(after?.expiresAt.toISOString()).toBe(once?.expiresAt.toISOString());
+
+            const overview = await subscriptions.referral(user.id);
+            expect(overview.stats).toEqual({ invited: 1, converted: 1, rewarded: 1 });
+            expect(overview.monthsEarned).toBe(1);
+        });
+
+        /**
+         * The claim is a conditional update on a row the primary key makes
+         * unique, so two grants racing for the same invitation cannot both
+         * win — no check in the service is involved.
+         */
+        it('cannot be granted twice for one invitation, even concurrently', async () => {
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+            await ctx.db.insert(schema.subscriptions).values({
+                userId: friend.id,
+                planId: (await subscriptionRepository.findPlanBySlug('monthly', 'uk'))!.id,
+                source: SubscriptionSource.Purchase,
+                status: SubscriptionStatus.Active,
+                startedAt: new Date(),
+                expiresAt: inDays(30),
+                pricePaidCents: 999,
+                currency: 'USD',
+                store: PurchaseStore.Apple,
+                storeTransactionId: 'txn-race',
+            });
+
+            const results = await Promise.all([
+                subscriptionRepository.grantReferralReward(friend.id, REWARD_TERMS),
+                subscriptionRepository.grantReferralReward(friend.id, REWARD_TERMS),
+            ]);
+
+            expect(results.filter(result => result !== null)).toHaveLength(1);
+            expect((await subscriptions.referral(user.id)).stats.rewarded).toBe(1);
+        });
+
+        /**
+         * Two friends converting at the same moment must give two months. Both
+         * grants read the referrer's end date; without the lock one would
+         * overwrite the other, or both would insert and the second would hit
+         * the one-active-per-account index.
+         */
+        it('gives two months when two friends pay at the same time', async () => {
+            const friendA = await invitedFriend(user.id, OTHER_EMAIL);
+            const friendB = await invitedFriend(user.id, THIRD_EMAIL);
+
+            await Promise.all([payMonthly(friendA.id), payMonthly(friendB.id)]);
+
+            const granted = (await subscriptions.state(user.id)).subscription;
+            expect(granted?.daysRemaining).toBeGreaterThanOrEqual(58);
+            expect(granted?.daysRemaining).toBeLessThanOrEqual(62);
+
+            const overview = await subscriptions.referral(user.id);
+            expect(overview.stats).toEqual({ invited: 2, converted: 2, rewarded: 2 });
+            expect(overview.monthsEarned).toBe(2);
+        });
+
+        /**
+         * The grant is one transaction with its claim. Failing half-way — here
+         * because the plan a fresh reward lands on is off sale — must leave the
+         * invitation unrewarded rather than recorded as rewarded with nothing
+         * given; and the buyer's own purchase must not notice at all.
+         */
+        it('never fails the purchase, and leaves a failed grant to be retried', async () => {
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+            const annual = receipt();
+
+            await setMonthlyOnSale(false);
+            try {
+                await expect(
+                    subscriptions.redeemReceipt(friend.id, { store: PurchaseStore.Apple, receipt: annual }),
+                ).resolves.toBeDefined();
+
+                expect((await subscriptions.state(friend.id)).subscription?.planSlug).toBe('annual');
+                expect((await subscriptions.state(user.id)).subscription).toBeNull();
+
+                // Owed, not given — and the screen says what was given.
+                const owed = await subscriptions.referral(user.id);
+                expect(owed.stats).toEqual({ invited: 1, converted: 1, rewarded: 0 });
+                expect(owed.monthsEarned).toBe(0);
+            } finally {
+                await setMonthlyOnSale(true);
+            }
+
+            // The client retrying the receipt is the retry of the grant.
+            await subscriptions.redeemReceipt(friend.id, { store: PurchaseStore.Apple, receipt: annual });
+
+            expect((await subscriptions.state(user.id)).subscription?.source).toBe(SubscriptionSource.Referral);
+            expect((await subscriptions.referral(user.id)).monthsEarned).toBe(1);
+        });
+
+        it('rewards only the referrer of the friend who paid', async () => {
+            const bystander = await register(FOURTH_EMAIL);
+            const friend = await invitedFriend(user.id, OTHER_EMAIL);
+            await invitedFriend(bystander.id, THIRD_EMAIL);
+
+            await payMonthly(friend.id);
+
+            expect((await subscriptions.state(user.id)).subscription).not.toBeNull();
+            expect((await subscriptions.state(bystander.id)).subscription).toBeNull();
+            expect((await subscriptions.referral(bystander.id)).stats).toEqual({
+                invited: 1,
+                converted: 0,
+                rewarded: 0,
+            });
         });
     });
 });

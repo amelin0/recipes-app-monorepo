@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { NotificationEntity, NotificationRepository, UserRepository, schema } from '@dns/database';
-import { NotificationEvent, NotificationType } from '@dns/shared-types';
+import { NotificationEvent, NotificationType, PurchaseStore, SubscriptionStatus } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { SubscriptionService } from '../src/modules/subscription/subscription.service';
@@ -148,7 +148,7 @@ describe('Notification producers', () => {
             expect(redeemerInbox.map(message => message.type)).toContain(NotificationType.Subscription);
         });
 
-        it('does not promise the referrer a month nobody grants', async () => {
+        it('does not promise the referrer a month for a redemption alone', async () => {
             const referrerId = await register(REFERRER_EMAIL);
             const redeemerId = await register(EMAIL);
 
@@ -156,10 +156,63 @@ describe('Notification producers', () => {
             await subscriptionService.redeemCode(redeemerId, code);
 
             const [message] = await inboxOf(referrerId);
-            // Nothing in the product gives the referrer their free month yet
-            // (a known debt). A message that said otherwise would be the only
-            // part of the app claiming it happened.
+            // Redeeming earns nothing: the month comes with this person's first
+            // payment, which may never happen. A message that read as if it
+            // had been earned would be promising what nothing has granted.
             expect(`${message?.title} ${message?.body}`).not.toMatch(/місяц|month/i);
+        });
+
+        it('tells the referrer their month landed once the friend pays, and until when', async () => {
+            const referrerId = await register(REFERRER_EMAIL);
+            const redeemerId = await register(EMAIL);
+
+            const { code } = await subscriptionService.referral(referrerId);
+            await subscriptionService.redeemCode(redeemerId, code);
+
+            // The free month has to be over before its holder can buy.
+            const sixWeeksAgo = new Date(Date.now() - 42 * 86_400_000);
+            await ctx.db
+                .update(schema.subscriptions)
+                .set({
+                    status: SubscriptionStatus.Expired,
+                    startedAt: sixWeeksAgo,
+                    expiresAt: new Date(Date.now() - 86_400_000),
+                })
+                .where(eq(schema.subscriptions.userId, redeemerId));
+            await ctx.db
+                .update(schema.referralRedemptions)
+                .set({ redeemedAt: sixWeeksAgo })
+                .where(eq(schema.referralRedemptions.redeemerUserId, redeemerId));
+
+            await subscriptionService.redeemReceipt(redeemerId, {
+                store: PurchaseStore.Apple,
+                receipt: JSON.stringify({
+                    transactionId: 'txn-referral-reward',
+                    productId: 'com.rationfit.application.monthly',
+                    startedAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+                    isTrial: false,
+                }),
+            });
+
+            const [row] = await ctx.db
+                .select({
+                    type: schema.notifications.type,
+                    title: schema.notifications.title,
+                    body: schema.notifications.body,
+                })
+                .from(schema.notifications)
+                .where(
+                    and(
+                        eq(schema.notifications.userId, referrerId),
+                        eq(schema.notifications.event, NotificationEvent.ReferralRewarded),
+                    ),
+                );
+
+            expect(row?.type).toBe(NotificationType.Subscription);
+            expect(row?.title).toBe('Ви отримали місяць Преміуму');
+            // Now that the month exists, the text can name the day it runs to.
+            expect(row?.body).toMatch(/\d/);
         });
     });
 
