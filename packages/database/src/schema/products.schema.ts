@@ -1,5 +1,16 @@
-import { relations } from 'drizzle-orm';
-import { boolean, index, numeric, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { SQL, SQLWrapper, relations, sql } from 'drizzle-orm';
+import {
+    boolean,
+    index,
+    numeric,
+    pgEnum,
+    pgTable,
+    primaryKey,
+    text,
+    timestamp,
+    uniqueIndex,
+    uuid,
+} from 'drizzle-orm/pg-core';
 
 import { ContentSource } from '@dns/shared-types';
 
@@ -66,10 +77,48 @@ export const products = pgTable(
          */
         archivedAt: timestamp('archived_at', { withTimezone: true }),
 
+        /**
+         * The English name, normalised by `englishNameKey` — the identity a
+         * recipe CSV addresses a catalogue product by (`Tomatoes:250`).
+         *
+         * A copy of what `product_translations` holds, and a deliberate one:
+         * the name lives in that table and the scope (`source`) lives in this
+         * one, and Postgres cannot index across two tables. Only here can a
+         * unique index say «no two **global** products share an English name»
+         * while leaving private products alone — every user may have their
+         * own «Tomatoes», and none of them may block or be overwritten by the
+         * catalogue's.
+         *
+         * Written in the same transaction as the English translation by
+         * everything that writes a global product: the admin create, edit and
+         * import, verification (which promotes a private product and has to
+         * compute it then), and the seed. Null on private products the app
+         * creates — the index ignores them anyway — and on a product with no
+         * English name.
+         */
+        nameEnKey: text('name_en_key'),
+
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
-    table => [index('products_source_creator_idx').on(table.source, table.createdBy)],
+    table => [
+        index('products_source_creator_idx').on(table.source, table.createdBy),
+        uniqueIndex('products_global_name_en_key_unique')
+            .on(table.nameEnKey)
+            .where(sql`${table.source} = 'global'`),
+    ],
 );
+
+/**
+ * How an English name becomes `products.name_en_key`: trimmed and
+ * lower-cased, in SQL so that the column, every lookup against it and the
+ * migration's backfill share one definition.
+ *
+ * Case-insensitive because the recipe import matches names that way — two
+ * rows differing only in case would still be one name to it.
+ */
+export function englishNameKey(name: SQLWrapper | string): SQL {
+    return sql`lower(btrim(${name}::text))`;
+}
 
 export const productTranslations = pgTable(
     'product_translations',

@@ -107,6 +107,73 @@ describe('admin product catalogue', () => {
             await expect(productService.create(payload())).rejects.toThrow(ConflictException);
         });
 
+        /**
+         * The old guard looked the name up and then inserted — two requests
+         * both looked, both found nothing, both inserted. The unique index
+         * on `name_en_key` lets exactly one through, however they interleave.
+         */
+        it('lets only one of two simultaneous creates of one English name through', async () => {
+            const outcomes = await Promise.allSettled([
+                productService.create(payload()),
+                productService.create(payload()),
+                productService.create(payload()),
+            ]);
+
+            expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+
+            const refused = outcomes.filter(outcome => outcome.status === 'rejected');
+            expect(refused).toHaveLength(2);
+            for (const outcome of refused) {
+                expect((outcome as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException);
+            }
+
+            expect(await globalProductsNamed(context, 'Test product')).toBe(1);
+        });
+
+        it('treats a name differing only in case or spacing as the same name', async () => {
+            await productService.create(payload());
+
+            const shouting = payload({
+                translations: [
+                    { language: Language.Ukrainian, name: 'Інший', servingLabel: null },
+                    { language: Language.English, name: '  TEST PRODUCT ', servingLabel: null },
+                ],
+            });
+
+            await expect(productService.create(shouting)).rejects.toThrow(ConflictException);
+        });
+
+        it('refuses renaming a product to another one’s English name', async () => {
+            await productService.create(payload());
+            const other = await productService.create(
+                payload({
+                    translations: [
+                        { language: Language.Ukrainian, name: 'Інший', servingLabel: null },
+                        { language: Language.English, name: 'Other product', servingLabel: null },
+                    ],
+                }),
+            );
+
+            await expect(productService.update(other, payload())).rejects.toThrow(ConflictException);
+
+            // Refused as a whole: the transaction took the translations back too.
+            const product = await productService.findById(other, DEFAULT_LANGUAGE);
+            expect(product.nameEn).toBe('Other product');
+        });
+
+        /**
+         * Somebody's private «Test product» is theirs. Before the lookup was
+         * scoped to the catalogue it made the admin's create a 409.
+         */
+        it('is not blocked by a user’s private product of the same name', async () => {
+            const userId = await createUser(context);
+            await createCustomProduct(context, userId, 'Test product');
+
+            await expect(productService.create(payload())).resolves.toEqual(expect.any(String));
+
+            await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
         it('replaces translations wholesale', async () => {
             const id = await productService.create(payload());
 
@@ -364,6 +431,41 @@ describe('admin product catalogue', () => {
             expect(report.errors[0]?.message).toMatch(/Duplicate name_en/);
         });
 
+        /**
+         * The bug this guards was not a race: the import's lookup was not
+         * limited to the catalogue, so a user's own «Kohlrabi» matched, and
+         * the import **overwrote that person's private product** with the
+         * file's numbers and names.
+         */
+        it('never touches a user’s private product of the same name', async () => {
+            const userId = await createUser(context);
+            const privateId = await createCustomProduct(context, userId, 'Kohlrabi');
+            const before = await productRow(context, privateId);
+
+            const report = await importService.import([HEADER, line('Kohlrabi', 'Кольрабі', '27')].join('\n'), 2000);
+
+            expect(report.created).toBe(1);
+            expect(report.updated).toBe(0);
+            expect(await productRow(context, privateId)).toEqual(before);
+            expect(await globalProductsNamed(context, 'Kohlrabi')).toBe(1);
+
+            await context.db.execute(sql`delete from users where id = ${userId}`);
+        });
+
+        /**
+         * Two imports of the same file at once — both rows say «create
+         * Kohlrabi». One creates it; the other either updates it or is
+         * reported as a duplicate, and either way there is one row.
+         */
+        it('leaves one product when two imports of the same name run at once', async () => {
+            const file = [HEADER, line('Kohlrabi', 'Кольрабі')].join('\n');
+
+            const reports = await Promise.all([importService.import(file, 2000), importService.import(file, 2000)]);
+
+            expect(reports.reduce((sum, report) => sum + report.created, 0)).toBe(1);
+            expect(await globalProductsNamed(context, 'Kohlrabi')).toBe(1);
+        });
+
         it('refuses a file missing a required column', async () => {
             await expect(importService.import('name_en,name_uk\nKohlrabi,Кольрабі', 2000)).rejects.toThrow(
                 /Missing required columns/,
@@ -376,7 +478,7 @@ describe('admin product catalogue', () => {
             // what lets real recipes in.
             await importService.import([HEADER, line('Kohlrabi', 'Кольрабі')].join('\n'), 2000);
 
-            const id = await adminRepository.findIdByEnglishName('Kohlrabi');
+            const id = await adminRepository.findGlobalIdByEnglishName('Kohlrabi');
             expect(id).not.toBeNull();
         });
     });
@@ -394,6 +496,29 @@ async function createUser(context: AdminTestContext): Promise<string> {
             values (${`product-${Date.now()}-${Math.random()}@example.com`}, 'x', now()) returning id`,
     );
     return row!.id;
+}
+
+/** Global rows carrying this English name, compared the way the unique index compares. */
+async function globalProductsNamed(context: AdminTestContext, nameEn: string): Promise<number> {
+    const [row] = await context.db.execute<{ total: number }>(
+        sql`select count(*)::int as total
+              from products p
+              join product_translations t on t.product_id = p.id and t.language = 'en'
+             where p.source = 'global' and lower(btrim(t.name)) = lower(btrim(${nameEn}::text))`,
+    );
+    return Number(row?.total ?? 0);
+}
+
+/** A product with its translations, as one comparable value. */
+async function productRow(context: AdminTestContext, id: string): Promise<unknown> {
+    const [product] = await context.db.select().from(schema.products).where(eq(schema.products.id, id));
+    const translations = await context.db
+        .select()
+        .from(schema.productTranslations)
+        .where(eq(schema.productTranslations.productId, id))
+        .orderBy(schema.productTranslations.language);
+
+    return { product, translations };
 }
 
 async function notificationCount(context: AdminTestContext): Promise<number> {

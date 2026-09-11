@@ -5,8 +5,9 @@ import { alias } from 'drizzle-orm/pg-core';
 import { DEFAULT_LANGUAGE } from '@dns/constants';
 import { ContentSource } from '@dns/shared-types';
 
-import { productGroups, productTranslations, products, recipeIngredients } from '../../schema';
+import { englishNameKey, productGroups, productTranslations, products, recipeIngredients } from '../../schema';
 import { BaseRepository, DrizzleDB } from '../base.repository';
+import { isUniqueViolation } from '../postgres-error';
 
 // Declared once. Building them inside each method produced distinct objects
 // that merely shared a name, so a `where` referring to one and a `from`
@@ -69,6 +70,32 @@ export interface WriteProductInput {
     translations: AdminProductTranslation[];
 }
 
+/** The index behind «no two global products share an English name» (schema). */
+const GLOBAL_NAME_INDEX = 'products_global_name_en_key_unique';
+
+/**
+ * Another global product already carries this English name.
+ *
+ * Raised from the unique index, so it is the answer however the requests
+ * interleaved — callers map it to a 409 rather than checking first.
+ */
+export class DuplicateProductNameError extends Error {
+    constructor() {
+        super('Another global product already has this English name');
+        this.name = 'DuplicateProductNameError';
+    }
+}
+
+function englishNameOf(translations: AdminProductTranslation[]): string | null {
+    return translations.find(t => t.language === 'en')?.name ?? null;
+}
+
+/** What `name_en_key` should hold for these translations — see the schema. */
+function nameKeyOf(translations: AdminProductTranslation[]): SQL | null {
+    const name = englishNameOf(translations);
+    return name === null ? null : englishNameKey(name);
+}
+
 @Injectable()
 export class AdminProductRepository extends BaseRepository {
     async list(params: {
@@ -115,61 +142,61 @@ export class AdminProductRepository extends BaseRepository {
         return { ...row, translations, usedInRecipes: usage[0]?.total ?? 0 };
     }
 
+    /**
+     * Adds a product to the shared catalogue.
+     *
+     * Throws `DuplicateProductNameError` when a global product already has
+     * this English name. That is the unique index speaking, not a lookup made
+     * beforehand: two requests creating «Kohlrabi» at the same moment would
+     * both have looked and found nothing.
+     */
     async create(input: WriteProductInput): Promise<string> {
-        return this.db.transaction(async tx => {
-            const [row] = await tx
-                .insert(products)
-                .values({
-                    // Anything an admin creates joins the shared catalogue. A
-                    // staff-owned private product would be a contradiction —
-                    // there is no admin-facing app to eat it in.
-                    source: ContentSource.Global,
-                    createdBy: null,
-                    isVerified: true,
-                    groupId: input.groupId,
-                    caloriesPer100g: input.caloriesPer100g,
-                    proteinPer100g: input.proteinPer100g,
-                    fatsPer100g: input.fatsPer100g,
-                    carbsPer100g: input.carbsPer100g,
-                    servingWeightG: input.servingWeightG,
-                    isQuickPick: input.isQuickPick,
-                })
-                .returning({ id: products.id });
-
-            if (!row) throw new Error('Failed to insert product');
-
-            await this.writeTranslations(tx, row.id, input.translations);
-
-            return row.id;
-        });
+        return this.refusingDuplicateNames(() => this.db.transaction(tx => this.insertGlobal(tx, input)));
     }
 
+    /** Throws `DuplicateProductNameError` when the new English name is another global product's. */
     async update(id: string, input: WriteProductInput): Promise<boolean> {
-        return this.db.transaction(async tx => {
-            const updated = await tx
-                .update(products)
-                .set({
-                    groupId: input.groupId,
-                    caloriesPer100g: input.caloriesPer100g,
-                    proteinPer100g: input.proteinPer100g,
-                    fatsPer100g: input.fatsPer100g,
-                    carbsPer100g: input.carbsPer100g,
-                    servingWeightG: input.servingWeightG,
-                    isQuickPick: input.isQuickPick,
-                })
-                .where(eq(products.id, id))
-                .returning({ id: products.id });
+        return this.refusingDuplicateNames(() => this.db.transaction(tx => this.rewrite(tx, id, input)));
+    }
 
-            if (updated.length === 0) return false;
+    /**
+     * The product import's write: updates the global product with this
+     * English name, or creates it — one transaction, so «which one» and the
+     * write cannot come apart.
+     *
+     * **Global only.** A user's private product with the same name is
+     * neither found nor touched: the import writes to the shared catalogue
+     * and nothing else, and before this was scoped it rewrote somebody's
+     * private «Tomatoes» with the catalogue's numbers.
+     *
+     * The match is locked (`FOR UPDATE`): an edit renaming that product
+     * meanwhile makes this wait, then re-read the row and find it no longer
+     * matches — so the import creates a new product rather than renaming the
+     * edited one back. When nothing matches but a concurrent import creates
+     * the same name first, the insert meets the unique index and this throws
+     * `DuplicateProductNameError` for the row, rather than writing a twin.
+     */
+    async upsertGlobalByEnglishName(input: WriteProductInput): Promise<'created' | 'updated'> {
+        const name = englishNameOf(input.translations);
+        if (name === null) throw new Error('An imported product needs an English name');
 
-            // Replaced wholesale rather than merged: a language the caller
-            // omitted is a language they removed, and merging would make
-            // deleting a translation impossible through this route.
-            await tx.delete(productTranslations).where(eq(productTranslations.productId, id));
-            await this.writeTranslations(tx, id, input.translations);
+        return this.refusingDuplicateNames(() =>
+            this.db.transaction(async tx => {
+                const [existing] = await tx
+                    .select({ id: products.id })
+                    .from(products)
+                    .where(and(eq(products.source, ContentSource.Global), eq(products.nameEnKey, englishNameKey(name))))
+                    .for('update');
 
-            return true;
-        });
+                if (existing) {
+                    await this.rewrite(tx, existing.id, input);
+                    return 'updated';
+                }
+
+                await this.insertGlobal(tx, input);
+                return 'created';
+            }),
+        );
     }
 
     /**
@@ -188,7 +215,9 @@ export class AdminProductRepository extends BaseRepository {
         const updated = await this.db
             .update(products)
             .set(
-                isVerified ? { isVerified: true, source: ContentSource.Global, createdBy: null } : { isVerified: false },
+                isVerified
+                    ? { isVerified: true, source: ContentSource.Global, createdBy: null }
+                    : { isVerified: false },
             )
             .where(eq(products.id, id))
             .returning({ id: products.id });
@@ -208,16 +237,19 @@ export class AdminProductRepository extends BaseRepository {
     }
 
     /**
-     * The import's natural key: English is what a recipe CSV names a product
-     * by (`Tomatoes:250`), so it is the identity that already exists — unlike
+     * The catalogue product a recipe CSV means by this English name
+     * (`Tomatoes:250`) — English is the identity that already exists, unlike
      * recipes, which needed an `import_key` invented for them.
+     *
+     * Global only, and by the indexed key: a user's private product of the
+     * same name is not the catalogue's, and matching it would hand the
+     * import somebody's own row to overwrite.
      */
-    async findIdByEnglishName(name: string): Promise<string | null> {
+    async findGlobalIdByEnglishName(name: string): Promise<string | null> {
         const [row] = await this.db
             .select({ id: products.id })
-            .from(productTranslations)
-            .innerJoin(products, eq(products.id, productTranslations.productId))
-            .where(and(eq(productTranslations.language, 'en'), ilike(productTranslations.name, name)))
+            .from(products)
+            .where(and(eq(products.source, ContentSource.Global), eq(products.nameEnKey, englishNameKey(name))))
             .limit(1);
 
         return row?.id ?? null;
@@ -285,6 +317,73 @@ export class AdminProductRepository extends BaseRepository {
             .where(where);
 
         return row?.total ?? 0;
+    }
+
+    private async insertGlobal(tx: DrizzleDB, input: WriteProductInput): Promise<string> {
+        const [row] = await tx
+            .insert(products)
+            .values({
+                // Anything an admin creates joins the shared catalogue. A
+                // staff-owned private product would be a contradiction —
+                // there is no admin-facing app to eat it in.
+                source: ContentSource.Global,
+                createdBy: null,
+                isVerified: true,
+                groupId: input.groupId,
+                caloriesPer100g: input.caloriesPer100g,
+                proteinPer100g: input.proteinPer100g,
+                fatsPer100g: input.fatsPer100g,
+                carbsPer100g: input.carbsPer100g,
+                servingWeightG: input.servingWeightG,
+                isQuickPick: input.isQuickPick,
+                nameEnKey: nameKeyOf(input.translations),
+            })
+            .returning({ id: products.id });
+
+        if (!row) throw new Error('Failed to insert product');
+
+        await this.writeTranslations(tx, row.id, input.translations);
+
+        return row.id;
+    }
+
+    private async rewrite(tx: DrizzleDB, id: string, input: WriteProductInput): Promise<boolean> {
+        const updated = await tx
+            .update(products)
+            .set({
+                groupId: input.groupId,
+                caloriesPer100g: input.caloriesPer100g,
+                proteinPer100g: input.proteinPer100g,
+                fatsPer100g: input.fatsPer100g,
+                carbsPer100g: input.carbsPer100g,
+                servingWeightG: input.servingWeightG,
+                isQuickPick: input.isQuickPick,
+                // In the same statement that could make it collide, so the
+                // unique index judges the name the row is about to carry.
+                nameEnKey: nameKeyOf(input.translations),
+            })
+            .where(eq(products.id, id))
+            .returning({ id: products.id });
+
+        if (updated.length === 0) return false;
+
+        // Replaced wholesale rather than merged: a language the caller
+        // omitted is a language they removed, and merging would make
+        // deleting a translation impossible through this route.
+        await tx.delete(productTranslations).where(eq(productTranslations.productId, id));
+        await this.writeTranslations(tx, id, input.translations);
+
+        return true;
+    }
+
+    /** Turns the index's refusal into the one error callers are meant to handle. */
+    private async refusingDuplicateNames<T>(write: () => Promise<T>): Promise<T> {
+        try {
+            return await write();
+        } catch (error) {
+            if (isUniqueViolation(error, GLOBAL_NAME_INDEX)) throw new DuplicateProductNameError();
+            throw error;
+        }
     }
 
     private async writeTranslations(
