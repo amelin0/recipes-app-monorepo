@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { hash } from 'bcryptjs';
 
 import { AUTH_POLICY } from '@dns/constants';
-import { OtpCodeRepository, PasswordResetPermitRepository, UserRepository } from '@dns/database';
+import { PasswordResetPermitRepository, UserRepository } from '@dns/database';
 import { OtpPurpose } from '@dns/shared-types';
 import { RequestPasswordResetInput, SetNewPasswordInput, VerifyPasswordResetCodeInput } from '@dns/validation';
 
@@ -16,17 +16,14 @@ import { AuthErrorCode, invalidCodeException } from './auth.errors';
 import { PasswordResetPermitPayload } from './auth.types';
 import { OtpMailer } from './otp.mailer';
 import { AuthOtpService } from './otp.service';
-import { TokenService } from './token.service';
 
 @Injectable()
 export class PasswordResetService {
     constructor(
         private readonly userRepository: UserRepository,
-        private readonly otpCodeRepository: OtpCodeRepository,
         private readonly permitRepository: PasswordResetPermitRepository,
         private readonly otpService: AuthOtpService,
         private readonly otpMailer: OtpMailer,
-        private readonly tokenService: TokenService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService<AllConfig>,
     ) {}
@@ -59,12 +56,15 @@ export class PasswordResetService {
         // undo that.
         if (!user) throw invalidCodeException();
 
-        await this.otpService.consume(user.id, OtpPurpose.PasswordReset, code);
+        const record = await this.otpService.check(user.id, OtpPurpose.PasswordReset, code);
 
         const permitId = randomUUID();
         const expiresAt = new Date(Date.now() + AUTH_POLICY.passwordResetPermit.ttlMinutes * 60_000);
 
-        await this.permitRepository.create({ id: permitId, userId: user.id, expiresAt });
+        // Spends the code and creates the permit together: null means another
+        // request with the same code — or a resend — got to the code first.
+        const permit = await this.permitRepository.createFromCode({ codeId: record.id, permitId, expiresAt });
+        if (!permit) throw invalidCodeException();
 
         const payload: PasswordResetPermitPayload = { sub: user.id, jti: permitId, type: 'password-reset' };
 
@@ -82,24 +82,25 @@ export class PasswordResetService {
      * Sets the new password and clears everything the old one could still
      * reach: all sessions, all permits, all outstanding codes (FR-005). No
      * session is issued — FR-009 sends the user back to the sign-in screen.
+     *
+     * The permit is spent inside the same transaction that changes the
+     * password, conditionally, so two requests carrying one permit cannot both
+     * set a password (FR-010).
      */
     async setNewPassword({ permitToken, password }: SetNewPasswordInput): Promise<void> {
         const payload = await this.verifyPermitToken(permitToken);
 
-        const permit = await this.permitRepository.findById(payload.jti);
-        if (!permit || permit.isConsumed() || permit.isExpired()) throw this.invalidPermit();
+        // Hashed before the transaction: bcrypt inside it would hold the
+        // account's row lock for the length of a hash.
+        const passwordHash = await hash(password, AUTH_POLICY.bcryptRounds);
 
-        const user = await this.userRepository.findById(permit.userId);
-        if (!user) throw this.invalidPermit();
+        const reset = await this.userRepository.resetPasswordWithPermit({
+            userId: payload.sub,
+            permitId: payload.jti,
+            passwordHash,
+        });
 
-        await this.permitRepository.markConsumed(permit.id);
-        await this.userRepository.setPasswordHash(user.id, await hash(password, AUTH_POLICY.bcryptRounds));
-
-        // Order matters: the password is already changed, so revoking now
-        // cannot leave a window in which an old session outlives it.
-        await this.tokenService.revokeAllForUser(user.id);
-        await this.permitRepository.deleteAllForUser(user.id);
-        await this.otpCodeRepository.deleteAllFor(user.id, OtpPurpose.PasswordReset);
+        if (!reset) throw this.invalidPermit();
     }
 
     private async verifyPermitToken(token: string): Promise<PasswordResetPermitPayload> {

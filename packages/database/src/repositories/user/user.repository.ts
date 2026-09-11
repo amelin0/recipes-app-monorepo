@@ -1,8 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import { UserEntity } from '../../entities';
-import { profiles, userReminders, users, userSettings } from '../../schema';
+import {
+    otpCodes,
+    passwordResetPermits,
+    profiles,
+    refreshTokens,
+    userReminders,
+    users,
+    userSettings,
+} from '../../schema';
 import { BaseRepository } from '../base.repository';
 
 type InsertUser = typeof users.$inferInsert;
@@ -75,5 +83,73 @@ export class UserRepository extends BaseRepository {
 
     async setPasswordHash(id: string, passwordHash: string): Promise<void> {
         await this.db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, id));
+    }
+
+    /**
+     * Spends a reset permit and sets the new password, clearing everything the
+     * old password could still reach — every session, every permit, every
+     * outstanding code (password-reset FR-005). One transaction; false when
+     * the permit is unknown, expired or already spent.
+     *
+     * - **Single use** is the conditional UPDATE on the permit: two requests
+     *   carrying the same permit both get this far, and only the first finds
+     *   `consumed_at IS NULL`. The second changes nothing.
+     * - **Revocation wins over a refresh in flight.** The user row is locked
+     *   `FOR NO KEY UPDATE` first — the lock every session grant and rotation
+     *   conflicts with (`RefreshTokenRepository`, which takes `FOR SHARE`). A
+     *   rotation that got in first is waited for, and the DELETE below, a later
+     *   statement with a fresh snapshot, sees the token it minted. One that
+     *   comes later waits for this commit and finds its token gone.
+     * - **Lock order** is user row, then permits, then tokens — the same user-
+     *   first order as rotation. Consuming the permit before locking the user
+     *   would deadlock two resets of one account holding different permits.
+     *
+     * READ COMMITTED on purpose: each statement must see what committed while
+     * it waited for the lock. Under REPEATABLE READ the DELETE would read from
+     * the snapshot taken before the wait and miss that token.
+     */
+    async resetPasswordWithPermit({
+        userId,
+        permitId,
+        passwordHash,
+    }: {
+        userId: string;
+        permitId: string;
+        passwordHash: string;
+    }): Promise<boolean> {
+        return this.db.transaction(async tx => {
+            const [user] = await tx
+                .select({ id: users.id })
+                .from(users)
+                .where(eq(users.id, userId))
+                .for('no key update');
+            if (!user) return false;
+
+            const [permit] = await tx
+                .update(passwordResetPermits)
+                .set({ consumedAt: sql`now()` })
+                .where(
+                    and(
+                        eq(passwordResetPermits.id, permitId),
+                        eq(passwordResetPermits.userId, userId),
+                        isNull(passwordResetPermits.consumedAt),
+                        gt(passwordResetPermits.expiresAt, sql`now()`),
+                    ),
+                )
+                .returning({ id: passwordResetPermits.id });
+            if (!permit) return false;
+
+            await tx
+                .update(users)
+                .set({ passwordHash, updatedAt: sql`now()` })
+                .where(eq(users.id, userId));
+
+            await tx.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+            await tx.delete(passwordResetPermits).where(eq(passwordResetPermits.userId, userId));
+            // Both flows' codes — «every outstanding code», not only this flow's.
+            await tx.delete(otpCodes).where(eq(otpCodes.userId, userId));
+
+            return true;
+        });
     }
 }
