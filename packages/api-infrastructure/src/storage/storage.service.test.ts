@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test, TestContext } from 'node:test';
 
-import { HeadObjectCommand, NotFound, S3Client, S3ServiceException } from '@aws-sdk/client-s3';
-import { BadRequestException } from '@nestjs/common';
+import { DeleteObjectCommand, HeadObjectCommand, NotFound, S3Client, S3ServiceException } from '@aws-sdk/client-s3';
+import { BadRequestException, Logger } from '@nestjs/common';
 
 import { StorageScope } from '@dns/shared-types';
 
@@ -96,6 +96,25 @@ test('percent-encoding cannot smuggle a foreign prefix past the check', () => {
     assert.throws(() => service.validateOwnership(pathStyleUrl(encoded), USER, StorageScope.ProfilePhoto));
 });
 
+test('an encoded dot segment cannot climb out of the prefix', () => {
+    const service = new StorageService(PATH_STYLE);
+    // The URL parser resolves a literal `..`, but not one hidden behind `%2F`:
+    // decoded, this starts with the right prefix and names somebody else's key.
+    const climbing = `users/${USER}/${StorageScope.ProfilePhoto}/..%2F..%2F${OTHER}%2F${StorageScope.ProfilePhoto}%2Fabc.jpg`;
+
+    assert.throws(() => service.validateOwnership(pathStyleUrl(climbing), USER, StorageScope.ProfilePhoto));
+});
+
+test('a malformed escape is refused as a bad request, not a crash', () => {
+    const service = new StorageService(PATH_STYLE);
+    const key = `users/${USER}/${StorageScope.ProfilePhoto}/abc%E0%A4%A.jpg`;
+
+    assert.throws(
+        () => service.validateOwnership(pathStyleUrl(key), USER, StorageScope.ProfilePhoto),
+        BadRequestException,
+    );
+});
+
 test('reads host-style URLs when the store is not MinIO', () => {
     const service = new StorageService(HOST_STYLE);
     const key = `users/${USER}/${StorageScope.ProfilePhoto}/abc.jpg`;
@@ -169,6 +188,79 @@ test('lets a store failure through instead of accepting the URL', async t => {
         service.validateUpload(pathStyleUrl(key), USER, StorageScope.ProfilePhoto),
         error => error === outage,
     );
+});
+
+test('deletes the file a row no longer points at, and only that file', async t => {
+    const service = new StorageService(PATH_STYLE);
+    const previous = `users/${USER}/${StorageScope.ProfilePhoto}/old.jpg`;
+    const current = `users/${USER}/${StorageScope.ProfilePhoto}/new.jpg`;
+    const sent = stubStore(t, () => Promise.resolve({}));
+
+    await service.discardReplaced(pathStyleUrl(previous), pathStyleUrl(current), USER, StorageScope.ProfilePhoto);
+    // Cleared rather than replaced: the old file is just as unreferenced.
+    await service.discardReplaced(pathStyleUrl(current), null, USER, StorageScope.ProfilePhoto);
+
+    assert.equal(sent.length, 2);
+    assert.ok(sent.every(command => command instanceof DeleteObjectCommand));
+    assert.deepEqual(
+        sent.map(command => (command as DeleteObjectCommand).input),
+        [
+            { Bucket: PATH_STYLE.bucket, Key: previous },
+            { Bucket: PATH_STYLE.bucket, Key: current },
+        ],
+    );
+});
+
+test('keeps the file when the new URL is the same key spelled differently', async t => {
+    const service = new StorageService(PATH_STYLE);
+    const key = `users/${USER}/${StorageScope.ProfilePhoto}/photo.jpg`;
+    const sent = stubStore(t, () => Promise.resolve({}));
+
+    // `%70` is `p`. A string comparison would call this a replacement and
+    // delete the photo the row still shows.
+    const respelled = pathStyleUrl(key).replace('photo.jpg', '%70hoto.jpg');
+    await service.discardReplaced(pathStyleUrl(key), respelled, USER, StorageScope.ProfilePhoto);
+
+    assert.equal(sent.length, 0);
+});
+
+test('never deletes a file that is not this user’s, for this purpose', async t => {
+    const service = new StorageService(PATH_STYLE);
+    const current = pathStyleUrl(`users/${USER}/${StorageScope.ProfilePhoto}/new.jpg`);
+    const sent = stubStore(t, () => Promise.resolve({}));
+
+    const notOurs = [
+        pathStyleUrl(`users/${OTHER}/${StorageScope.ProfilePhoto}/theirs.jpg`),
+        // Same user, a support attachment: the ticket still points at it.
+        pathStyleUrl(`users/${USER}/${StorageScope.Feedback}/attachment.jpg`),
+        `https://elsewhere.example.com/${PATH_STYLE.bucket}/users/${USER}/${StorageScope.ProfilePhoto}/x.jpg`,
+        pathStyleUrl(
+            `users/${USER}/${StorageScope.ProfilePhoto}/..%2F..%2F${OTHER}%2F${StorageScope.ProfilePhoto}%2Fx.jpg`,
+        ),
+        pathStyleUrl(`users/${USER}/${StorageScope.ProfilePhoto}/abc%E0%A4%A.jpg`),
+        'not-a-url',
+    ];
+
+    for (const previous of notOurs) {
+        await service.discardReplaced(previous, current, USER, StorageScope.ProfilePhoto);
+    }
+
+    assert.equal(sent.length, 0);
+});
+
+test('a failed delete is logged, not thrown', async t => {
+    const service = new StorageService(PATH_STYLE);
+    const previous = pathStyleUrl(`users/${USER}/${StorageScope.ProfilePhoto}/old.jpg`);
+    stubStore(t, () => Promise.reject(new Error('connect ECONNREFUSED')));
+    const logged = t.mock.method(Logger.prototype, 'error', () => undefined);
+
+    // The row is already written by the time this runs; rejecting here would
+    // report a successful edit as a failed one.
+    await service.discardReplaced(previous, null, USER, StorageScope.ProfilePhoto);
+
+    assert.equal(logged.mock.callCount(), 1);
+    // The key is what someone cleaning up orphans by hand needs to find.
+    assert.match(JSON.stringify(logged.mock.calls[0]?.arguments), /users\/[^"]+\/old\.jpg/);
 });
 
 test('refuses to sign a grant for an oversized file', async () => {

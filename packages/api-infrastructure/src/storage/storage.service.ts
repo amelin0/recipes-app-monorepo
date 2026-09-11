@@ -1,8 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
-import { HeadObjectCommand, PutObjectCommand, S3Client, S3ServiceException } from '@aws-sdk/client-s3';
+import {
+    DeleteObjectCommand,
+    HeadObjectCommand,
+    PutObjectCommand,
+    S3Client,
+    S3ServiceException,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { BadRequestException, Inject, Injectable, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, PayloadTooLargeException } from '@nestjs/common';
 
 import { StorageScope, UploadGrant } from '@dns/shared-types';
 
@@ -20,6 +26,7 @@ export interface PresignRequest {
 
 @Injectable()
 export class StorageService {
+    private readonly logger = new Logger(StorageService.name);
     private readonly client: S3Client;
 
     constructor(@Inject(STORAGE_CONFIG) private readonly cfg: StorageConfig) {
@@ -95,7 +102,7 @@ export class StorageService {
             throw new BadRequestException('File URL does not point at our storage');
         }
 
-        if (!key.startsWith(`users/${userId}/${scope}/`)) {
+        if (!this.belongsTo(key, userId, scope)) {
             throw new BadRequestException('File URL does not belong to the current user');
         }
 
@@ -136,6 +143,57 @@ export class StorageService {
         return key;
     }
 
+    /**
+     * Deletes the file a row used to point at, now that it points elsewhere
+     * (or nowhere). Call it after the row is written, never before.
+     *
+     * Best effort, and never rejects: by now the edit has succeeded, and a
+     * failed delete leaves an orphaned object — storage cost, not a broken
+     * image. Reporting it as a failed request would tell the client its edit
+     * did not happen when it did.
+     */
+    async discardReplaced(
+        previousUrl: string,
+        currentUrl: string | null,
+        userId: string,
+        scope: StorageScope,
+    ): Promise<void> {
+        const previousKey = this.keyOf(previousUrl);
+
+        // Only a file this user uploaded for this purpose. A stored URL that
+        // fails the check predates it or came from somewhere other than an
+        // upload grant — either way it is not ours to remove.
+        if (previousKey === null || !this.belongsTo(previousKey, userId, scope)) return;
+
+        // Compared as keys, not strings: two spellings of one URL must not
+        // read as a replacement and delete the file the row still points at.
+        if (currentUrl !== null && this.keyOf(currentUrl) === previousKey) return;
+
+        try {
+            await this.client.send(new DeleteObjectCommand({ Bucket: this.cfg.bucket, Key: previousKey }));
+        } catch (error) {
+            this.logger.error({ msg: 'failed to delete a replaced file', key: previousKey, err: error });
+        }
+    }
+
+    private belongsTo(key: string, userId: string, scope: StorageScope): boolean {
+        // A `..` segment passes the prefix test yet names another user's key
+        // to any store that resolves it — and a key that passes here may now
+        // be deleted. `buildKey` never produces one, so refusing costs nothing.
+        return (
+            key.startsWith(`users/${userId}/${scope}/`) &&
+            !key.split('/').some(segment => segment === '.' || segment === '..')
+        );
+    }
+
+    private keyOf(url: string): string | null {
+        try {
+            return this.extractKey(new URL(url));
+        } catch {
+            return null;
+        }
+    }
+
     private buildKey(userId: string, scope: StorageScope, fileName: string): string {
         // The original name survives only as a readable suffix; the UUID is
         // what makes the key unique, so two uploads called `photo.jpg` cannot
@@ -165,13 +223,22 @@ export class StorageService {
             const prefix = `/${this.cfg.bucket}/`;
             if (!parsed.pathname.startsWith(prefix)) return null;
 
-            return decodeURIComponent(parsed.pathname.slice(prefix.length));
+            return this.decodeKey(parsed.pathname.slice(prefix.length));
         }
 
         if (parsed.host !== `${this.cfg.bucket}.${publicUrl.host}` || parsed.protocol !== publicUrl.protocol) {
             return null;
         }
 
-        return decodeURIComponent(parsed.pathname.replace(/^\//, ''));
+        return this.decodeKey(parsed.pathname.replace(/^\//, ''));
+    }
+
+    /** A malformed escape makes a URL that is not ours, not a 500. */
+    private decodeKey(encoded: string): string | null {
+        try {
+            return decodeURIComponent(encoded);
+        } catch {
+            return null;
+        }
     }
 }
