@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
 
 import { DAILY_TARGET_TOLERANCE } from '@dns/constants';
 import { NutritionRepository, UserEntity, UserRepository, schema } from '@dns/database';
@@ -303,6 +304,116 @@ describe('Meal plan', () => {
         });
     });
 
+    describe('under concurrent requests', () => {
+        const PARALLEL = 6;
+
+        /** What a day holds, as the screen renders it: slot by slot, in order. */
+        const contentsOf = (day: PlanDay): Array<[MealSlot, string[]]> =>
+            day.slots.map(slot => [slot.slot, slot.items.map(item => item.recipe.title)]);
+
+        const dayOf = async (date: string): Promise<PlanDay> => {
+            const [day] = await plan.range(user.id, { from: date, to: date });
+            expect(day).toBeDefined();
+
+            return day as PlanDay;
+        };
+
+        const planRows = async (date: string): Promise<Array<{ slot: MealSlot; sortOrder: number }>> =>
+            ctx.db
+                .select({ slot: schema.mealPlanItems.slot, sortOrder: schema.mealPlanItems.sortOrder })
+                .from(schema.mealPlanItems)
+                .where(and(eq(schema.mealPlanItems.userId, user.id), eq(schema.mealPlanItems.planDate, date)));
+
+        /**
+         * A double submit used to double the target: on READ COMMITTED the
+         * second copy's DELETE could not see the first copy's fresh rows, so it
+         * removed nothing and inserted the source a second time.
+         */
+        it('leaves every target an exact copy of the source after parallel copies', async () => {
+            const breakfast = await seedRecipe('Сніданок', 500);
+            const lunch = await seedRecipe('Обід', 700);
+            const snack = await seedRecipe('Перекус', 150);
+
+            await plan.addItem(user.id, DAY, { slot: MealSlot.Breakfast, recipeId: breakfast });
+            await plan.addItem(user.id, DAY, { slot: MealSlot.Lunch, recipeId: lunch });
+            await plan.addItem(user.id, DAY, { slot: MealSlot.Lunch, recipeId: snack });
+
+            const source = await dayOf(DAY);
+
+            await Promise.all(
+                Array.from({ length: PARALLEL }, () =>
+                    plan.copyDay(user.id, DAY, { targetDates: [NEXT_DAY, THIRD_DAY] }),
+                ),
+            );
+
+            for (const date of [NEXT_DAY, THIRD_DAY]) {
+                const target = await dayOf(date);
+
+                expect(contentsOf(target)).toEqual(contentsOf(source));
+                expect(target.planned).toEqual(source.planned);
+                expect(await planRows(date)).toHaveLength(3);
+            }
+        });
+
+        it('gives dishes added in parallel to one slot distinct positions', async () => {
+            const recipeId = await seedRecipe('Щось', 300);
+
+            await Promise.all(
+                Array.from({ length: PARALLEL }, () => plan.addItem(user.id, DAY, { slot: MealSlot.Dinner, recipeId })),
+            );
+
+            const positions = (await planRows(DAY)).map(row => row.sortOrder).sort((a, b) => a - b);
+
+            // Without the lock, inserts in flight read the same max() and tie.
+            expect(positions).toEqual(Array.from({ length: PARALLEL }, (_, index) => index));
+        });
+
+        it('never clears a target when the source empties while a copy is in flight', async () => {
+            const source = await seedRecipe('Джерело', 600);
+            const alreadyThere = await seedRecipe('Було', 900);
+
+            await plan.addItem(user.id, DAY, { slot: MealSlot.Breakfast, recipeId: source });
+            await plan.addItem(user.id, NEXT_DAY, { slot: MealSlot.Dinner, recipeId: alreadyThere });
+
+            const [copy] = await Promise.allSettled([
+                plan.copyDay(user.id, DAY, { targetDates: [NEXT_DAY] }),
+                plan.clearDay(user.id, DAY),
+            ]);
+
+            const target = await dayOf(NEXT_DAY);
+
+            // Either the copy saw the dish and made the target its copy, or it
+            // saw an empty day and refused — the target is never left empty.
+            if (copy.status === 'fulfilled') {
+                expect(slotOf(target, MealSlot.Breakfast).items.map(item => item.recipe.title)).toEqual(['Джерело']);
+            } else {
+                expect(copy.reason).toBeInstanceOf(BadRequestException);
+                expect(slotOf(target, MealSlot.Dinner).items.map(item => item.recipe.title)).toEqual(['Було']);
+            }
+            expect(target.planned.calories).toBeGreaterThan(0);
+        });
+
+        it('keeps a copy exact when dishes are added to the source alongside it', async () => {
+            const first = await seedRecipe('Перша', 400);
+            const second = await seedRecipe('Друга', 250);
+            await plan.addItem(user.id, DAY, { slot: MealSlot.Lunch, recipeId: first });
+
+            await Promise.all([
+                plan.copyDay(user.id, DAY, { targetDates: [NEXT_DAY] }),
+                plan.addItem(user.id, DAY, { slot: MealSlot.Lunch, recipeId: second }),
+                plan.copyDay(user.id, DAY, { targetDates: [NEXT_DAY] }),
+            ]);
+
+            // Whichever copy ran last, the target equals the source as that
+            // copy read it — one or two dishes, in the source's order, never
+            // a mix of two copies' rows.
+            const target = contentsOf(await dayOf(NEXT_DAY));
+            const lunch = target.find(([slot]) => slot === MealSlot.Lunch)?.[1];
+
+            expect([['Перша'], ['Перша', 'Друга']]).toContainEqual(lunch);
+        });
+    });
+
     describe('the plan window', () => {
         it('reaches a year ahead, which is what planning means', async () => {
             const recipeId = await seedRecipe('Далеко', 500);
@@ -316,7 +427,7 @@ describe('Meal plan', () => {
 
     const productId = async (name: string): Promise<string> => {
         const row = await ctx.db.query.productTranslations.findFirst({
-            where: (translations, { eq }) => eq(translations.name, name),
+            where: eq(schema.productTranslations.name, name),
         });
         expect(row).toBeDefined();
 

@@ -122,7 +122,9 @@ export class MealPlanService {
      *
      * Copying an empty day is refused rather than performed: it would clear
      * every day it was aimed at, which is a destructive act dressed as a
-     * harmless one — and the sheet that triggers it has no undo.
+     * harmless one — and the sheet that triggers it has no undo. The
+     * repository decides «empty» under the same lock it copies under; a read
+     * here first could go stale before the copy ran.
      */
     async copyDay(userId: string, date: string, input: CopyPlanDayInput): Promise<PlanDay[]> {
         if (input.targetDates.includes(date)) {
@@ -132,15 +134,12 @@ export class MealPlanService {
             });
         }
 
-        const source = await this.plan.findRange(userId, date, date);
-        if (source.length === 0) {
+        if (!(await this.plan.copyDay(userId, date, input.targetDates))) {
             throw new BadRequestException({
                 message: 'This day has nothing to copy',
                 code: MealPlanErrorCode.NothingToCopy,
             });
         }
-
-        await this.plan.copyDay(userId, date, input.targetDates);
 
         const sorted = [...input.targetDates].sort();
         return this.range(userId, {
