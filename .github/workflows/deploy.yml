@@ -27,6 +27,15 @@ name: deploy
 on:
     push:
         branches: [development]
+        # A merge that changes nothing but words does not need a deploy: the
+        # image would be rebuilt, the containers swapped and the migrations
+        # re-run to ship a paragraph. A merge that touches code AND docs still
+        # deploys — GitHub skips the run only when every changed path matches.
+        paths-ignore:
+            - '**/*.md'
+            - 'docs/**'
+            - 'handoff/**'
+            - '.claude/**'
     workflow_dispatch:
         inputs:
             ref:
