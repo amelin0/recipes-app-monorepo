@@ -3,7 +3,7 @@ spec: ./spec.md
 status: Approved
 owner: '@amelin0'
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-11
 related-adrs: [ADR-0004, ADR-0005]
 related-runbooks: ['../../../../runbooks/execute-overdue-account-deletions.md']
 ---
@@ -171,8 +171,21 @@ packages/database/src/repositories/account-deletion-request/
 
 Поки завдання немає, прострочені запити накопичуються і **нічого не
 відбувається саме собою**. Проміжна ручна процедура —
-[`execute-overdue-account-deletions`](../../../../runbooks/execute-overdue-account-deletions.md);
-її треба запускати щотижня, бо сигналу від моніторингу теж ще немає.
+[`execute-overdue-account-deletions`](../../../../runbooks/execute-overdue-account-deletions.md),
+щотижня.
+
+Накопичення тепер хоча б видно — рахувати не значить видаляти:
+
+- **Моніторинг.** Воркер щогодини (і раз на старті) рахує відкриті запити й
+  публікує `dns_account_deletion_requests_open{state="overdue"|"waiting"}` та
+  `dns_account_deletion_requests_oldest_overdue_seconds`. Алерт
+  `dns-overdue-account-deletions` дивиться на **вік** найстарішого
+  простроченого запиту (поріг 10 днів — «тижневий запуск пропустили»), а не на
+  кількість: ненульова кількість — нормальний стан посеред тижня.
+- **Адмінка.** Банер «N прострочених запитів» на сторінці користувачів і
+  сигнал на головній ведуть у відфільтрований список `/users/?deletion=overdue`.
+- **Інбокс.** Створення і скасування запиту пишуть сповіщення власникові
+  акаунта ([`../../notifications/producers/plan.md`](../../notifications/producers/plan.md)).
 
 Окремий наслідок чинної схеми: `executed_at` ніколи не заповнюється. Рядок
 запиту зникає разом із користувачем через `ON DELETE CASCADE`, тож факт
@@ -184,4 +197,6 @@ packages/database/src/repositories/account-deletion-request/
 
 - Spec: [./spec.md](./spec.md)
 - Замінює FR-009 у [`../profile/spec.md`](../profile/spec.md)
-- ADRs: [ADR-0004](../../../../adr/0004-client-api-url-conventions.md)
+- ADRs: [ADR-0004](../../../../adr/0004-client-api-url-conventions.md),
+  [ADR-0005](../../../../adr/0005-what-account-deletion-erases.md)
+- Алерт і метрики: `infra/prod/README.md`, `apps/worker/src/jobs/pending-work/`

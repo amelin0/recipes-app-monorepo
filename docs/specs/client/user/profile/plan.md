@@ -1,24 +1,22 @@
 ---
 spec: ./spec.md
-status: Approved
+status: Implemented
 owner: '@amelin0'
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-11
 related-adrs: [ADR-0004]
 related-runbooks: []
 ---
 
 # Plan: Profile (Профіль)
 
-> **Status is `Approved`, not `Implemented`:** FR-003 (стан підписки) чекає на
-> домен subscription. Решта серверної частини на місці — див. «Що ще не
-> побудовано».
-
 ## Summary
 
 Екран читається одним запитом `GET /profile`. FR-001 (імʼя, email, ініціали)
 і FR-005 (значення налаштувань у підрядках) покриває `ProfileService`
-поверх таблиць `profiles` і `user_settings`. FR-002, FR-006, FR-007, FR-010,
+поверх таблиць `profiles` і `user_settings`. FR-003 (рядок «Підписка») —
+вкладений `subscription`, прочитаний тим самим викликом репозиторію, що й
+`GET /subscription`. FR-002, FR-006, FR-007, FR-010,
 FR-011 — статична розкладка, версія збірки і мітки для скрінрідера — цілком
 клієнтські. FR-004 («Оцініть нас») — системний діалог, серверу невидимий.
 
@@ -83,12 +81,41 @@ FR-009 **застаріла**: вона описує безповоротне в
             "productWeightUnit": "METRIC",
             "lengthUnit": "METRIC",
             "waterUnit": "METRIC"
+        },
+        "subscription": {
+            "planSlug": "monthly",
+            "planName": "Місячний план",
+            "period": "month",
+            "expiresAt": "2026-10-11T09:00:00.000Z",
+            "daysRemaining": 30,
+            "…": "…"
         }
     }
 }
 ```
 
 **Errors:** `401` — немає/прострочений токен.
+
+**`subscription` — рівно той об'єкт, що `GET /subscription` віддає в полі
+`subscription`** (`SubscriptionView`), прочитаний тим самим
+`SubscriptionRepository.findActive`. Так SC-005 («стан у профілі збігається з
+екраном підписки») виконується конструктивно: вужча форма того самого рядка
+була б другим місцем, де дата могла б розійтися. Тег — `planName` мовою
+акаунта, «До …» — `expiresAt`; формат дати лишається клієнту (відкрите
+питання специфікації).
+
+`null` — безкоштовний рівень **і** підписка, строк якої минув, навіть якщо
+рядок ще позначений `active`: фільтр `expires_at > now()` той самий, що на
+екрані підписки. Як підписано рядок без підписки — відкрите питання, і текст
+пише клієнт.
+
+Читання окреме від `getAggregate`: той самий агрегат читає онбординг, якому
+підписка ні до чого, — тож `ProfileService.getScreen` додає один запит лише
+для екрана профілю. Мова для назви плану береться з уже прочитаного рядка
+налаштувань, окремого звернення за нею немає.
+
+`PATCH /profile` віддає те саме тіло, включно з підпискою: відповідь на запис
+і читання мають бути однаковою формою.
 
 **Налаштування вкладені, а не окремим запитом.** Рядки «Мова», «Тема»,
 «Одиниці виміру» показують поточне значення підрядком (FR-005), тож екран усе
@@ -108,8 +135,9 @@ FR-009 **застаріла**: вона описує безповоротне в
 
 ```
 apps/client-api/src/modules/user/profile.controller.ts
-apps/client-api/src/modules/user/profile.service.ts
+apps/client-api/src/modules/user/profile.service.ts          # getAggregate, getScreen
 apps/client-api/src/modules/user/dto/outbound/{profile,user-settings}.view.ts
+apps/client-api/src/modules/subscription/dto/outbound/subscription.view.ts  # SubscriptionView, спільний
 packages/database/src/schema/profiles.schema.ts
 packages/database/src/entities/profile.entity.ts        # initials()
 packages/database/src/repositories/profile/
@@ -136,18 +164,19 @@ packages/database/src/repositories/profile/
 
 ## Verification
 
-- `apps/client-api/test/user-profile.db-spec.ts` — блок `provisioning`
-  (новий акаунт отримує профіль і налаштування) і `profile and settings`.
+- `apps/client-api/test/user-profile.db-spec.ts` — блоки `provisioning`
+  (новий акаунт отримує профіль і налаштування), `profile and settings` і
+  `subscription row`: `null` на безкоштовному рівні, об'єкт, що дорівнює
+  `GET /subscription` (SC-005), і `null` для підписки з минулим строком.
 - Смоук: `GET /profile` одразу після реєстрації має віддати `name: null`,
-  `initials: ""` і повний набір налаштувань за замовчуванням.
+  `initials: ""`, повний набір налаштувань за замовчуванням і
+  `subscription: null`.
 
 ## Що ще не побудовано
 
-- **FR-003, стан підписки** — домен subscription не існує. Поле свідомо
-  відсутнє у відповіді, а не повертається як `null`: додати його потім
-  сумісно зі зворотним боком, а вигадати зараз означало б віддавати значення,
-  яке нічим наповнити.
-- Фото профілю — див. [`../profile-edit/plan.md`](../profile-edit/plan.md).
+- **Куди веде рядок «Підписка»** (FR-003, US-2 сценарій 3) — екран керування
+  підпискою не задизайнений і в специфікації paywall прямо поза межами.
+  Сервер віддає все, що цей рядок показує; переходу вести нікуди.
 
 ## Related
 

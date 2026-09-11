@@ -2,10 +2,10 @@
 title: Meal details (Деталі страви + вибір порцій)
 bucket: client
 domain: recipe
-status: Approved
+status: Implemented
 owner: '@amelin0'
 created: 2026-07-18
-updated: 2026-09-07
+updated: 2026-09-11
 plan: ./plan.md
 related-adrs: [ADR-0004, ADR-0006]
 supersedes: null

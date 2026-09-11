@@ -17,8 +17,8 @@ UI обох екранів уже реалізовано в мобільному
 
 | Feature                                                       | Spec        | Plan                             | Owner    | Updated    |
 | ------------------------------------------------------------- | ----------- | -------------------------------- | -------- | ---------- |
-| [Daily tracking (Головний екран)](./daily-tracking/spec.md)   | Approved    | [plan](./daily-tracking/plan.md) | @amelin0 | 2026-09-06 |
-| [Goal setup (Налаштування цілі)](./goal-setup/spec.md)        | Approved    | [plan](./goal-setup/plan.md)     | @amelin0 | 2026-09-06 |
+| [Daily tracking (Головний екран)](./daily-tracking/spec.md)   | Implemented | [plan](./daily-tracking/plan.md) | @amelin0 | 2026-09-11 |
+| [Goal setup (Налаштування цілі)](./goal-setup/spec.md)        | Implemented | [plan](./goal-setup/plan.md)     | @amelin0 | 2026-09-11 |
 | [Meal logging (Відмітити прийом їжі)](./meal-logging/spec.md) | Implemented | [plan](./meal-logging/plan.md)   | @amelin0 | 2026-09-06 |
 
 `Approved` означає, що серверна частина реалізована не повністю — деталі в

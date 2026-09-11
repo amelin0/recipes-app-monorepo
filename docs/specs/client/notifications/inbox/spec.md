@@ -2,10 +2,10 @@
 title: Inbox (Сповіщення)
 bucket: client
 domain: notifications
-status: Approved
+status: Implemented
 owner: '@amelin0'
 created: 2026-08-20
-updated: 2026-09-07
+updated: 2026-09-11
 plan: ./plan.md
 related-adrs: [ADR-0004]
 supersedes: null

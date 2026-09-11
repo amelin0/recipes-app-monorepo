@@ -2,10 +2,10 @@
 title: Daily tracking (Головний екран — трекінг дня)
 bucket: client
 domain: nutrition
-status: Approved
+status: Implemented
 owner: '@amelin0'
 created: 2026-07-18
-updated: 2026-09-06
+updated: 2026-09-11
 plan: ./plan.md
 related-adrs: [ADR-0004]
 supersedes: null
