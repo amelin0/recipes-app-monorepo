@@ -26,22 +26,25 @@ export class AccountDeletionService {
      * here would leave the user holding a recovery screen they cannot act on.
      */
     async request(userId: string): Promise<AccountDeletionRequestEntity> {
-        const active = await this.requestRepository.findActive(userId);
+        // No «is one pending?» read first: the partial unique index answers
+        // that inside the insert, which is the only place two taps in flight
+        // cannot both get past it.
+        const request = await this.requestRepository.createIfNoneActive(
+            userId,
+            new Date(Date.now() + ACCOUNT_DELETION_GRACE_DAYS * DAY_MS),
+        );
 
-        if (active) {
+        if (!request) {
             throw new ConflictException({
                 message: 'A deletion request is already pending',
                 code: UserErrorCode.DeletionAlreadyRequested,
             });
         }
 
-        const request = await this.requestRepository.create(
-            userId,
-            new Date(Date.now() + ACCOUNT_DELETION_GRACE_DAYS * DAY_MS),
-        );
-
         // The one message here that is not a courtesy: it carries the date the
-        // account disappears, and the way back while it still exists.
+        // account disappears, and the way back while it still exists. Reached
+        // only by the request that was actually written, so a double tap
+        // produces one message, not two with dates a millisecond apart.
         await this.notifications.emit(userId, NotificationEvent.AccountDeletionRequested, {
             date: request.scheduledFor,
         });
@@ -49,18 +52,23 @@ export class AccountDeletionService {
         return request;
     }
 
-    /** Cancels the countdown and hands the account back untouched (FR-005). */
+    /**
+     * Cancels the countdown and hands the account back untouched (FR-005).
+     *
+     * One conditional update over every active row, so no request can survive
+     * the cancel and still erase the account later; the message goes out only
+     * when that update changed something.
+     */
     async cancel(userId: string): Promise<void> {
-        const active = await this.requestRepository.findActive(userId);
+        const cancelled = await this.requestRepository.cancelActive(userId);
 
-        if (!active) {
+        if (!cancelled) {
             throw new NotFoundException({
                 message: 'No pending deletion request',
                 code: UserErrorCode.NoDeletionRequest,
             });
         }
 
-        await this.requestRepository.cancel(active.id);
         await this.notifications.emit(userId, NotificationEvent.AccountDeletionCancelled);
     }
 }

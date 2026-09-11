@@ -1,8 +1,9 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { MEAL_REMINDER_DEFAULTS, USER_SETTINGS_DEFAULTS, WEIGH_IN_PERIODICITY_DAYS_DEFAULT } from '@dns/constants';
-import { UserEntity, UserRepository } from '@dns/database';
-import { OAuthProvider, PurchaseStore, ReminderType, Theme } from '@dns/shared-types';
+import { UserEntity, UserRepository, schema } from '@dns/database';
+import { NotificationEvent, OAuthProvider, PurchaseStore, ReminderType, Theme } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { OAuthSignInService } from '../src/modules/auth/oauth.service';
@@ -239,6 +240,114 @@ describe('User domain', () => {
 
         it('explains a cancel with nothing pending rather than failing silently', async () => {
             await expect(deletionService.cancel(user.id)).rejects.toBeInstanceOf(NotFoundException);
+        });
+
+        describe('under concurrent taps', () => {
+            const PARALLEL = 6;
+
+            const activeRequests = async (): Promise<number> => {
+                const rows = await ctx.db
+                    .select({ id: schema.accountDeletionRequests.id })
+                    .from(schema.accountDeletionRequests)
+                    .where(
+                        and(
+                            eq(schema.accountDeletionRequests.userId, user.id),
+                            isNull(schema.accountDeletionRequests.cancelledAt),
+                            isNull(schema.accountDeletionRequests.executedAt),
+                        ),
+                    );
+
+                return rows.length;
+            };
+
+            const messages = async (event: NotificationEvent): Promise<number> => {
+                const rows = await ctx.db
+                    .select({ id: schema.notifications.id })
+                    .from(schema.notifications)
+                    .where(and(eq(schema.notifications.userId, user.id), eq(schema.notifications.event, event)));
+
+                return rows.length;
+            };
+
+            /**
+             * A double tap used to raise two active requests: both calls read
+             * «nothing pending» before either inserted. Cancelling then stopped
+             * one of them and the other would still have erased the account.
+             */
+            it('raises exactly one request, however many taps are in flight', async () => {
+                const results = await Promise.allSettled(
+                    Array.from({ length: PARALLEL }, () => deletionService.request(user.id)),
+                );
+
+                const accepted = results.filter(result => result.status === 'fulfilled');
+                const refused = results.filter(
+                    (result): result is PromiseRejectedResult => result.status === 'rejected',
+                );
+
+                expect(accepted).toHaveLength(1);
+                expect(refused).toHaveLength(PARALLEL - 1);
+                for (const result of refused) {
+                    expect(result.reason).toBeInstanceOf(ConflictException);
+                }
+
+                expect(await activeRequests()).toBe(1);
+                // Only the request that was written tells the user about it.
+                expect(await messages(NotificationEvent.AccountDeletionRequested)).toBe(1);
+            });
+
+            it('leaves nothing counting down after concurrent cancels, and says so once', async () => {
+                await deletionService.request(user.id);
+
+                const results = await Promise.allSettled(
+                    Array.from({ length: PARALLEL }, () => deletionService.cancel(user.id)),
+                );
+
+                const refused = results.filter(
+                    (result): result is PromiseRejectedResult => result.status === 'rejected',
+                );
+
+                expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+                for (const result of refused) {
+                    expect(result.reason).toBeInstanceOf(NotFoundException);
+                }
+
+                expect(await activeRequests()).toBe(0);
+                expect(await messages(NotificationEvent.AccountDeletionCancelled)).toBe(1);
+            });
+
+            it('refuses a second active row in the database itself, not only in the service', async () => {
+                await deletionService.request(user.id);
+
+                // Straight to the table, past the service: the guard is the
+                // partial unique index, so any writer — a script, a future
+                // endpoint — meets it too.
+                await expect(
+                    ctx.db.insert(schema.accountDeletionRequests).values({
+                        userId: user.id,
+                        scheduledFor: new Date(Date.now() + 30 * DAY_MS),
+                    }),
+                ).rejects.toThrow();
+
+                // A cancelled request is history and does not count.
+                await deletionService.cancel(user.id);
+                await expect(deletionService.request(user.id)).resolves.toBeDefined();
+                expect(await activeRequests()).toBe(1);
+            });
+
+            it('never ends with a request alive when request and cancel race', async () => {
+                await deletionService.request(user.id);
+
+                // A cancel racing a fresh request: whichever order they land
+                // in, the account ends either restored or with exactly one
+                // countdown — never two, and never one the cancel missed.
+                await Promise.allSettled([
+                    deletionService.cancel(user.id),
+                    deletionService.request(user.id),
+                    deletionService.request(user.id),
+                ]);
+
+                expect(await activeRequests()).toBeLessThanOrEqual(1);
+            });
         });
     });
 });
