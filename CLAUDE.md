@@ -186,3 +186,11 @@ react-native-best-practices, vercel-react-rules, callstack-skills).
 See `.claude/agents/` — code-refactorer, component-auditor,
 performance-optimizer, refactor-cleaner, security-reviewer,
 silent-failure-hunter, tdd-guide, typescript-reviewer.
+
+**qa-tester** is different: a black-box tester that sees only the spec and a
+running build, never the code (a guard hook in `.claude/hooks/qa-guard.mjs`
+enforces it). Launch it only through `/qa <spec.md>` — the command builds the
+last commit on an isolated stand (`scripts/qa-up.sh`: own worktree, `dns_qa`
+database, ports 3100–3102) and hands the agent a fixed prompt. Run it when a
+feature is done and the cheap gates (typecheck, lint, `test:db`) are green,
+before the PR.
