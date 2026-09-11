@@ -170,6 +170,36 @@ describe('User domain', () => {
             expect(await isStored(storage, second, user.id, StorageScope.ProfilePhoto)).toBe(true);
         });
 
+        it('never ends up pointing at a file a concurrent edit deleted', async () => {
+            // One edit re-sends the photo the form shows, the other replaces it.
+            // Either may win; what must hold is that the row points at a file
+            // that is in the store, and the loser's file is gone — no dangling
+            // photo, no orphan. The test cannot force an interleaving, so it
+            // asserts the invariant over rounds (an unlocked delete broke it
+            // within a few).
+            let shown = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl: shown });
+
+            for (let round = 0; round < 10; round++) {
+                const next = await upload(storage, user.id, StorageScope.ProfilePhoto);
+
+                await Promise.allSettled([
+                    profileService.updateProfile(user, { name: `Олег ${round}`, photoUrl: shown }),
+                    profileService.updateProfile(user, { photoUrl: next }),
+                ]);
+
+                const { profile } = await profileService.getAggregate(user);
+                const kept = profile.photoUrl as string;
+                const dropped = kept === next ? shown : next;
+
+                expect([shown, next]).toContain(kept);
+                expect(await isStored(storage, kept, user.id, StorageScope.ProfilePhoto)).toBe(true);
+                expect(await isStored(storage, dropped, user.id, StorageScope.ProfilePhoto)).toBe(false);
+
+                shown = kept;
+            }
+        });
+
         it('deletes the photo when it is cleared', async () => {
             const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
             await profileService.updateProfile(user, { photoUrl });
