@@ -159,4 +159,31 @@ export class NotificationRepository extends BaseRepository {
 
         return NotificationEntity.from(row);
     }
+
+    /**
+     * Writes the row unless this account already has one under the same
+     * `dedupeKey`, and returns it — or null when it was a duplicate.
+     *
+     * One statement, so two writers racing on one key cannot both win: the
+     * second insert meets the first one's index entry (waiting for its commit
+     * if need be) and does nothing. Reading the inbox first and inserting
+     * after would let both of them read «nothing yet».
+     *
+     * Without a key the conflict target cannot match — the index skips
+     * nulls — so the row is always written.
+     */
+    async createUnlessDuplicate(data: InsertNotification): Promise<NotificationEntity | null> {
+        const [row] = await this.db
+            .insert(notifications)
+            .values(data)
+            .onConflictDoNothing({
+                target: [notifications.userId, notifications.dedupeKey],
+                // Repeats the index predicate: Postgres picks a partial unique
+                // index as the arbiter only when the conflict clause implies it.
+                where: sql`${notifications.dedupeKey} is not null`,
+            })
+            .returning();
+
+        return row ? NotificationEntity.from(row) : null;
+    }
 }
