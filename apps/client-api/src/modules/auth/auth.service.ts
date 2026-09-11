@@ -77,7 +77,10 @@ export class AuthService {
             });
         }
 
-        return this.tokenService.issuePair(user);
+        // The hash just compared travels with the grant: a password reset that
+        // commits before the session is stored makes this sign-in fail
+        // instead of opening a session with the old password.
+        return this.tokenService.issuePair(user, { expectedPasswordHash: user.passwordHash });
     }
 
     /** Confirms the address and, per FR-007, signs the user in straight away. */
