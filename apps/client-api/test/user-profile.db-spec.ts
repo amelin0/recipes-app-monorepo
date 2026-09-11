@@ -1,8 +1,9 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
+import { StorageErrorCode, StorageService } from '@dns/api-infrastructure/storage';
 import { MEAL_REMINDER_DEFAULTS, USER_SETTINGS_DEFAULTS, WEIGH_IN_PERIODICITY_DAYS_DEFAULT } from '@dns/constants';
 import { UserEntity, UserRepository } from '@dns/database';
-import { OAuthProvider, ReminderType, Theme } from '@dns/shared-types';
+import { OAuthProvider, ReminderType, StorageScope, Theme } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { OAuthSignInService } from '../src/modules/auth/oauth.service';
@@ -11,6 +12,7 @@ import { ProfileService } from '../src/modules/user/profile.service';
 import { RemindersService } from '../src/modules/user/reminders.service';
 
 import { truncateAuthTables } from './support/db';
+import { grantOnly, upload } from './support/storage';
 import { AuthTestContext, createAuthTestContext } from './support/testing-module';
 
 const EMAIL = 'profile@example.com';
@@ -125,6 +127,35 @@ describe('User domain', () => {
             expect(after.language).toBe(before.language);
             expect(after.massUnit).toBe(before.massUnit);
             expect(after.waterUnit).toBe(before.waterUnit);
+        });
+    });
+
+    // These PUT real bytes, so MinIO from docker compose must be up as well.
+    describe('profile photo', () => {
+        let storage: StorageService;
+
+        beforeAll(() => {
+            storage = ctx.moduleRef.get(StorageService);
+        });
+
+        it('stores a photo that was actually uploaded', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+
+            const profile = await profileService.updateProfile(user, { photoUrl });
+
+            expect(profile.photoUrl).toBe(photoUrl);
+        });
+
+        it('refuses a photo URL nothing was uploaded to, and leaves the row alone', async () => {
+            const photoUrl = await grantOnly(storage, user.id, StorageScope.ProfilePhoto);
+
+            await expect(profileService.updateProfile(user, { name: 'Олег', photoUrl })).rejects.toMatchObject({
+                response: { code: StorageErrorCode.NotUploaded },
+            });
+
+            const { profile } = await profileService.getAggregate(user);
+            expect(profile.photoUrl).toBeNull();
+            expect(profile.name).toBeNull();
         });
     });
 

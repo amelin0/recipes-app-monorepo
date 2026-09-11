@@ -44,10 +44,11 @@ export class ProfileService {
     // ownership check must reject, not throw synchronously.
     async updateProfile(user: UserEntity, input: UpdateProfileInput): Promise<ProfileEntity> {
         // A photo URL is only accepted if this user uploaded it, for this
-        // purpose. Skipping the check would turn `photoUrl` into a way to
-        // point every viewer of the profile at any address on the internet.
+        // purpose, and the upload actually landed. Skipping the check would
+        // turn `photoUrl` into a way to point every viewer of the profile at
+        // any address on the internet, or at a file that does not exist.
         if (input.photoUrl) {
-            this.storageService.validateOwnership(input.photoUrl, user.id, StorageScope.ProfilePhoto);
+            await this.storageService.validateUpload(input.photoUrl, user.id, StorageScope.ProfilePhoto);
         }
 
         const { targetWeightKg, ...rest } = input;
