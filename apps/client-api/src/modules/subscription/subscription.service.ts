@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { NotificationsProducer } from '@dns/api-common';
 import { PurchasesService } from '@dns/api-infrastructure/purchases';
 import { REFERRAL_CODE_LENGTH, REFERRAL_REWARD } from '@dns/constants';
 import {
+    GrantedReferralReward,
     ProfileRepository,
     ReferenceEntity,
     ReferralStats,
@@ -49,6 +50,7 @@ export interface SubscriptionState {
 export interface ReferralOverview {
     code: string;
     stats: ReferralStats;
+    /** Months actually granted — not months deserved (referral SC-002). */
     monthsEarned: number;
 }
 
@@ -60,6 +62,8 @@ export interface ReferralOffer {
 
 @Injectable()
 export class SubscriptionService {
+    private readonly logger = new Logger(SubscriptionService.name);
+
     constructor(
         private readonly subscriptions: SubscriptionRepository,
         private readonly profiles: ProfileRepository,
@@ -130,6 +134,11 @@ export class SubscriptionService {
                 });
             }
 
+            // The retry is also the retry of a reward that failed the first
+            // time round. Granting is idempotent, so when it already landed
+            // this costs one update that matches nothing.
+            await this.rewardReferrer(userId);
+
             return this.readBack(userId);
         }
 
@@ -171,6 +180,10 @@ export class SubscriptionService {
         // After the row exists, and never inside its transaction: the purchase
         // is what must survive, the message about it is not.
         await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, { date: row.expiresAt });
+
+        // Same placement, same reason: the buyer's subscription exists by now
+        // and does not depend on what happens to somebody else's.
+        await this.rewardReferrer(userId);
 
         return SubscriptionEntity.from({
             ...row,
@@ -231,7 +244,9 @@ export class SubscriptionService {
         await this.notifications.emit(userId, NotificationEvent.SubscriptionActivated, { date: row.expiresAt });
 
         // The referrer is the one who otherwise never finds out: their screen
-        // shows a number that moves with nothing to explain it.
+        // shows a number that moves with nothing to explain it. Nothing is
+        // granted here — the free month this code just gave is not a payment,
+        // and rewarding it would pay out for every account anyone cares to make.
         await this.notifications.emit(referrerUserId, NotificationEvent.ReferralRedeemed);
 
         return SubscriptionEntity.from({
@@ -254,7 +269,55 @@ export class SubscriptionService {
         const code = existing ?? (await this.mintCode(userId));
         const stats = await this.subscriptions.referralStats(userId);
 
-        return { code, stats, monthsEarned: stats.converted * REFERRAL_REWARD.freeMonths };
+        // Counted from the grants, not from the conversions: the two differ
+        // only while a grant is failing, and then the screen should show what
+        // was given rather than what is owed (referral SC-002).
+        return { code, stats, monthsEarned: stats.rewarded * REFERRAL_REWARD.freeMonths };
+    }
+
+    /**
+     * Gives whoever invited this buyer their month, if this purchase is what
+     * earns it (referral FR-006, FR-007).
+     *
+     * Called for every purchase; whether it counts — invited, paid, first time
+     * — is decided by the repository in the same statement that claims the
+     * reward, so there is no second copy of the rule here to drift.
+     *
+     * **Never throws.** The buyer's purchase has already happened and must not
+     * report failure over somebody else's reward. But unlike a notification, a
+     * lost reward is somebody's money: the grant is one transaction, so a
+     * failure leaves it unclaimed and the next replay of the receipt tries
+     * again — and the failure is logged as an error, not a warning.
+     */
+    private async rewardReferrer(buyerUserId: string): Promise<void> {
+        let reward: GrantedReferralReward | null;
+
+        try {
+            reward = await this.subscriptions.grantReferralReward(buyerUserId, {
+                planSlug: REFERRAL_REWARD.planSlug,
+                extend: from => addMonths(from, REFERRAL_REWARD.freeMonths),
+            });
+        } catch (error) {
+            this.logger.error({ msg: 'failed to grant a referral reward', buyerUserId, error });
+            return;
+        }
+
+        if (!reward) return;
+
+        this.logger.log({
+            msg: 'granted a referral reward',
+            buyerUserId,
+            referrerUserId: reward.referrerUserId,
+            extended: reward.extended,
+            // A store-billed subscription lengthened here runs past the date
+            // the store will next charge on; see the referral plan.
+            store: reward.store,
+            expiresAt: reward.expiresAt,
+        });
+
+        await this.notifications.emit(reward.referrerUserId, NotificationEvent.ReferralRewarded, {
+            date: reward.expiresAt,
+        });
     }
 
     /** Returns the code's owner — the checks are the same for describing and for spending. */
