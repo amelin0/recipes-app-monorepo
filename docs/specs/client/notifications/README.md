@@ -18,7 +18,7 @@ RF-mobile-app) — специфікації фіксують продуктов�
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
 | [Inbox (Сповіщення)](./inbox/spec.md) | Implemented | @amelin0 | 2026-09-11 |
-| [Notification producers (Хто пише в інбокс)](./producers/spec.md) | Implemented | @amelin0 | 2026-09-08 |
+| [Notification producers (Хто пише в інбокс)](./producers/spec.md) | Implemented | @amelin0 | 2026-09-11 |
 
 ## Related
 
