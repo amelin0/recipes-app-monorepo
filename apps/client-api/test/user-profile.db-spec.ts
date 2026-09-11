@@ -1,9 +1,10 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 
+import { StorageErrorCode, StorageService } from '@dns/api-infrastructure/storage';
 import { MEAL_REMINDER_DEFAULTS, USER_SETTINGS_DEFAULTS, WEIGH_IN_PERIODICITY_DAYS_DEFAULT } from '@dns/constants';
-import { UserEntity, UserRepository, schema } from '@dns/database';
-import { NotificationEvent, OAuthProvider, PurchaseStore, ReminderType, Theme } from '@dns/shared-types';
+import { ProfileRepository, UserEntity, UserRepository, schema } from '@dns/database';
+import { NotificationEvent, OAuthProvider, PurchaseStore, ReminderType, StorageScope, Theme } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { OAuthSignInService } from '../src/modules/auth/oauth.service';
@@ -15,6 +16,7 @@ import { ProfileService } from '../src/modules/user/profile.service';
 import { RemindersService } from '../src/modules/user/reminders.service';
 
 import { truncateAuthTables } from './support/db';
+import { grantOnly, isStored, upload } from './support/storage';
 import { AuthTestContext, createAuthTestContext } from './support/testing-module';
 
 const EMAIL = 'profile@example.com';
@@ -174,6 +176,122 @@ describe('User domain', () => {
 
             const { subscription } = await profileService.getScreen(user);
             expect(subscription).toBeNull();
+        });
+    });
+
+    // These PUT real bytes, so MinIO from docker compose must be up as well.
+    describe('profile photo', () => {
+        let storage: StorageService;
+
+        beforeAll(() => {
+            storage = ctx.moduleRef.get(StorageService);
+        });
+
+        it('stores a photo that was actually uploaded', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+
+            const profile = await profileService.updateProfile(user, { photoUrl });
+
+            expect(profile.photoUrl).toBe(photoUrl);
+        });
+
+        it('refuses a photo URL nothing was uploaded to, and leaves the row alone', async () => {
+            const photoUrl = await grantOnly(storage, user.id, StorageScope.ProfilePhoto);
+
+            await expect(profileService.updateProfile(user, { name: 'Олег', photoUrl })).rejects.toMatchObject({
+                response: { code: StorageErrorCode.NotUploaded },
+            });
+
+            const { profile } = await profileService.getAggregate(user);
+            expect(profile.photoUrl).toBeNull();
+            expect(profile.name).toBeNull();
+        });
+
+        it('deletes the replaced photo once the row points at the new one', async () => {
+            const first = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            const second = await upload(storage, user.id, StorageScope.ProfilePhoto);
+
+            await profileService.updateProfile(user, { photoUrl: first });
+            const profile = await profileService.updateProfile(user, { photoUrl: second });
+
+            expect(profile.photoUrl).toBe(second);
+            expect(await isStored(storage, first, user.id, StorageScope.ProfilePhoto)).toBe(false);
+            expect(await isStored(storage, second, user.id, StorageScope.ProfilePhoto)).toBe(true);
+        });
+
+        it('never ends up pointing at a file a concurrent edit deleted', async () => {
+            // One edit re-sends the photo the form shows, the other replaces it.
+            // Either may win; what must hold is that the row points at a file
+            // that is in the store, and the loser's file is gone — no dangling
+            // photo, no orphan. The test cannot force an interleaving, so it
+            // asserts the invariant over rounds (an unlocked delete broke it
+            // within a few).
+            let shown = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl: shown });
+
+            for (let round = 0; round < 10; round++) {
+                const next = await upload(storage, user.id, StorageScope.ProfilePhoto);
+
+                await Promise.allSettled([
+                    profileService.updateProfile(user, { name: `Олег ${round}`, photoUrl: shown }),
+                    profileService.updateProfile(user, { photoUrl: next }),
+                ]);
+
+                const { profile } = await profileService.getAggregate(user);
+                const kept = profile.photoUrl as string;
+                const dropped = kept === next ? shown : next;
+
+                expect([shown, next]).toContain(kept);
+                expect(await isStored(storage, kept, user.id, StorageScope.ProfilePhoto)).toBe(true);
+                expect(await isStored(storage, dropped, user.id, StorageScope.ProfilePhoto)).toBe(false);
+
+                shown = kept;
+            }
+        });
+
+        it('deletes the photo when it is cleared', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+
+            const profile = await profileService.updateProfile(user, { photoUrl: null });
+
+            expect(profile.photoUrl).toBeNull();
+            expect(await isStored(storage, photoUrl, user.id, StorageScope.ProfilePhoto)).toBe(false);
+        });
+
+        it('keeps the photo when the form re-sends the one it already shows', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+
+            const profile = await profileService.updateProfile(user, { name: 'Олег', photoUrl });
+
+            expect(profile.name).toBe('Олег');
+            expect(profile.photoUrl).toBe(photoUrl);
+            expect(await isStored(storage, photoUrl, user.id, StorageScope.ProfilePhoto)).toBe(true);
+        });
+
+        it('saves a new name even when the photo it re-sends has gone from the store', async () => {
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+            await storage.discardReplaced(photoUrl, null, user.id, StorageScope.ProfilePhoto);
+
+            // The URL is the row's own; re-checking it would lock the user
+            // out of editing their name over a file they cannot see.
+            const profile = await profileService.updateProfile(user, { name: 'Олег', photoUrl });
+
+            expect(profile.name).toBe('Олег');
+        });
+
+        it('never deletes a file the old URL did not hold as this user’s profile photo', async () => {
+            // A row written before the checks existed, pointing at one of the
+            // user's support attachments — which a ticket still references.
+            const attachment = await upload(storage, user.id, StorageScope.Feedback);
+            await ctx.moduleRef.get(ProfileRepository).update(user.id, { photoUrl: attachment });
+
+            const photoUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
+            await profileService.updateProfile(user, { photoUrl });
+
+            expect(await isStored(storage, attachment, user.id, StorageScope.Feedback)).toBe(true);
         });
     });
 

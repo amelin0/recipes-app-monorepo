@@ -1,3 +1,4 @@
+export { StorageErrorCode } from './storage.errors';
 export { StorageModule } from './storage.module';
 export type { StorageModuleAsyncOptions } from './storage.module';
 export { StorageService } from './storage.service';

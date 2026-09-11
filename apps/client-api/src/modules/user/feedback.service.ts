@@ -18,10 +18,11 @@ export class FeedbackService {
     async create(userId: string, input: CreateFeedbackInput): Promise<FeedbackEntity> {
         // Every attachment must be a file this user uploaded for this purpose.
         // Without the check a ticket could carry any URL, and staff opening it
-        // would fetch whatever the reporter pointed them at.
-        for (const url of input.imageUrls ?? []) {
-            this.storageService.validateOwnership(url, userId, StorageScope.Feedback);
-        }
+        // would fetch whatever the reporter pointed them at — or, for a grant
+        // whose upload never happened, nothing at all.
+        await Promise.all(
+            (input.imageUrls ?? []).map(url => this.storageService.validateUpload(url, userId, StorageScope.Feedback)),
+        );
 
         return this.feedbackRepository.create({
             userId,
