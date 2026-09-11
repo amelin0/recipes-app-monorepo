@@ -20,7 +20,7 @@ UI екрана вже реалізовано в мобільному засто
 | Feature                                                                  | Spec        | Plan                               | Owner    | Updated    |
 | ------------------------------------------------------------------------ | ----------- | ---------------------------------- | -------- | ---------- |
 | [Profile (Профіль і налаштування)](./profile/spec.md)                    | Approved    | [plan](./profile/plan.md)          | @amelin0 | 2026-09-06 |
-| [Profile edit (Редагування профілю)](./profile-edit/spec.md)             | Approved    | [plan](./profile-edit/plan.md)     | @amelin0 | 2026-09-06 |
+| [Profile edit (Редагування профілю)](./profile-edit/spec.md)             | Approved    | [plan](./profile-edit/plan.md)     | @amelin0 | 2026-09-11 |
 | [App settings (Мова, тема, одиниці)](./app-settings/spec.md)             | Implemented | [plan](./app-settings/plan.md)     | @amelin0 | 2026-09-06 |
 | [Reminders (Нагадування)](./reminders/spec.md)                           | Implemented | [plan](./reminders/plan.md)        | @amelin0 | 2026-09-06 |
 | [FAQ (Часті питання)](./faq/spec.md)                                     | Implemented | [plan](./faq/plan.md)              | @amelin0 | 2026-09-07 |
