@@ -8,6 +8,14 @@ export interface AdminAccessTokenPayload {
     email: string;
     role: string;
     type: 'access';
+    /**
+     * Seconds since the epoch, stamped by the signer — absent from the object
+     * handed to `sign`, present on every payload that comes back from
+     * `verify`. `AdminJwtStrategy` reads it to enforce
+     * `admins.sessions_valid_from`, so signing out everywhere ends this token
+     * instead of letting it run out its fifteen minutes.
+     */
+    iat?: number;
 }
 
 export interface AdminRefreshTokenPayload {

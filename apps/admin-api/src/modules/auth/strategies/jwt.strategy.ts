@@ -45,6 +45,15 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException();
         }
 
+        // Deactivation is caught by the flag above; signing out everywhere was
+        // not caught by anything. It deletes the browser chains, but this token
+        // is stateless and stayed good for the rest of its fifteen minutes. The
+        // account records when its sessions were last ended wholesale, and a
+        // token stamped before that no longer belongs to one (FR-007).
+        if (!admin.acceptsTokenIssuedAt(payload.iat)) {
+            throw new UnauthorizedException();
+        }
+
         return admin;
     }
 }
