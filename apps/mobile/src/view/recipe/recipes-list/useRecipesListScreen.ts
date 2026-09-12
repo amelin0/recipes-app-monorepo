@@ -2,13 +2,15 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
+import type { RecipeTab } from '@/data';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
-import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/recipe';
+import { useGetRecipeFilters, useGetRecipes, useToggleFavorite } from '@/state/domains/catalog';
+import { countRecipeFilters, RECIPE_FILTER_GROUPS, type RecipeFilterGroup } from '@/state/domains/recipe';
 
-import { MOCK_RECIPES } from '../recipe.constants';
+import { useRecipeQuery } from '../useRecipeQuery';
 
-export type RecipesTab = 'all' | 'favorites' | 'own';
+export type RecipesTab = RecipeTab;
 export type RecipesViewMode = 'grid' | 'list';
 
 export interface AppliedFilterChip {
@@ -25,59 +27,64 @@ export const useRecipesListScreen = () => {
 
     const [activeTab, setActiveTab] = useState<RecipesTab>('all');
     const [viewMode, setViewMode] = useState<RecipesViewMode>('grid');
-    const [favorites, setFavorites] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(MOCK_RECIPES.map(recipe => [recipe.id, recipe.isFavorite])),
-    );
 
-    const recipes = useMemo(() => {
-        const withFavorites = MOCK_RECIPES.map(recipe => ({ ...recipe, isFavorite: favorites[recipe.id] ?? false }));
-        if (activeTab === 'favorites') return withFavorites.filter(recipe => recipe.isFavorite);
-        if (activeTab === 'own') return withFavorites.filter(recipe => recipe.isOwn);
-        return withFavorites;
-    }, [activeTab, favorites]);
+    const query = useRecipeQuery(activeTab);
+    const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGetRecipes(query);
+    const { data: filterOptions } = useGetRecipeFilters();
+    const toggleFavorite = useToggleFavorite();
+
+    const recipes = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
+    const total = data?.pages[0]?.meta.total ?? 0;
 
     const sectionTitle =
-        activeTab === 'favorites'
+        activeTab === 'favorite'
             ? t('recipes:list.favorites-section')
             : activeTab === 'own'
               ? t('recipes:list.own-section')
               : t('recipes:list.section');
 
-    // Applied chips carry plain labels — the design strips the option emojis (594:44769).
+    /**
+     * Chips carry names, but the store keeps ids — so the labels are resolved
+     * against the filter payload. Until it arrives a selection has no name to
+     * show, and a chip reading its own uuid would be worse than none.
+     */
     const appliedFilters = useMemo<AppliedFilterChip[]>(() => {
-        const chips: AppliedFilterChip[] = [];
-        recipeFilters.ingredients.forEach(value =>
-            chips.push({
-                key: `ingredients-${value}`,
-                group: 'ingredients',
-                value,
-                label: t(`recipes:ingredients.${value}`),
-            }),
-        );
-        recipeFilters.categories.forEach(value =>
-            chips.push({
-                key: `categories-${value}`,
-                group: 'categories',
-                value,
-                label: t(`recipes:rail-categories.${value}`),
-            }),
-        );
-        (['products', 'cuisines', 'diets'] as const).forEach(group => {
-            recipeFilters[group].forEach(value =>
-                chips.push({ key: `${group}-${value}`, group, value, label: t(`recipes:options.${value}`) }),
-            );
-        });
-        return chips;
-    }, [recipeFilters, t]);
+        if (!filterOptions) return [];
 
-    const handleToggleFavorite = useCallback((id: string) => {
-        // TODO: PUT /recipes/:id/favorite once the API ships.
-        setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
-    }, []);
+        // Products carry more than a reference does, but only `id` and `name`
+        // are needed here — narrowed so the two shapes line up.
+        const byGroup: Record<RecipeFilterGroup, { id: string; name: string }[]> = {
+            products: filterOptions.quickProducts,
+            productGroups: filterOptions.productGroups,
+            categories: filterOptions.categories,
+            cuisines: filterOptions.cuisines,
+            diets: filterOptions.diets,
+        };
+
+        return RECIPE_FILTER_GROUPS.flatMap(group =>
+            recipeFilters[group].flatMap(value => {
+                const option = byGroup[group].find(item => item.id === value);
+                return option ? [{ key: `${group}-${value}`, group, value, label: option.name }] : [];
+            }),
+        );
+    }, [filterOptions, recipeFilters]);
+
+    const handleToggleFavorite = useCallback(
+        (id: string) => {
+            const recipe = recipes.find(item => item.id === id);
+            if (!recipe) return;
+            toggleFavorite.mutate({ id, isFavorite: recipe.isFavorite });
+        },
+        [recipes, toggleFavorite],
+    );
 
     const handleRecipePress = useCallback((id: string) => {
         router.push({ pathname: '/(app)/meal-details', params: { id } });
     }, []);
+
+    const handleEndReached = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+    }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
     return {
         activeTab,
@@ -85,13 +92,21 @@ export const useRecipesListScreen = () => {
         viewMode,
         setViewMode,
         recipes,
+        total,
+        isLoading,
+        isError,
+        isEmpty: !isLoading && !isError && recipes.length === 0,
+        handleRetry: refetch,
+        handleEndReached,
+        isFetchingNextPage,
+        categories: filterOptions?.categories ?? [],
         sectionTitle,
         appliedFilters,
         filtersCount: countRecipeFilters(recipeFilters),
         handleSearchPress: () => router.push('/(app)/recipe-search'),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
-        handleCategoryPress: (category: string) =>
-            router.push({ pathname: '/(app)/recipe-search', params: { category } }),
+        handleCategoryPress: (categoryId: string) =>
+            router.push({ pathname: '/(app)/recipe-search', params: { category: categoryId } }),
         handleRecipePress,
         handleToggleFavorite,
         handleRemoveFilter: (chip: AppliedFilterChip) => toggleRecipeFilter(chip.group, chip.value),

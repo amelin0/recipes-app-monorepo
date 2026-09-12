@@ -5,11 +5,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
-import { countRecipeFilters, type RecipeFilterGroup } from '@/state/domains/recipe';
+import { useGetRecipeFilters } from '@/state/domains/catalog';
+import { countRecipeFilters, RECIPE_FILTER_GROUPS, type RecipeFilterGroup } from '@/state/domains/recipe';
 
 import { buildPlanDish, pickedInMeal, pickedPlanId, resolvePlanTarget } from '@/state/domains/meal-plan';
 
-import { RECIPE_RAIL_CATEGORIES } from '../../recipe/recipe.constants';
 import {
     ADD_DISH_TABS,
     MOCK_PICKER_DISHES,
@@ -30,6 +30,7 @@ export const useAddDishScreen = () => {
     const { t } = useAppTranslation(['meal-plan', 'recipes', 'common']);
     const params = useLocalSearchParams<{ day?: string; meal?: string }>();
 
+    const { data: filterOptions } = useGetRecipeFilters();
     const planWeek = useStore(state => state.planWeek);
     const recipeFilters = useStore(state => state.recipeFilters);
     const toggleRecipeFilter = useStore(state => state.toggleRecipeFilter);
@@ -50,31 +51,25 @@ export const useAddDishScreen = () => {
     const [railCategory, setRailCategory] = useState<string | null>(null);
 
     // Applied chips mirror the recipes tab (594:30640) — plain labels, removable.
+    // Labels are resolved against the filter payload because the store keeps ids.
     const appliedFilters = useMemo<AppliedFilterChip[]>(() => {
-        const chips: AppliedFilterChip[] = [];
-        recipeFilters.ingredients.forEach(value =>
-            chips.push({
-                key: `ingredients-${value}`,
-                group: 'ingredients',
-                value,
-                label: t(`recipes:ingredients.${value}`),
+        if (!filterOptions) return [];
+
+        const byGroup: Record<RecipeFilterGroup, { id: string; name: string }[]> = {
+            products: filterOptions.quickProducts,
+            productGroups: filterOptions.productGroups,
+            categories: filterOptions.categories,
+            cuisines: filterOptions.cuisines,
+            diets: filterOptions.diets,
+        };
+
+        return RECIPE_FILTER_GROUPS.flatMap(group =>
+            recipeFilters[group].flatMap(value => {
+                const option = byGroup[group].find(item => item.id === value);
+                return option ? [{ key: `${group}-${value}`, group, value, label: option.name }] : [];
             }),
         );
-        recipeFilters.categories.forEach(value =>
-            chips.push({
-                key: `categories-${value}`,
-                group: 'categories',
-                value,
-                label: t(`recipes:rail-categories.${value}`),
-            }),
-        );
-        (['products', 'cuisines', 'diets'] as const).forEach(group => {
-            recipeFilters[group].forEach(value =>
-                chips.push({ key: `${group}-${value}`, group, value, label: t(`recipes:options.${value}`) }),
-            );
-        });
-        return chips;
-    }, [recipeFilters, t]);
+    }, [filterOptions, recipeFilters]);
 
     // Мок звужується рейкою або категоріями зі спільних фільтрів (594:31262);
     // решту груп (інгредієнти, продукти, кухні, дієти, ккал) фільтрує система.
@@ -132,7 +127,7 @@ export const useAddDishScreen = () => {
         tabs: ADD_DISH_TABS,
         handleTabChange,
         railCategory,
-        railCategories: RECIPE_RAIL_CATEGORIES,
+        railCategories: filterOptions?.categories ?? [],
         handleRailPress: (key: string) => setRailCategory(prev => (prev === key ? null : key)),
         appliedFilters,
         filtersCount: countRecipeFilters(recipeFilters),

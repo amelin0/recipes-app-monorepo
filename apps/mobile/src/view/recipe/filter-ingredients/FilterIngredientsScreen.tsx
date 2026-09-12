@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppInput, AppText, Chip, ScreenActions } from '@/shared/ui/components';
+import { AppButton, AppInput, AppText, Chip, QueryState, ScreenActions } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
@@ -15,8 +15,22 @@ import { useFilterIngredientsScreen } from './useFilterIngredientsScreen';
 export const FilterIngredientsScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes', 'common']);
-    const { catalog, query, setQuery, selectedCount, isSelected, handleToggle, handleClear, handleClose, handleApply } =
-        useFilterIngredientsScreen();
+    const {
+        catalog,
+        isLoading,
+        isError,
+        isEmpty,
+        handleRetry,
+        handleEndReached,
+        query,
+        setQuery,
+        selectedCount,
+        isSelected,
+        handleToggle,
+        handleClear,
+        handleClose,
+        handleApply,
+    } = useFilterIngredientsScreen();
 
     return (
         <View style={styles.root}>
@@ -74,23 +88,28 @@ export const FilterIngredientsScreen = () => {
                     contentContainerStyle={styles.scroll}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    onScrollEndDrag={handleEndReached}
+                    onMomentumScrollEnd={handleEndReached}
                 >
-                    {catalog.length > 0 ? (
+                    <QueryState
+                        isLoading={isLoading}
+                        isError={isError}
+                        isEmpty={isEmpty}
+                        emptyMessage={t('recipes:list.empty')}
+                        onRetry={handleRetry}
+                        style={styles.stateBox}
+                    >
                         <View style={styles.chipsWrap}>
-                            {catalog.map(key => (
+                            {catalog.map(product => (
                                 <Chip
-                                    key={key}
-                                    label={t(`recipes:ingredients.${key}`)}
-                                    selected={isSelected(key)}
-                                    onPress={() => handleToggle(key)}
+                                    key={product.id}
+                                    label={product.name}
+                                    selected={isSelected(product.id)}
+                                    onPress={() => handleToggle(product.id)}
                                 />
                             ))}
                         </View>
-                    ) : (
-                        <AppText variant="bodyMediumReg" color="tertiary">
-                            {t('recipes:list.empty')}
-                        </AppText>
-                    )}
+                    </QueryState>
                 </ScrollView>
 
                 <ScreenActions style={styles.footer}>
@@ -157,6 +176,11 @@ const styles = StyleSheet.create(theme => ({
     scroll: {
         paddingHorizontal: theme.spacing[4],
         paddingBottom: theme.spacing[4],
+    },
+    // Стан живе всередині скрола — на всю висоту він виштовхнув би футер.
+    stateBox: {
+        flex: 0,
+        paddingVertical: theme.spacing[8],
     },
     chipsWrap: {
         flexDirection: 'row',

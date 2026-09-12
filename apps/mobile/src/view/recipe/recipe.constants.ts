@@ -10,19 +10,28 @@ export interface RecipeCategory {
  * Shared by the recipes-tab rail, the search grid and, as emoji chips, the
  * filter screen.
  */
-export const RECIPE_RAIL_CATEGORIES: RecipeCategory[] = [
-    { key: 'savory-breakfast', image: require('../../../assets/images/categories/rail-savory-breakfast.png') },
-    { key: 'sweet-breakfast', image: require('../../../assets/images/categories/rail-sweet-breakfast.png') },
-    { key: 'lunch', image: require('../../../assets/images/categories/rail-lunch.png') },
-    { key: 'dinner', image: require('../../../assets/images/categories/rail-dinner.png') },
-    { key: 'snacks', image: require('../../../assets/images/categories/rail-snacks.png') },
-    { key: 'salads', image: require('../../../assets/images/categories/rail-salads.png') },
-    { key: 'pasta', image: require('../../../assets/images/categories/rail-pasta.png') },
-    { key: 'bowls', image: require('../../../assets/images/categories/rail-bowls.png') },
-    { key: 'smoothies', image: require('../../../assets/images/categories/rail-smoothies.png') },
-    { key: 'desserts', image: require('../../../assets/images/categories/rail-desserts.png') },
-    { key: 'baking', image: require('../../../assets/images/categories/rail-baking.png') },
-];
+/**
+ * Artwork for the category rail, keyed by the API's own slug. The reference
+ * payload carries an `imageUrl`, but it is empty for every category today, so
+ * the shipped illustrations stand in — and the map is by slug precisely so
+ * that a category the API adds simply has no tile rather than breaking one.
+ */
+export const RAIL_CATEGORY_IMAGES: Record<string, number> = {
+    'salty-breakfast': require('../../../assets/images/categories/rail-savory-breakfast.png'),
+    'sweet-breakfast': require('../../../assets/images/categories/rail-sweet-breakfast.png'),
+    lunch: require('../../../assets/images/categories/rail-lunch.png'),
+    dinner: require('../../../assets/images/categories/rail-dinner.png'),
+    snacks: require('../../../assets/images/categories/rail-snacks.png'),
+    salads: require('../../../assets/images/categories/rail-salads.png'),
+    pasta: require('../../../assets/images/categories/rail-pasta.png'),
+    bowls: require('../../../assets/images/categories/rail-bowls.png'),
+    smoothies: require('../../../assets/images/categories/rail-smoothies.png'),
+    desserts: require('../../../assets/images/categories/rail-desserts.png'),
+    baking: require('../../../assets/images/categories/rail-baking.png'),
+};
+
+/** Stands in for a recipe with no photo of its own. */
+export const RECIPE_PLACEHOLDER_IMAGE = require('../../../assets/images/recipes/mock-1.jpg');
 
 /**
  * Filter option keys — plain labels live in `recipes:options.*`, the emoji

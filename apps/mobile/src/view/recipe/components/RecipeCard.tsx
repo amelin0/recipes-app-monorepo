@@ -3,15 +3,16 @@ import { ImageBackground, Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import type { RecipeCard as RecipeCardData } from '@/data';
 import { AppText, MacroChipsRow } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import HeartIcon from '../../../../assets/icons/heart.svg';
 import TimerIcon from '../../../../assets/icons/timer.svg';
-import type { MockRecipe } from '../recipe.constants';
+import { RECIPE_PLACEHOLDER_IMAGE } from '../recipe.constants';
 
 export interface RecipeCardProps {
-    recipe: MockRecipe;
+    recipe: RecipeCardData;
     /** grid — two-column tile; list — full-width tall card. */
     variant: 'grid' | 'list';
     onPress: () => void;
@@ -24,14 +25,28 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
     const { t } = useAppTranslation(['recipes']);
     const isList = variant === 'list';
 
+    const perServing = recipe.perServing;
+    // Час приготування може бути невідомий — `POST /recipes` його не приймає,
+    // тож у власних страв його немає. Тоді пігулку не малюємо взагалі: «0 хв»
+    // читалось би як факт, а не як відсутність даних.
+    const cookTime = recipe.cookTimeMinutes;
+
     return (
         <Pressable accessibilityRole="button" onPress={onPress} style={styles.card(isList)}>
-            <ImageBackground source={recipe.image} style={styles.image(isList)} resizeMode="cover">
+            <ImageBackground
+                source={recipe.photoUrl ? { uri: recipe.photoUrl } : RECIPE_PLACEHOLDER_IMAGE}
+                style={styles.image(isList)}
+                resizeMode="cover"
+            >
                 <View style={styles.imageOverlayRow}>
-                    <View style={styles.timePill}>
-                        <TimerIcon width={16} height={16} color={theme.colors.elements.primary} />
-                        <AppText variant="bodySmallReg">{t('recipes:list.minutes', { count: recipe.minutes })}</AppText>
-                    </View>
+                    {cookTime ? (
+                        <View style={styles.timePill}>
+                            <TimerIcon width={16} height={16} color={theme.colors.elements.primary} />
+                            <AppText variant="bodySmallReg">{t('recipes:list.minutes', { count: cookTime })}</AppText>
+                        </View>
+                    ) : (
+                        <View />
+                    )}
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t('recipes:list.favorite-a11y')}
@@ -57,19 +72,23 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
                 </AppText>
                 {isList ? (
                     <MacroChipsRow
-                        protein={recipe.protein}
-                        fats={recipe.fats}
-                        carbs={recipe.carbs}
-                        kcal={recipe.kcal}
+                        protein={Math.round(perServing.proteinG)}
+                        fats={Math.round(perServing.fatsG)}
+                        carbs={Math.round(perServing.carbsG)}
+                        kcal={Math.round(perServing.calories)}
                     />
                 ) : (
                     <>
                         <View style={styles.kcalBadge}>
                             <AppText variant="bodySmallReg" style={styles.kcalText}>
-                                {t('recipes:list.kcal', { count: recipe.kcal })}
+                                {t('recipes:list.kcal', { count: Math.round(perServing.calories) })}
                             </AppText>
                         </View>
-                        <MacroChipsRow protein={recipe.protein} fats={recipe.fats} carbs={recipe.carbs} />
+                        <MacroChipsRow
+                            protein={Math.round(perServing.proteinG)}
+                            fats={Math.round(perServing.fatsG)}
+                            carbs={Math.round(perServing.carbsG)}
+                        />
                     </>
                 )}
             </View>

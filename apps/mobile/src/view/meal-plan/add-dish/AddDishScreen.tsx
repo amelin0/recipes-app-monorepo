@@ -21,6 +21,8 @@ import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
 import ShrugMascot from '../../../../assets/images/brand/mascot-shrug.svg';
 
+import { RAIL_CATEGORY_IMAGES, RECIPE_PLACEHOLDER_IMAGE } from '../../recipe/recipe.constants';
+
 import { useAddDishScreen } from './useAddDishScreen';
 
 /** Додавання страв до прийому — the meal plan's dish picker (594:30106). */
@@ -132,11 +134,11 @@ export const AddDishScreen = () => {
                         >
                             {railCategories.map(category => (
                                 <CategoryTile
-                                    key={category.key}
-                                    image={category.image}
-                                    label={t(`recipes:rail-categories.${category.key}`)}
-                                    selected={railCategory === category.key}
-                                    onPress={() => handleRailPress(category.key)}
+                                    key={category.id}
+                                    image={RAIL_CATEGORY_IMAGES[category.slug] ?? RECIPE_PLACEHOLDER_IMAGE}
+                                    label={category.name}
+                                    selected={railCategory === category.id}
+                                    onPress={() => handleRailPress(category.id)}
                                 />
                             ))}
                         </ScrollView>
