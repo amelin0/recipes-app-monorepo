@@ -91,18 +91,21 @@ describe('Revoking every session of an account', () => {
     };
 
     /**
-     * Waits for the wall clock to cross into the next whole second.
+     * Puts the account's revocation marker `offsetMs` from now, as stamped by
+     * the database clock.
      *
-     * `iat` is a JWT claim counted in WHOLE SECONDS, so a token minted 300 ms
-     * after a revocation still carries the second that began before it, and the
-     * marker — which has sub-second precision — is later than it. Such a token
-     * is refused. That is the deliberate side of the ambiguity: within the
-     * second a revocation lands in, a freshly minted token may die, and the
-     * caller simply gets another one. A test that wants to prove «minted after
-     * the revocation works» has to wait the ambiguity out.
+     * Signing in right after a real revocation lands in the same second only
+     * most of the time — bcrypt can carry it over the boundary. Stamping the
+     * marker ahead makes «issued in the revocation's second, after it» a
+     * certainty instead of a race, and it is a real case of its own: the
+     * marker comes from Postgres's clock, `iat` from this process's.
      */
-    const nextSecond = (): Promise<void> =>
-        new Promise(resolve => setTimeout(resolve, 1_000 - (Date.now() % 1_000) + 50));
+    const stampMarkerAhead = async (offsetMs: number): Promise<void> => {
+        await ctx.db
+            .update(schema.users)
+            .set({ sessionsValidFrom: new Date(Date.now() + offsetMs) })
+            .where(eq(schema.users.id, await userId()));
+    };
 
     const completePasswordReset = async (): Promise<void> => {
         await passwordResetService.request({ email: EMAIL });
@@ -141,16 +144,51 @@ describe('Revoking every session of an account', () => {
             await expect(authenticate(tablet.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
         });
 
-        it('lets a session opened afterwards work normally', async () => {
+        /**
+         * QA: `logout-all`, then an immediate `login`, answered 200 — and the
+         * access token it handed out was 401 forever. `iat` counts whole
+         * seconds, so a token minted in the revocation's own second looked
+         * older than the revocation. No waiting here on purpose.
+         */
+        it('lets a session opened right afterwards work, in the same second', async () => {
             await authService.login({ email: EMAIL, password: PASSWORD });
             await tokenService.revokeAllForUser(await userId());
 
-            // Past the second the revocation landed in — see `nextSecond`.
-            await nextSecond();
             const fresh = await authService.login({ email: EMAIL, password: PASSWORD });
 
             await expect(authenticate(fresh.accessToken)).resolves.toBeDefined();
             await expect(writeThrough(fresh.accessToken, 'Signed In Again')).resolves.toBeUndefined();
+        });
+
+        it('lets a new session work even when the marker is stamped just ahead of this clock', async () => {
+            await stampMarkerAhead(1_500);
+
+            const fresh = await authService.login({ email: EMAIL, password: PASSWORD });
+
+            await expect(authenticate(fresh.accessToken)).resolves.toBeDefined();
+        });
+
+        it('does not stretch a token over a marker far ahead — it stays refused', async () => {
+            // Clearing the marker moves `exp` with `iat`; chasing a clock that
+            // is minutes off would hand out tokens that outlive their TTL.
+            await stampMarkerAhead(5 * 60_000);
+
+            const fresh = await authService.login({ email: EMAIL, password: PASSWORD });
+
+            await expect(authenticate(fresh.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+        });
+
+        it('lets a refreshed access token work in the revocation second too', async () => {
+            // Every path that signs an access token goes through the same rule,
+            // not only sign-in.
+            // The chain is left in place — only the marker moves — so the
+            // refresh itself is allowed and the question is purely its `iat`.
+            const session = await authService.login({ email: EMAIL, password: PASSWORD });
+            await stampMarkerAhead(1_500);
+
+            const rotated = await tokenService.rotate(session.refreshToken);
+
+            await expect(authenticate(rotated.accessToken)).resolves.toBeDefined();
         });
     });
 
@@ -176,7 +214,6 @@ describe('Revoking every session of an account', () => {
             await expect(authenticate(phone.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
             await expect(authenticate(tablet.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
 
-            await nextSecond();
             const fresh = await authService.login({ email: EMAIL, password: NEW_PASSWORD });
             await expect(authenticate(fresh.accessToken)).resolves.toBeDefined();
         });
