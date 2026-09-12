@@ -50,9 +50,9 @@ const TEMPLATES: Partial<Record<NotificationEvent, Record<string, Writer>>> = {
         }),
     },
 
-    // Says what happened and nothing more: the referrer's free month is not
-    // granted anywhere yet, and a message that promised it would be the only
-    // part of the product claiming otherwise.
+    // Says what happened and nothing more. Redeeming earns the referrer
+    // nothing — the month comes when this person first pays, which they may
+    // never do — so the text must not read as if it had been earned.
     [NotificationEvent.ReferralRedeemed]: {
         uk: () => ({
             type: NotificationType.System,
@@ -65,6 +65,32 @@ const TEMPLATES: Partial<Record<NotificationEvent, Record<string, Writer>>> = {
             type: NotificationType.System,
             title: 'Your code was used',
             body: 'Someone joined with your invitation.',
+            actionLabel: 'My invitations',
+            actionRoute: '/profile/referral',
+        }),
+    },
+
+    // Written only after the grant is committed, so this one may name the
+    // month and the date it now runs to. «Місяць» because
+    // `REFERRAL_REWARD.freeMonths` is 1 — change the two together (a test
+    // holds them to it). It says how long premium lasts, not that nothing will
+    // be charged: a store-billed subscription still renews on the store's date.
+    [NotificationEvent.ReferralRewarded]: {
+        uk: ({ subject }) => ({
+            type: NotificationType.Subscription,
+            title: 'Ви отримали місяць Преміуму',
+            body: subject
+                ? `Друг, якого ви запросили, оформив підписку. Преміум тепер діє до ${subject}.`
+                : 'Друг, якого ви запросили, оформив підписку.',
+            actionLabel: 'Мої запрошення',
+            actionRoute: '/profile/referral',
+        }),
+        en: ({ subject }) => ({
+            type: NotificationType.Subscription,
+            title: 'You earned a month of Premium',
+            body: subject
+                ? `A friend you invited has subscribed. Your Premium now runs until ${subject}.`
+                : 'A friend you invited has subscribed.',
             actionLabel: 'My invitations',
             actionRoute: '/profile/referral',
         }),
@@ -151,7 +177,9 @@ const TEMPLATES: Partial<Record<NotificationEvent, Record<string, Writer>>> = {
         en: ({ subject }) => ({
             type: NotificationType.System,
             title: 'Your product is in the catalogue',
-            body: subject ? `«${subject}» has been verified — everyone can find it now.` : 'Your product has been verified — everyone can find it now.',
+            body: subject
+                ? `«${subject}» has been verified — everyone can find it now.`
+                : 'Your product has been verified — everyone can find it now.',
         }),
     },
 };

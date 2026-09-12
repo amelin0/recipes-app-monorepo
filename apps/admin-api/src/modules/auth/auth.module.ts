@@ -3,12 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
+import { THROTTLER_IDENTITY_VERIFIER } from '@dns/api-common';
 import {
     AdminLoginAttemptRepositoryModule,
     AdminRefreshTokenRepositoryModule,
     AdminRepositoryModule,
 } from '@dns/database';
 
+import { AdminAccessTokenIdentityVerifier } from './access-token-identity.verifier';
 import { AdminsController } from './admins.controller';
 import { AdminAuthController } from './auth.controller';
 import { AdminAuthService } from './auth.service';
@@ -28,7 +30,14 @@ import { AdminTokenService } from './token.service';
         AdminLoginAttemptRepositoryModule,
     ],
     controllers: [AdminAuthController, AdminsController],
-    providers: [AdminAuthService, AdminTokenService, AdminJwtStrategy],
-    exports: [AdminAuthService, AdminTokenService],
+    providers: [
+        AdminAuthService,
+        AdminTokenService,
+        AdminJwtStrategy,
+        // Consumed by the global CustomThrottlerGuard in AppModule, which can
+        // only see what this module exports.
+        { provide: THROTTLER_IDENTITY_VERIFIER, useClass: AdminAccessTokenIdentityVerifier },
+    ],
+    exports: [AdminAuthService, AdminTokenService, THROTTLER_IDENTITY_VERIFIER],
 })
 export class AuthModule {}

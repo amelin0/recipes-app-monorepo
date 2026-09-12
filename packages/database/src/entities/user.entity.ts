@@ -8,6 +8,7 @@ export class UserEntity {
     readonly passwordHash: string | null;
     readonly emailVerifiedAt: Date | null;
     readonly blockedAt: Date | null;
+    readonly sessionsValidFrom: Date | null;
     readonly createdAt: Date;
     readonly updatedAt: Date;
 
@@ -17,6 +18,7 @@ export class UserEntity {
         this.passwordHash = row.passwordHash;
         this.emailVerifiedAt = row.emailVerifiedAt;
         this.blockedAt = row.blockedAt;
+        this.sessionsValidFrom = row.sessionsValidFrom;
         this.createdAt = row.createdAt;
         this.updatedAt = row.updatedAt;
     }
@@ -45,5 +47,29 @@ export class UserEntity {
      */
     hasPassword(): boolean {
         return this.passwordHash !== null;
+    }
+
+    /**
+     * Whether an access token stamped with this `iat` still belongs to a live
+     * session (session FR-007, password-reset FR-005).
+     *
+     * **The second-resolution edge.** `iat` counts WHOLE SECONDS, while
+     * `sessions_valid_from` has sub-second precision, so for the one second a
+     * revocation lands in the claim cannot say which side of it a token is on.
+     * The comparison resolves that against the token: with a strict `<`, one
+     * minted 300 ms *after* the revocation carries the same floored `iat` as
+     * the second's start and is refused too. That costs its owner one extra
+     * sign-in inside a one-second window. Rounding the other way would let a
+     * token minted just *before* the revocation survive it — which is the bug
+     * this exists to close, so the ambiguity is spent on the safe side.
+     *
+     * A missing `iat` fails closed for the same reason: every token we sign
+     * carries one, so its absence is not owed the benefit of the doubt.
+     */
+    acceptsTokenIssuedAt(iatSeconds: number | undefined): boolean {
+        if (this.sessionsValidFrom === null) return true;
+        if (iatSeconds === undefined) return false;
+
+        return iatSeconds * 1_000 >= this.sessionsValidFrom.getTime();
     }
 }

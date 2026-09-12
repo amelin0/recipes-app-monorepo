@@ -127,6 +127,62 @@
       "when": 1788890555520,
       "tag": "0017_living_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789145710079,
+      "tag": "0018_amazing_crystal",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789146047649,
+      "tag": "0019_yielding_radioactive_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789150503918,
+      "tag": "0020_puzzling_lilandra",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789155252588,
+      "tag": "0021_gigantic_speed_demon",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1789156015402,
+      "tag": "0022_dashing_microchip",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789156147220,
+      "tag": "0023_fancy_rattler",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789156250303,
+      "tag": "0024_motionless_mystique",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789173016850,
+      "tag": "0025_worried_kylun",
+      "breakpoints": true
     }
   ]
 }

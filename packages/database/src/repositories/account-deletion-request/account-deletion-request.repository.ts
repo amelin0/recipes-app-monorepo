@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, count, eq, gt, isNull, lte, min } from 'drizzle-orm';
+import { SQL, and, count, eq, gt, isNull, lte, min } from 'drizzle-orm';
 
 import { AccountDeletionRequestEntity } from '../../entities';
 import { accountDeletionRequests } from '../../schema';
@@ -32,7 +32,7 @@ export class AccountDeletionRequestRepository extends BaseRepository {
      * «silently» is the problem — the promise made to the user has a date on it.
      */
     async countOpen(now: Date = new Date()): Promise<OpenDeletionRequestCounts> {
-        const open = and(isNull(accountDeletionRequests.cancelledAt), isNull(accountDeletionRequests.executedAt));
+        const open = this.isActive();
 
         const [overdue] = await this.db
             .select({ value: count() })
@@ -57,29 +57,65 @@ export class AccountDeletionRequestRepository extends BaseRepository {
         };
     }
 
-    /** The one request still counting down, if any. */
+    /**
+     * The one request still counting down, if any. «One» is the partial unique
+     * index `account_deletion_requests_one_active_per_user`, not a hope.
+     */
     async findActive(userId: string): Promise<AccountDeletionRequestEntity | null> {
         const row = await this.db.query.accountDeletionRequests.findFirst({
-            where: and(
-                eq(accountDeletionRequests.userId, userId),
-                isNull(accountDeletionRequests.cancelledAt),
-                isNull(accountDeletionRequests.executedAt),
-            ),
+            where: and(eq(accountDeletionRequests.userId, userId), this.isActive()),
         });
 
         return row ? AccountDeletionRequestEntity.from(row) : null;
     }
 
-    async create(userId: string, scheduledFor: Date): Promise<AccountDeletionRequestEntity> {
-        const [row] = await this.db.insert(accountDeletionRequests).values({ userId, scheduledFor }).returning();
-        if (!row) throw new Error('Failed to insert account deletion request');
-        return AccountDeletionRequestEntity.from(row);
+    /**
+     * Raises a request, or returns null when one is already counting down.
+     *
+     * One statement and no prior read: the partial unique index is what says
+     * «already pending», so two taps in flight cannot both get past it. The
+     * second insert waits for the first to commit and then does nothing.
+     *
+     * `ON CONFLICT DO NOTHING` without a target on purpose — the only other
+     * unique constraint on the table is the random primary key, and naming the
+     * partial index here would repeat its predicate in a second place.
+     */
+    async createIfNoneActive(userId: string, scheduledFor: Date): Promise<AccountDeletionRequestEntity | null> {
+        const [row] = await this.db
+            .insert(accountDeletionRequests)
+            .values({ userId, scheduledFor })
+            .onConflictDoNothing()
+            .returning();
+
+        return row ? AccountDeletionRequestEntity.from(row) : null;
     }
 
-    async cancel(id: string): Promise<void> {
-        await this.db
+    /**
+     * Cancels whatever is counting down for the account, in one conditional
+     * update, and says whether anything was.
+     *
+     * By owner rather than by the id of a row read a moment earlier: with a
+     * read first, a concurrent second cancel would stamp the same row twice and
+     * both callers would report success. Here the second one waits on the row
+     * lock, re-checks `cancelled_at is null`, finds nothing and returns false.
+     * Addresses every active row rather than one picked by id, so the
+     * statement stays correct on its own and does not lean on the index to
+     * mean «the» request.
+     */
+    async cancelActive(userId: string): Promise<boolean> {
+        const cancelled = await this.db
             .update(accountDeletionRequests)
             .set({ cancelledAt: new Date() })
-            .where(eq(accountDeletionRequests.id, id));
+            .where(and(eq(accountDeletionRequests.userId, userId), this.isActive()))
+            .returning({ id: accountDeletionRequests.id });
+
+        return cancelled.length > 0;
+    }
+
+    /** Active means neither cancelled nor executed — state is derived, never stored. */
+    private isActive(): SQL {
+        const active = and(isNull(accountDeletionRequests.cancelledAt), isNull(accountDeletionRequests.executedAt));
+        if (!active) throw new Error('Failed to build the deletion-request clause');
+        return active;
     }
 }

@@ -31,11 +31,17 @@ export enum NotificationEvent {
     /**
      * Somebody used this account's referral code.
      *
-     * Deliberately not «rewarded»: nothing grants the referrer their month yet
-     * (a known debt), and an event named after a reward would be a promise the
-     * text then has to keep.
+     * Still not «rewarded», and it never will be: redeeming earns nothing.
+     * The month comes when that person first pays — `ReferralRewarded` — and
+     * most of them may never do so, so this text must not promise it.
      */
     ReferralRedeemed = 'referral_redeemed',
+    /**
+     * Somebody this account invited paid for the first time, and the month
+     * was granted — the subscription was lengthened or started. Sent after
+     * the grant is committed, so the text can name the new end date.
+     */
+    ReferralRewarded = 'referral_rewarded',
     /** The account is scheduled for deletion; the grace period is running. */
     AccountDeletionRequested = 'account_deletion_requested',
     /** …and the request was taken back. */
@@ -65,5 +71,4 @@ export enum NotificationEvent {
      * — the store does, and it does not tell us. Needs store notifications.
      */
     SubscriptionCancelled = 'subscription_cancelled',
-
 }

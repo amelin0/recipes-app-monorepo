@@ -227,6 +227,105 @@ describe('Progress', () => {
             expect((await profileOf()).weightKg).toBe(80);
         });
 
+        /**
+         * Wrong even without concurrency: the profile used to take whatever
+         * was written last, so yesterday's weight entered today replaced
+         * today's.
+         */
+        it('keeps the profile on the latest reading by date when an older one is entered after it', async () => {
+            await progress.record(user.id, BodyMetric.Weight, { value: 84, measuredOn: today() });
+            await progress.record(user.id, BodyMetric.Weight, { value: 80, measuredOn: daysAgo(5) });
+
+            expect((await profileOf()).weightKg).toBe(84);
+
+            const weight = oneOffCardFor(await progress.overview(user.id, 30), ProgressMetric.Weight);
+            expect(weight.current).toBe(84);
+        });
+
+        it('takes the later-entered of two readings on the same day, as the card does', async () => {
+            await progress.record(user.id, BodyMetric.Weight, { value: 81, measuredOn: today() });
+            await progress.record(user.id, BodyMetric.Weight, { value: 82, measuredOn: today() });
+
+            const weight = oneOffCardFor(await progress.overview(user.id, 30), ProgressMetric.Weight);
+
+            expect(weight.current).toBe(82);
+            expect((await profileOf()).weightKg).toBe(weight.current);
+        });
+
+        it('ends on the latest reading by date when readings are recorded in parallel', async () => {
+            const readings = [
+                { value: 80, measuredOn: daysAgo(9) },
+                { value: 86, measuredOn: daysAgo(1) },
+                { value: 81, measuredOn: daysAgo(7) },
+                { value: 83, measuredOn: daysAgo(4) },
+                { value: 79, measuredOn: daysAgo(12) },
+                { value: 84, measuredOn: daysAgo(2) },
+            ];
+
+            await Promise.all(readings.map(reading => progress.record(user.id, BodyMetric.Weight, reading)));
+
+            expect((await profileOf()).weightKg).toBe(86);
+            expect(oneOffCardFor(await progress.overview(user.id, 30), ProgressMetric.Weight).current).toBe(86);
+        });
+
+        it('agrees with the card when parallel readings share a day', async () => {
+            await Promise.all(
+                [81, 82, 83, 84, 85].map(value =>
+                    progress.record(user.id, BodyMetric.Weight, { value, measuredOn: today() }),
+                ),
+            );
+
+            // Which one is latest is decided by the shared order, not by which
+            // request committed last — and the profile and the card agree on it.
+            const weight = oneOffCardFor(await progress.overview(user.id, 30), ProgressMetric.Weight);
+            expect((await profileOf()).weightKg).toBe(weight.current);
+        });
+
+        it('keeps height on the latest reading by date as well', async () => {
+            await Promise.all([
+                progress.record(user.id, BodyMetric.Height, { value: 178, measuredOn: daysAgo(3) }),
+                progress.record(user.id, BodyMetric.Height, { value: 176, measuredOn: daysAgo(30) }),
+                progress.record(user.id, BodyMetric.Height, { value: 177, measuredOn: daysAgo(10) }),
+            ]);
+
+            expect((await profileOf()).heightCm).toBe(178);
+        });
+
+        it('hands the profile back to the previous reading when the latest is deleted', async () => {
+            await progress.record(user.id, BodyMetric.Weight, { value: 82, measuredOn: daysAgo(3) });
+            const latest = await progress.record(user.id, BodyMetric.Weight, { value: 85, measuredOn: today() });
+            expect((await profileOf()).weightKg).toBe(85);
+
+            await progress.remove(user.id, latest.id);
+
+            expect((await profileOf()).weightKg).toBe(82);
+        });
+
+        it('keeps the profile weight when the only reading is deleted', async () => {
+            await onboarding.saveStep(await profileOf(), { weightKg: 80 });
+            const only = await progress.record(user.id, BodyMetric.Weight, { value: 83 });
+
+            await progress.remove(user.id, only.id);
+
+            // Nothing better to fall back to: the questionnaire answer the
+            // reading replaced is not stored anywhere else, and a null weight
+            // would take the recommendation away.
+            expect((await profileOf()).weightKg).toBe(83);
+        });
+
+        it('ends on the latest surviving reading when deletes and records race', async () => {
+            const old = await progress.record(user.id, BodyMetric.Weight, { value: 80, measuredOn: daysAgo(10) });
+            const newest = await progress.record(user.id, BodyMetric.Weight, { value: 84, measuredOn: daysAgo(1) });
+
+            await Promise.all([
+                progress.remove(user.id, newest.id),
+                progress.record(user.id, BodyMetric.Weight, { value: 82, measuredOn: daysAgo(5) }),
+                progress.remove(user.id, old.id),
+            ]);
+
+            expect((await profileOf()).weightKg).toBe(82);
+        });
+
         it('removes a reading and refuses to remove one that is not yours', async () => {
             const mine = await progress.record(user.id, BodyMetric.Waist, { value: 88 });
             const stranger = await register(OTHER_EMAIL);

@@ -87,11 +87,11 @@ describe('One-time codes', () => {
     it('registering over a verified account is refused, over an unverified one is not', async () => {
         await authService.register({ email: EMAIL, password: PASSWORD });
 
-        // Unverified: a second attempt replaces the password and re-sends.
+        // Unverified: a second attempt sends a new code bound to its password.
         await expect(authService.register({ email: EMAIL, password: 'other123' })).resolves.toBeUndefined();
         await authService.verifyEmail({ email: EMAIL, code: DEV_CODE });
 
-        // The password from the LAST attempt is the live one.
+        // The code verified is the LAST attempt's, so its password is the live one.
         await expect(authService.login({ email: EMAIL, password: 'other123' })).resolves.toHaveProperty('accessToken');
 
         // Verified: FR-009 wants a distinguishable answer.

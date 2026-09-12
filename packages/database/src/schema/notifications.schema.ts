@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm';
-import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { NotificationEvent, NotificationType } from '@dns/shared-types';
 
@@ -25,6 +25,10 @@ export const notificationEventEnum = pgEnum('notification_event', [
     NotificationEvent.Inactivity,
     NotificationEvent.SubscriptionExpiring,
     NotificationEvent.SubscriptionExpired,
+    // Appended, not placed beside `referral_redeemed`: a value added at the
+    // end is a plain `ADD VALUE`, one in the middle needs `BEFORE`, and the
+    // order here means nothing to anybody reading the column.
+    NotificationEvent.ReferralRewarded,
 ]);
 
 /**
@@ -82,9 +86,42 @@ export const notifications = pgTable(
 
         readAt: timestamp('read_at', { withTimezone: true }),
 
+        /**
+         * Names the one occurrence this row is about — `sub-expired:<id>`,
+         * `product-verified:<id>` — when the same event could otherwise be
+         * produced twice for it: a nightly job run twice, two admins clicking
+         * «verify» at once.
+         *
+         * The guard is the unique index below, not a look at the inbox before
+         * writing. A read-then-insert lets two writers both see nothing and
+         * both write; an insert that conflicts cannot. Null for events that
+         * have no such identity, and nulls never conflict.
+         *
+         * Forgotten with the row by the retention sweep. That is safe for
+         * every key in use: each names an occurrence that is long over, and
+         * never produced again, by the time its row is ninety days old.
+         */
+        dedupeKey: text('dedupe_key'),
+
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
-    table => [index('notifications_user_created_idx').on(table.userId, table.createdAt)],
+    table => [
+        index('notifications_user_created_idx').on(table.userId, table.createdAt),
+        /**
+         * For the retention sweep, which asks «older than» across every
+         * account. The index above cannot answer that: `user_id` leads, and
+         * Postgres 16 has no skip scan, so without this one every nightly
+         * batch — including the last, empty one — reads the whole table.
+         */
+        index('notifications_created_idx').on(table.createdAt),
+        /**
+         * What `dedupe_key` promises. Per account, because two people told
+         * about «the same» thing must both be told.
+         */
+        uniqueIndex('notifications_user_dedupe_key_unique')
+            .on(table.userId, table.dedupeKey)
+            .where(sql`${table.dedupeKey} is not null`),
+    ],
 );
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({

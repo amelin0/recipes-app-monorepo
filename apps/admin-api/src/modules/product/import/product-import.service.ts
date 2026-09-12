@@ -1,6 +1,5 @@
 import { Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
 
-import { AdminProductRepository } from '@dns/database';
 import { Language } from '@dns/shared-types';
 import { adminCreateProductSchema } from '@dns/validation';
 
@@ -21,10 +20,7 @@ const REQUIRED_COLUMNS = ['name_en', 'name_uk', 'calories', 'protein', 'fats', '
 export class ProductImportService {
     private readonly logger = new Logger(ProductImportService.name);
 
-    constructor(
-        private readonly productRepository: AdminProductRepository,
-        private readonly productService: AdminProductService,
-    ) {}
+    constructor(private readonly productService: AdminProductService) {}
 
     /**
      * Imports a CSV of products.
@@ -34,9 +30,11 @@ export class ProductImportService {
      * and `200` even with errors, because partial success is the expected
      * outcome of a file a human typed.
      *
-     * Deduplicated on the **English name**. Unlike recipes, products need no
-     * invented key: English is already the identity, because that is what a
-     * recipe CSV addresses them by (`Tomatoes:250`).
+     * Deduplicated on the **English name** of **global** products. Unlike
+     * recipes, products need no invented key: English is already the
+     * identity, because that is what a recipe CSV addresses them by
+     * (`Tomatoes:250`). Private products are outside the catalogue and
+     * outside the match.
      */
     async import(csv: string, maxRows: number): Promise<ProductImportReport> {
         const table = parseCsv(csv);
@@ -84,16 +82,12 @@ export class ProductImportService {
                 if (seen.has(key)) throw new Error(`Duplicate name_en "${nameEn}" in this file`);
                 seen.add(key);
 
-                const payload = this.toPayload(get, nameEn);
-                const existingId = await this.productRepository.findIdByEnglishName(nameEn);
-
-                if (existingId) {
-                    await this.productService.update(existingId, payload);
-                    report.updated++;
-                } else {
-                    await this.productService.create(payload);
-                    report.created++;
-                }
+                // One call decides «update or create» and writes, in one
+                // transaction and only ever against the global catalogue — a
+                // user's private product of the same name is not the row the
+                // file means, and must come out of the import untouched.
+                const outcome = await this.productService.importRow(this.toPayload(get, nameEn));
+                report[outcome]++;
             } catch (error) {
                 report.skipped++;
                 report.errors.push({ row: rowNumber, importKey: nameEn || null, message: this.explain(error) });

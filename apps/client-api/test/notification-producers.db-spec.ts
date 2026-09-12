@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
+import { NotificationDedupeKey, NotificationsProducer } from '@dns/api-common';
 import { NotificationEntity, NotificationRepository, UserRepository, schema } from '@dns/database';
-import { NotificationEvent, NotificationType } from '@dns/shared-types';
+import { NotificationEvent, NotificationType, PurchaseStore, SubscriptionStatus } from '@dns/shared-types';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { SubscriptionService } from '../src/modules/subscription/subscription.service';
@@ -90,7 +91,9 @@ describe('Notification producers', () => {
         it('still records the request when the inbox write fails', async () => {
             const userId = await register(EMAIL);
             const producer = ctx.moduleRef.get(NotificationRepository);
-            const create = jest.spyOn(producer, 'create').mockRejectedValue(new Error('inbox is down'));
+            const create = jest
+                .spyOn(producer, 'createUnlessDuplicate')
+                .mockRejectedValue(new Error('inbox is down'));
 
             await expect(deletionService.request(userId)).resolves.toBeDefined();
             expect(await deletionService.findActive(userId)).not.toBeNull();
@@ -148,7 +151,7 @@ describe('Notification producers', () => {
             expect(redeemerInbox.map(message => message.type)).toContain(NotificationType.Subscription);
         });
 
-        it('does not promise the referrer a month nobody grants', async () => {
+        it('does not promise the referrer a month for a redemption alone', async () => {
             const referrerId = await register(REFERRER_EMAIL);
             const redeemerId = await register(EMAIL);
 
@@ -156,10 +159,107 @@ describe('Notification producers', () => {
             await subscriptionService.redeemCode(redeemerId, code);
 
             const [message] = await inboxOf(referrerId);
-            // Nothing in the product gives the referrer their free month yet
-            // (a known debt). A message that said otherwise would be the only
-            // part of the app claiming it happened.
+            // Redeeming earns nothing: the month comes with this person's first
+            // payment, which may never happen. A message that read as if it
+            // had been earned would be promising what nothing has granted.
             expect(`${message?.title} ${message?.body}`).not.toMatch(/місяц|month/i);
+        });
+
+        it('tells the referrer their month landed once the friend pays, and until when', async () => {
+            const referrerId = await register(REFERRER_EMAIL);
+            const redeemerId = await register(EMAIL);
+
+            const { code } = await subscriptionService.referral(referrerId);
+            await subscriptionService.redeemCode(redeemerId, code);
+
+            // The free month has to be over before its holder can buy.
+            const sixWeeksAgo = new Date(Date.now() - 42 * 86_400_000);
+            await ctx.db
+                .update(schema.subscriptions)
+                .set({
+                    status: SubscriptionStatus.Expired,
+                    startedAt: sixWeeksAgo,
+                    expiresAt: new Date(Date.now() - 86_400_000),
+                })
+                .where(eq(schema.subscriptions.userId, redeemerId));
+            await ctx.db
+                .update(schema.referralRedemptions)
+                .set({ redeemedAt: sixWeeksAgo })
+                .where(eq(schema.referralRedemptions.redeemerUserId, redeemerId));
+
+            await subscriptionService.redeemReceipt(redeemerId, {
+                store: PurchaseStore.Apple,
+                receipt: JSON.stringify({
+                    transactionId: 'txn-referral-reward',
+                    productId: 'com.rationfit.application.monthly',
+                    startedAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+                    isTrial: false,
+                }),
+            });
+
+            const [row] = await ctx.db
+                .select({
+                    type: schema.notifications.type,
+                    title: schema.notifications.title,
+                    body: schema.notifications.body,
+                })
+                .from(schema.notifications)
+                .where(
+                    and(
+                        eq(schema.notifications.userId, referrerId),
+                        eq(schema.notifications.event, NotificationEvent.ReferralRewarded),
+                    ),
+                );
+
+            expect(row?.type).toBe(NotificationType.Subscription);
+            expect(row?.title).toBe('Ви отримали місяць Преміуму');
+            // Now that the month exists, the text can name the day it runs to.
+            expect(row?.body).toMatch(/\d/);
+        });
+    });
+
+    /**
+     * `dedupe_key` is what makes «at most once» hold under concurrency. The
+     * producer itself never reads the inbox first: these run the writes at
+     * the same moment, which is exactly where a read-then-insert would let
+     * both through.
+     */
+    describe('at most once, per key', () => {
+        const producer = (): NotificationsProducer => ctx.moduleRef.get(NotificationsProducer, { strict: false });
+
+        const emitTwiceAtOnce = (userId: string, dedupeKey?: string): Promise<boolean[]> =>
+            Promise.all([
+                producer().emit(userId, NotificationEvent.ProductVerified, { subject: 'Cheese', dedupeKey }),
+                producer().emit(userId, NotificationEvent.ProductVerified, { subject: 'Cheese', dedupeKey }),
+            ]);
+
+        it('writes one row when two writers race on one key, and says which one wrote it', async () => {
+            const userId = await register(EMAIL);
+
+            const outcomes = await emitTwiceAtOnce(userId, NotificationDedupeKey.productVerified('product-1'));
+
+            expect(outcomes.sort()).toEqual([false, true]);
+            expect(await inboxOf(userId)).toHaveLength(1);
+        });
+
+        it('still tells a second account about the same key', async () => {
+            const first = await register(EMAIL);
+            const second = await register(REFERRER_EMAIL);
+            const key = NotificationDedupeKey.productVerified('product-1');
+
+            await expect(emitTwiceAtOnce(first, key)).resolves.toContain(true);
+            await expect(emitTwiceAtOnce(second, key)).resolves.toContain(true);
+
+            expect(await inboxOf(first)).toHaveLength(1);
+            expect(await inboxOf(second)).toHaveLength(1);
+        });
+
+        it('writes a keyless event every time it is produced', async () => {
+            const userId = await register(EMAIL);
+
+            await expect(emitTwiceAtOnce(userId)).resolves.toEqual([true, true]);
+            expect(await inboxOf(userId)).toHaveLength(2);
         });
     });
 

@@ -7,8 +7,10 @@ import {
     MealLogEntryEntity,
     NutritionGoalEntity,
     NutritionRepository,
+    RecipeEntity,
     WaterLogEntryEntity,
 } from '@dns/database';
+import { MealSlot } from '@dns/shared-types';
 import {
     LogMealInput,
     LogWaterInput,
@@ -17,7 +19,26 @@ import {
     UpsertNutritionGoalInput,
 } from '@dns/validation';
 
+import { MealPlanService, PlanSlot } from '../meal-plan/meal-plan.service';
+
 import { NutritionErrorCode } from './nutrition.errors';
+
+/** A planned dish on the tracking screen, and whether it has been eaten yet. */
+export interface DailyPlanItem {
+    /** The plan item's id, as the plan tab knows it. */
+    id: string;
+    recipe: RecipeEntity;
+    /**
+     * The log entry that ate this dish; null while it has not been eaten.
+     * Unmarking is deleting that entry — the ring and the mark read one log.
+     */
+    eatenEntryId: string | null;
+}
+
+export interface DailyPlanSlot {
+    slot: MealSlot;
+    items: DailyPlanItem[];
+}
 
 /** Everything the tracking screen renders for one day. */
 export interface DailySlice {
@@ -25,13 +46,18 @@ export interface DailySlice {
     goal: NutritionGoalEntity | null;
     totals: DailyTotals;
     meals: MealLogEntryEntity[];
+    /** All four slots, always — empty ones are «Не заплановано» (FR-005). */
+    plan: DailyPlanSlot[];
     steps: number;
     stepsTarget: number;
 }
 
 @Injectable()
 export class NutritionService {
-    constructor(private readonly nutritionRepository: NutritionRepository) {}
+    constructor(
+        private readonly nutritionRepository: NutritionRepository,
+        private readonly mealPlanService: MealPlanService,
+    ) {}
 
     getGoal(userId: string): Promise<NutritionGoalEntity | null> {
         return this.nutritionRepository.findGoal(userId);
@@ -70,13 +96,17 @@ export class NutritionService {
      * `goal` is null for an account that has never set one — the screen shows
      * a call to action rather than rings, and inventing numbers nobody chose
      * would be worse than showing none.
+     *
+     * The planned dishes come from the meal plan and whether each was eaten
+     * from the log, so the screen needs no second request to draw its slots.
      */
     async getDay(userId: string, date: string): Promise<DailySlice> {
-        const [goal, totals, meals, steps] = await Promise.all([
+        const [goal, totals, meals, steps, slots] = await Promise.all([
             this.nutritionRepository.findGoal(userId),
             this.nutritionRepository.findDailyTotals(userId, date),
             this.nutritionRepository.findMealLogEntries(userId, date),
             this.nutritionRepository.findSteps(userId, date),
+            this.mealPlanService.slotsOn(userId, date),
         ]);
 
         return {
@@ -84,6 +114,7 @@ export class NutritionService {
             goal,
             totals,
             meals,
+            plan: markEaten(slots, meals),
             steps: steps?.steps ?? 0,
             stepsTarget: goal?.dailyStepsTarget ?? DAILY_STEPS_TARGET_DEFAULT,
         };
@@ -154,4 +185,29 @@ export class NutritionService {
     setSteps(userId: string, date: string, input: SetStepsInput): Promise<DailyStepsEntity> {
         return this.nutritionRepository.upsertSteps(userId, date, input.steps);
     }
+}
+
+/**
+ * Pairs each planned dish with a log entry for the same recipe in the same
+ * slot. **The mark is derived, never stored:** a flag on the plan item would
+ * be a second record of the same meal, and the day the two disagreed the dish
+ * would read «eaten» while the ring did not count it.
+ *
+ * Each entry settles one dish, oldest first, so a dish planned twice needs
+ * two entries to be eaten twice. An entry with no recipe — or logged into
+ * another slot — settles nothing here and still counts in `meals` and the
+ * totals.
+ */
+function markEaten(slots: PlanSlot[], meals: MealLogEntryEntity[]): DailyPlanSlot[] {
+    const unclaimed = [...meals].sort((a, b) => a.loggedAt.getTime() - b.loggedAt.getTime());
+
+    return slots.map(({ slot, items }) => ({
+        slot,
+        items: items.map(item => {
+            const index = unclaimed.findIndex(entry => entry.slot === slot && entry.recipeId === item.recipe.id);
+            const [entry] = index === -1 ? [] : unclaimed.splice(index, 1);
+
+            return { id: item.id, recipe: item.recipe, eatenEntryId: entry?.id ?? null };
+        }),
+    }));
 }

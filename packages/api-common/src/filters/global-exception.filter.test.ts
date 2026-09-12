@@ -66,3 +66,48 @@ test('never leaks the message of an unrecognised error', () => {
     assert.equal(status, 500);
     assert.equal(body.message, 'Internal server error');
 });
+
+/** What postgres-js throws, wrapped the way Drizzle wraps it. */
+function driverError(code: string): Error {
+    const pg = Object.assign(new Error('duplicate key value violates unique constraint "users_email_unique"'), {
+        name: 'PostgresError',
+        severity: 'ERROR',
+        code,
+        constraint_name: 'users_email_unique',
+    });
+    return new Error('Failed query: insert into "users" ("email", "password_hash") values ($1, $2)', { cause: pg });
+}
+
+test('a unique violation is a 409 conflict, not a 500', () => {
+    const { status, body } = runFilter(driverError('23505'));
+
+    assert.equal(status, 409);
+    assert.equal(body.code, 'common.conflict');
+});
+
+test('a foreign-key violation is a 409 conflict too', () => {
+    const { status, body } = runFilter(driverError('23503'));
+
+    assert.equal(status, 409);
+    assert.equal(body.code, 'common.conflict');
+});
+
+test('a conflict body names neither the constraint nor the query', () => {
+    const serialized = JSON.stringify(runFilter(driverError('23505')).body);
+
+    assert.doesNotMatch(serialized, /users_email_unique/);
+    assert.doesNotMatch(serialized, /insert into/i);
+});
+
+test('any other database error stays an opaque 500', () => {
+    const { status, body } = runFilter(driverError('40P01'));
+
+    assert.equal(status, 500);
+    assert.equal(body.message, 'Internal server error');
+});
+
+test('a Node system error with a five-letter code is not mistaken for SQLSTATE', () => {
+    const { status } = runFilter(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' }));
+
+    assert.equal(status, 500);
+});

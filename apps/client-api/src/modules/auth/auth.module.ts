@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
+import { THROTTLER_IDENTITY_VERIFIER } from '@dns/api-common';
 import {
     AccountDeletionRequestRepositoryModule,
     OAuthIdentityRepositoryModule,
@@ -12,6 +13,7 @@ import {
     UserRepositoryModule,
 } from '@dns/database';
 
+import { AccessTokenIdentityVerifier } from './access-token-identity.verifier';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtGuard } from './guards';
@@ -47,7 +49,10 @@ import { TokenService } from './token.service';
         TokenService,
         JwtStrategy,
         JwtGuard,
+        // Consumed by the global CustomThrottlerGuard in AppModule, which can
+        // only see what this module exports.
+        { provide: THROTTLER_IDENTITY_VERIFIER, useClass: AccessTokenIdentityVerifier },
     ],
-    exports: [JwtGuard, TokenService],
+    exports: [JwtGuard, TokenService, THROTTLER_IDENTITY_VERIFIER],
 })
 export class AuthModule {}

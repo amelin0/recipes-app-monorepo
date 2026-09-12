@@ -133,7 +133,15 @@ export const createFeedbackSchema = z.object({
         .max(1000, 'Description must be at most 1000 characters'),
     /** Public URLs from `POST /uploads` with the `feedback` scope; ownership is checked server-side. */
     imageUrls: z.array(z.string().url('Must be a valid URL')).max(3, 'At most 3 images').optional(),
-    replyEmail: emailSchema.optional(),
+    /**
+     * Optional (FR-006), and a blank field means «not given»: the form keeps
+     * an untouched input as `''`, and refusing that would make the optional
+     * field mandatory to anyone who never tapped it.
+     */
+    replyEmail: z.preprocess(
+        value => (value === null || (typeof value === 'string' && value.trim() === '') ? undefined : value),
+        emailSchema.optional(),
+    ),
     /**
      * App version, platform, OS build — whatever the client can say about
      * itself (FR-008). Deliberately open: the spec leaves the exact set

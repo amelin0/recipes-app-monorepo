@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { isUniqueViolation } from '@dns/api-common';
 import { OAuthService as OAuthVerifier } from '@dns/api-infrastructure/oauth';
 import { OAuthIdentityRepository, UserEntity, UserRepository } from '@dns/database';
 import { AuthTokens } from '@dns/shared-types';
@@ -7,6 +8,14 @@ import { OAuthSignInInput } from '@dns/validation';
 
 import { newAccountInput } from './account.factory';
 import { TokenService } from './token.service';
+
+/**
+ * How many times account resolution is run when a concurrent sign-in keeps
+ * winning the insert. Each lost race means the other request committed, so
+ * the next pass finds its rows; three covers «create account» then «link»
+ * both being lost, and anything beyond that is not a double tap.
+ */
+const RESOLVE_ATTEMPTS = 3;
 
 /**
  * Sign-in and sign-up through a provider are one mechanism, not two: the app
@@ -25,9 +34,31 @@ export class OAuthSignInService {
     async signIn({ provider, idToken }: OAuthSignInInput): Promise<AuthTokens> {
         const profile = await this.verifier.verifyIdToken(provider, idToken);
 
-        const user = await this.resolveAccount(profile.providerUserId, profile.email, provider);
+        const user = await this.resolveAccountRetrying(profile.providerUserId, profile.email, provider);
 
         return this.tokenService.issuePair(user);
+    }
+
+    /**
+     * Resolution is read-then-write, and the writes are guarded by unique
+     * indexes — `users_email_unique` and `oauth_identities_provider_user_unique`
+     * — not by the reads. Two first sign-ins of one person (a double tap, or
+     * the app retrying) both read «nobody yet» and both insert; the index
+     * turns the loser away, and the loser simply resolves again and finds what
+     * the winner committed. Before, that second request was a 500.
+     */
+    private async resolveAccountRetrying(
+        providerUserId: string,
+        email: string,
+        provider: OAuthSignInInput['provider'],
+    ): Promise<UserEntity> {
+        for (let attempt = 1; ; attempt++) {
+            try {
+                return await this.resolveAccount(providerUserId, email, provider);
+            } catch (error) {
+                if (!isUniqueViolation(error) || attempt >= RESOLVE_ATTEMPTS) throw error;
+            }
+        }
     }
 
     private async resolveAccount(
@@ -45,27 +76,26 @@ export class OAuthSignInService {
         //    accounts and loses their data.
         const existing = await this.userRepository.findByEmail(email);
         if (existing) {
-            await this.oauthIdentityRepository.create({ userId: existing.id, provider, providerUserId });
-
             // An unverified account becomes verified here: the provider has
             // just asserted ownership of the address, which is exactly what
-            // the emailed code was asking the user to prove.
-            if (!existing.isEmailVerified()) {
-                await this.userRepository.markEmailVerified(existing.id);
-                const refreshed = await this.userRepository.findById(existing.id);
-                return refreshed ?? existing;
-            }
+            // the emailed code was asking the user to prove. Its password, set
+            // by whoever registered the address without proving it, is
+            // dropped in the same transaction — see `linkOAuthIdentity`.
+            const withLink = await this.userRepository.linkOAuthIdentity({
+                userId: existing.id,
+                provider,
+                providerUserId,
+            });
 
-            return existing;
+            return withLink ?? existing;
         }
 
         // 3. Nobody yet. The account starts verified and without a password
         //    (sign-up FR-012); a password can be added later through the reset
-        //    flow (FR-013).
-        const created = await this.userRepository.createAccount(newAccountInput({ email, emailVerified: true }));
-
-        await this.oauthIdentityRepository.create({ userId: created.id, provider, providerUserId });
-
-        return created;
+        //    flow (FR-013). The identity goes in with it, in one transaction.
+        return this.userRepository.createAccount({
+            ...newAccountInput({ email, emailVerified: true }),
+            oauthIdentity: { provider, providerUserId },
+        });
     }
 }

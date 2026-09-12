@@ -1,11 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
-import { NotificationsProducer } from '@dns/api-common';
-import { DEFAULT_LANGUAGE } from '@dns/constants';
+import { NotificationDedupeKey, NotificationsProducer } from '@dns/api-common';
 import {
     AdminProductDetail,
     AdminProductListItem,
     AdminProductRepository,
+    DuplicateProductNameError,
     WriteProductInput,
 } from '@dns/database';
 import { NotificationEvent } from '@dns/shared-types';
@@ -42,28 +42,56 @@ export class AdminProductService {
     }
 
     async create(input: AdminCreateProductInput): Promise<string> {
-        await this.assertEnglishNameFree(input, null);
-        return this.productRepository.create(await this.toWriteInput(input));
+        const write = await this.toWriteInput(input);
+        return this.refusingDuplicateNames(englishNameOf(input), () => this.productRepository.create(write));
     }
 
     async update(id: string, input: AdminCreateProductInput): Promise<void> {
-        await this.assertEnglishNameFree(input, id);
-
-        const updated = await this.productRepository.update(id, await this.toWriteInput(input));
+        const write = await this.toWriteInput(input);
+        const updated = await this.refusingDuplicateNames(englishNameOf(input), () =>
+            this.productRepository.update(id, write),
+        );
         if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
     }
 
+    /**
+     * The CSV import's row: the global product with this English name is
+     * updated, or created. One repository call owns the lookup and the write,
+     * and it never reaches a user's private product (see the repository).
+     */
+    async importRow(input: AdminCreateProductInput): Promise<'created' | 'updated'> {
+        const write = await this.toWriteInput(input);
+        return this.refusingDuplicateNames(englishNameOf(input), () =>
+            this.productRepository.upsertGlobalByEnglishName(write),
+        );
+    }
+
+    /**
+     * Verifying promotes; un-verifying only takes the mark off.
+     *
+     * The author is told only when **this** call did the promotion — the
+     * repository's conditional update decides that, so two admins verifying
+     * at once produce one message. Verifying again, or a product that was
+     * ours all along, tells nobody. The dedupe key is the second lock on the
+     * same door: whatever happens upstream, one product is announced once.
+     */
     async setVerified(id: string, isVerified: boolean): Promise<void> {
-        // Read before the write: verification clears `createdBy`, so afterwards
-        // there is no author left to tell.
-        const before = await this.findById(id, DEFAULT_LANGUAGE);
+        if (!isVerified) {
+            const updated = await this.productRepository.unverify(id);
+            if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+            return;
+        }
 
-        const updated = await this.productRepository.setVerified(id, isVerified);
-        if (!updated) throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+        const outcome = await this.refusingDuplicateNames(null, () => this.productRepository.verify(id));
 
-        if (isVerified && before.createdBy) {
-            await this.notifications.emit(before.createdBy, NotificationEvent.ProductVerified, {
-                subject: before.name,
+        if (outcome.kind === 'not-found') {
+            throw new NotFoundException({ message: 'Product not found', code: ProductErrorCode.NotFound });
+        }
+
+        if (outcome.kind === 'promoted' && outcome.authorId) {
+            await this.notifications.emit(outcome.authorId, NotificationEvent.ProductVerified, {
+                subject: outcome.name,
+                dedupeKey: NotificationDedupeKey.productVerified(id),
             });
         }
     }
@@ -103,23 +131,33 @@ export class AdminProductService {
     }
 
     /**
-     * English names have to stay unique, because the recipe CSV import
-     * addresses a product by its English name (`Tomatoes:250`).
+     * English names of global products have to stay unique, because the
+     * recipe CSV import addresses a product by its English name
+     * (`Tomatoes:250`). A duplicate would not fail loudly: the import would
+     * pick whichever row came back first, and two dishes claiming the same
+     * ingredient could quietly resolve to different products.
      *
-     * A duplicate would not fail loudly: the import would pick whichever row
-     * came back first, and two dishes claiming the same ingredient could
-     * quietly resolve to different products with different macros.
+     * Enforced by a unique index, not checked here first — a check and a
+     * write are two statements, and two requests fit between them. This only
+     * translates the index's refusal into the 409 the panel shows.
      */
-    private async assertEnglishNameFree(input: AdminCreateProductInput, selfId: string | null): Promise<void> {
-        const english = input.translations.find(t => t.language === 'en');
-        if (!english) return;
+    private async refusingDuplicateNames<T>(englishName: string | null, write: () => Promise<T>): Promise<T> {
+        try {
+            return await write();
+        } catch (error) {
+            if (!(error instanceof DuplicateProductNameError)) throw error;
 
-        const owner = await this.productRepository.findIdByEnglishName(english.name);
-        if (owner && owner !== selfId) {
             throw new ConflictException({
-                message: `Another product is already called "${english.name}" in English`,
+                message:
+                    englishName === null
+                        ? 'The catalogue already has a product with this English name'
+                        : `Another product is already called "${englishName}" in English`,
                 code: ProductErrorCode.DuplicateName,
             });
         }
     }
+}
+
+function englishNameOf(input: AdminCreateProductInput): string | null {
+    return input.translations.find(t => t.language === 'en')?.name ?? null;
 }

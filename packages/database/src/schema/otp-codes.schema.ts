@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm';
-import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { OtpPurpose } from '@dns/shared-types';
 
@@ -13,9 +13,11 @@ export const otpPurposeEnum = pgEnum('otp_purpose', [OtpPurpose.EmailVerificatio
  * (expiry, single use, attempt counter) and differ only in what consuming the
  * code grants.
  *
- * Issuing a new code deletes the previous unconsumed one for the same
- * (user, purpose): sign-up FR-006 and password-reset FR-006 both require a
- * resend to invalidate its predecessor.
+ * At most one unconsumed code per (user, purpose) — a partial unique index,
+ * not a convention. Sign-up FR-006 and password-reset FR-006 both require a
+ * resend to invalidate its predecessor, and issuing is an upsert against that
+ * index, so two resends landing together replace one row instead of leaving
+ * two live codes (and twice the guesses).
  */
 export const otpCodes = pgTable(
     'otp_codes',
@@ -32,15 +34,36 @@ export const otpCodes = pgTable(
         // table of SHA-256 codes would be reversed instantly.
         codeHash: text('code_hash').notNull(),
 
-        // Counts failed guesses. At the cap (see AUTH_POLICY) the code is spent
-        // whether or not it was ever entered correctly — sign-up FR-005.
+        // Counts checks, reserved BEFORE the comparison runs: a guess takes a
+        // slot with a conditional UPDATE (`attempts < max`) and only then
+        // compares. Once the cap is reached the code is spent whether or not
+        // it was ever entered correctly — sign-up FR-005.
         attempts: integer('attempts').notNull().default(0),
+
+        /**
+         * Sign-up only: bcrypt of the password chosen by the registration this
+         * code was sent for. It becomes `users.password_hash` when — and only
+         * when — THIS code is verified.
+         *
+         * The password lives with the code rather than on the account because
+         * an unverified address is claimable by anyone: writing it to the
+         * account at registration let a second registrant replace the owner's
+         * password while the owner's confirmation was in flight. A resend or a
+         * sign-in that re-issues the code carries it over; a password reset
+         * deletes it with the code. Null for password-reset codes.
+         */
+        passwordHash: text('password_hash'),
 
         expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
         consumedAt: timestamp('consumed_at', { withTimezone: true }),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
-    table => [index('otp_codes_user_id_purpose_idx').on(table.userId, table.purpose)],
+    table => [
+        index('otp_codes_user_id_purpose_idx').on(table.userId, table.purpose),
+        uniqueIndex('otp_codes_one_live_per_purpose')
+            .on(table.userId, table.purpose)
+            .where(sql`${table.consumedAt} is null`),
+    ],
 );
 
 export const otpCodesRelations = relations(otpCodes, ({ one }) => ({

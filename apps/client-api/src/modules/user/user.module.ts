@@ -6,6 +6,7 @@ import {
     FeedbackRepositoryModule,
     NutritionRepositoryModule,
     ProfileRepositoryModule,
+    SubscriptionRepositoryModule,
     UserReminderRepositoryModule,
     UserSettingsRepositoryModule,
 } from '@dns/database';
@@ -32,6 +33,7 @@ import { RemindersService } from './reminders.service';
         AccountDeletionRequestRepositoryModule,
         FeedbackRepositoryModule,
         NutritionRepositoryModule,
+        SubscriptionRepositoryModule,
         NotificationsProducerModule,
     ],
     controllers: [

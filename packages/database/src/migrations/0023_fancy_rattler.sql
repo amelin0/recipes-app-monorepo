@@ -1,0 +1,2 @@
+ALTER TABLE "admin_refresh_tokens" ADD COLUMN "grace_used_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "admin_refresh_tokens" ADD CONSTRAINT "admin_refresh_tokens_grace_after_rotation" CHECK ("admin_refresh_tokens"."grace_used_at" IS NULL OR "admin_refresh_tokens"."rotated_at" IS NOT NULL);

@@ -7,7 +7,7 @@ import {
     ONBOARDING_LIMITS,
     recommendedDailyNorms,
 } from '@dns/constants';
-import { NutritionRepository, ProfileEntity, ProfileRepository } from '@dns/database';
+import { ProfileEntity, ProfileRepository } from '@dns/database';
 import { BodyProfile, DailyNorms, MacroTargets, UserGoal } from '@dns/shared-types';
 import { CompleteOnboardingInput, SaveOnboardingStepInput } from '@dns/validation';
 
@@ -21,10 +21,7 @@ export interface Recommendations {
 
 @Injectable()
 export class OnboardingService {
-    constructor(
-        private readonly profileRepository: ProfileRepository,
-        private readonly nutritionRepository: NutritionRepository,
-    ) {}
+    constructor(private readonly profileRepository: ProfileRepository) {}
 
     /**
      * Saves whatever the current step answered.
@@ -51,8 +48,11 @@ export class OnboardingService {
                   ? {}
                   : { targetWeightKg: targetWeightKg === null ? null : targetWeightKg.toFixed(1) }),
             // Never moves backwards: revisiting an earlier step to change an
-            // answer must not make the app resume from there next time.
-            ...(step === undefined ? {} : { onboardingStep: Math.max(step, profile.onboardingStep) }),
+            // answer must not make the app resume from there next time. The
+            // repository writes it as `greatest(current, step)` in the same
+            // statement — a max against `profile`, read before this request
+            // wrote anything, loses to a concurrent answer landing out of order.
+            ...(step === undefined ? {} : { onboardingStep: step }),
         });
     }
 
@@ -80,41 +80,43 @@ export class OnboardingService {
      * The two happen together on purpose. Steps 14–16 *are* the goal screen in
      * disguise, and leaving the account marked complete but goal-less would
      * drop the user onto a tracking screen with no rings and no idea why.
+     *
+     * Both writes are one repository transaction, and the goal is computed
+     * from the profile as that transaction locked it — not from `profile`,
+     * which the controller read before anything here ran. Only the owner is
+     * taken from it.
      */
     async complete(profile: ProfileEntity, input: CompleteOnboardingInput): Promise<ProfileEntity> {
-        const body = this.bodyProfile(profile);
+        return this.profileRepository.completeOnboarding(profile.userId, ONBOARDING_LIMITS.stepCount, current => {
+            const body = this.bodyProfile(current);
 
-        if (!body) {
-            throw new BadRequestException({
-                message: 'The questionnaire has unanswered questions',
-                code: UserErrorCode.OnboardingIncomplete,
-            });
-        }
+            if (!body) {
+                throw new BadRequestException({
+                    message: 'The questionnaire has unanswered questions',
+                    code: UserErrorCode.OnboardingIncomplete,
+                });
+            }
 
-        const recommended = recommendedDailyNorms(body);
-        // The split follows the calories the user settled on, not the ones we
-        // suggested — they may have moved the dial (FR-006h).
-        const macros = macroTargetsFor(input.dailyCalories, body.goal);
+            const recommended = recommendedDailyNorms(body);
+            // The split follows the calories the user settled on, not the ones
+            // we suggested — they may have moved the dial (FR-006h).
+            const macros = macroTargetsFor(input.dailyCalories, body.goal);
 
-        await this.nutritionRepository.upsertGoal({
-            userId: profile.userId,
-            dailyCalories: input.dailyCalories,
-            dailyProteinG: macros.proteinG,
-            dailyFatsG: macros.fatsG,
-            dailyCarbsG: macros.carbsG,
-            dailyWaterMl: input.dailyWaterMl,
-            dailyFiberG: macros.fiberG,
-            dailyStepsTarget: input.dailySteps || DAILY_STEPS_TARGET_DEFAULT,
-            // Frozen here so «how far did they move from the recommendation»
-            // stays answerable later, when a fresh one would have shifted.
-            recommendedCalories: recommended.calories,
-            recommendedWaterMl: recommended.waterMl,
-            recommendedSteps: recommended.steps,
-        });
-
-        return this.profileRepository.update(profile.userId, {
-            onboardingCompletedAt: new Date(),
-            onboardingStep: ONBOARDING_LIMITS.stepCount,
+            return {
+                dailyCalories: input.dailyCalories,
+                dailyProteinG: macros.proteinG,
+                dailyFatsG: macros.fatsG,
+                dailyCarbsG: macros.carbsG,
+                dailyWaterMl: input.dailyWaterMl,
+                dailyFiberG: macros.fiberG,
+                dailyStepsTarget: input.dailySteps || DAILY_STEPS_TARGET_DEFAULT,
+                // Frozen here so «how far did they move from the
+                // recommendation» stays answerable later, when a fresh one
+                // would have shifted.
+                recommendedCalories: recommended.calories,
+                recommendedWaterMl: recommended.waterMl,
+                recommendedSteps: recommended.steps,
+            };
         });
     }
 

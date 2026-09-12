@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 
 import { AUTH_POLICY } from '@dns/constants';
-import { RefreshTokenRepository, UserEntity, UserRepository } from '@dns/database';
+import { NewRefreshToken, RefreshTokenRepository, UserEntity } from '@dns/database';
 import { AuthTokens } from '@dns/shared-types';
 
 import { AllConfig } from '../../common/config';
@@ -14,51 +14,59 @@ import { AllConfig } from '../../common/config';
 import { AuthErrorCode } from './auth.errors';
 import { AccessTokenPayload, RefreshTokenPayload } from './auth.types';
 
+/** A refresh token ready to store: the JWT for the client, the row for the database. */
+interface MintedRefreshToken {
+    token: string;
+    row: NewRefreshToken;
+}
+
 @Injectable()
 export class TokenService {
     constructor(
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService<AllConfig>,
         private readonly refreshTokenRepository: RefreshTokenRepository,
-        private readonly userRepository: UserRepository,
     ) {}
 
     /**
-     * Mints a token pair and opens (or continues) one device's chain.
+     * Mints a token pair and opens a new chain — one device's session.
      *
-     * `familyId` is omitted on a fresh sign-in and carried over on rotation —
-     * that is what keeps devices independent (session FR-006) while still
-     * letting one compromised chain be revoked whole.
+     * The single choke point for every fresh session — sign-in, email
+     * confirmation, OAuth. The block check that makes a block leave no way in
+     * (admin user-directory FR-006) runs again under the account's lock when
+     * the token is stored, so a block that commits after `user` was read still
+     * wins.
+     *
+     * `expectedPasswordHash`: the hash a sign-in verified the password
+     * against. If a password reset replaced it in the meantime, the session is
+     * refused rather than opened with the old password.
      */
-    async issuePair(user: UserEntity, familyId: string = randomUUID()): Promise<AuthTokens> {
-        // The single choke point for every way a session is handed out —
-        // sign-in, email confirmation, OAuth, and rotation, which calls this
-        // method too. One check here is what makes a block leave no way in
-        // (admin user-directory FR-006).
-        if (user.isBlocked()) {
-            throw new ForbiddenException({
-                message: 'This account has been blocked',
-                code: AuthErrorCode.AccountBlocked,
-            });
-        }
+    async issuePair(
+        user: UserEntity,
+        { expectedPasswordHash }: { expectedPasswordHash?: string | null } = {},
+    ): Promise<AuthTokens> {
+        if (user.isBlocked()) throw this.accountBlocked();
 
-        const accessToken = await this.signAccessToken(user);
+        const refresh = await this.mintRefreshToken(user.id);
 
-        // The row id has to exist before the token is signed, because it
-        // travels inside it as `jti`.
-        const tokenId = randomUUID();
-        const expiresAt = this.refreshExpiresAt();
-        const refreshToken = await this.signRefreshToken(user.id, tokenId);
-
-        await this.refreshTokenRepository.create({
-            id: tokenId,
+        const grant = await this.refreshTokenRepository.openSession({
             userId: user.id,
-            familyId,
-            tokenHash: await hash(refreshToken, AUTH_POLICY.bcryptRounds),
-            expiresAt,
+            familyId: randomUUID(),
+            token: refresh.row,
+            expectedPasswordHash,
         });
 
-        return { accessToken, refreshToken };
+        switch (grant.outcome) {
+            case 'granted':
+                return { accessToken: await this.signAccessToken(grant.user), refreshToken: refresh.token };
+            case 'blocked':
+                throw this.accountBlocked();
+            case 'refused':
+                throw new UnauthorizedException({
+                    message: 'Invalid email or password',
+                    code: AuthErrorCode.InvalidCredentials,
+                });
+        }
     }
 
     /**
@@ -68,10 +76,16 @@ export class TokenService {
      * would say whether the id exists and whether it was already spent.
      *
      * One exception, and it is not an enumeration hole: a blocked account
-     * answers 403 `auth.account-blocked` from `issuePair`. Whoever presents a
-     * valid refresh token has already proved the account is theirs, and a
-     * silent logout would leave them reinstalling the app to fix something an
-     * install cannot fix.
+     * answers 403 `auth.account-blocked`. Whoever presents a genuine refresh
+     * token has already proved the account is theirs, and a silent logout
+     * would leave them reinstalling the app to fix something an install
+     * cannot fix.
+     *
+     * Concurrency (see `RefreshTokenRepository.rotate`): of several refreshes
+     * of one token exactly one rotates it; ONE more arriving within
+     * `refreshRotationGraceSeconds` gets a sibling pair on the same chain —
+     * the app firing two refreshes at once must not sign the user out — and
+     * any further one is a replay that revokes the chain.
      */
     async rotate(refreshToken: string): Promise<AuthTokens> {
         const payload = await this.verifyRefreshToken(refreshToken).catch(() => {
@@ -83,28 +97,35 @@ export class TokenService {
         const stored = await this.refreshTokenRepository.findById(payload.jti);
         if (!stored) throw this.invalidRefreshToken();
 
-        // Before the replay check: a token whose signature is valid but whose
-        // body does not match the stored digest was minted by someone holding
-        // the refresh secret, not handed out by us. Treating that as a replay
-        // would let an attacker revoke a victim's live chain at will.
+        // Before anything that writes: a token whose signature is valid but
+        // whose body does not match the stored digest was minted by someone
+        // holding the refresh secret, not handed out by us. Treating that as a
+        // replay would let an attacker revoke a victim's live chain at will.
+        // Outside the transaction on purpose — bcrypt under a row lock would
+        // make every revocation of the account wait for it.
         if (!(await compare(refreshToken, stored.tokenHash))) throw this.invalidRefreshToken();
 
-        // The genuine token, presented a second time. Only theft explains
-        // that, so the whole chain goes — and only that chain, leaving the
-        // user's other devices signed in (session FR-006).
-        if (stored.isRotated()) {
-            await this.refreshTokenRepository.deleteFamily(stored.familyId);
-            throw this.invalidRefreshToken();
+        // Minted up front for the same reason: the transaction only stores it,
+        // and a refused rotation simply never hands it out.
+        const child = await this.mintRefreshToken(stored.userId);
+
+        const result = await this.refreshTokenRepository.rotate({
+            tokenId: stored.id,
+            userId: stored.userId,
+            child: child.row,
+            graceSeconds: AUTH_POLICY.refreshRotationGraceSeconds,
+        });
+
+        switch (result.outcome) {
+            case 'rotated':
+            case 'grace':
+                return { accessToken: await this.signAccessToken(result.user), refreshToken: child.token };
+            case 'blocked':
+                throw this.accountBlocked();
+            case 'replay':
+            case 'refused':
+                throw this.invalidRefreshToken();
         }
-
-        if (stored.isExpired()) throw this.invalidRefreshToken();
-
-        const user = await this.userRepository.findById(stored.userId);
-        if (!user || !user.isEmailVerified()) throw this.invalidRefreshToken();
-
-        await this.refreshTokenRepository.markRotated(stored.id);
-
-        return this.issuePair(user, stored.familyId);
     }
 
     /**
@@ -118,10 +139,13 @@ export class TokenService {
         const stored = await this.refreshTokenRepository.findById(payload.jti);
         if (!stored) return;
 
-        await this.refreshTokenRepository.deleteFamily(stored.familyId);
+        await this.refreshTokenRepository.deleteFamily(stored.userId, stored.familyId);
     }
 
-    /** Signs every device out — "log out everywhere", and after a password change (session FR-007). */
+    /**
+     * Signs every device out — "log out everywhere" (session FR-007). Wins over
+     * a refresh in flight: see `RefreshTokenRepository`.
+     */
     revokeAllForUser(userId: string): Promise<void> {
         return this.refreshTokenRepository.deleteAllForUser(userId);
     }
@@ -133,10 +157,31 @@ export class TokenService {
         });
     }
 
+    private accountBlocked(): ForbiddenException {
+        return new ForbiddenException({
+            message: 'This account has been blocked',
+            code: AuthErrorCode.AccountBlocked,
+        });
+    }
+
     verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
         return this.jwtService.verifyAsync<RefreshTokenPayload>(token, {
             secret: this.configService.getOrThrow('auth.refresh.secret', { infer: true }),
         });
+    }
+
+    /**
+     * The row id has to exist before the token is signed, because it travels
+     * inside it as `jti`.
+     */
+    private async mintRefreshToken(userId: string): Promise<MintedRefreshToken> {
+        const id = randomUUID();
+        const token = await this.signRefreshToken(userId, id);
+
+        return {
+            token,
+            row: { id, tokenHash: await hash(token, AUTH_POLICY.bcryptRounds), expiresAt: this.refreshExpiresAt() },
+        };
     }
 
     private signAccessToken(user: UserEntity): Promise<string> {

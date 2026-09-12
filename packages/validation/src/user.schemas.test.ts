@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { ReminderType, Theme } from '@dns/shared-types';
+import { FeedbackType, ReminderType, Theme } from '@dns/shared-types';
 
-import { updateProfileSchema, updateRemindersSchema, updateSettingsSchema } from './user.schemas';
+import { createFeedbackSchema, updateProfileSchema, updateRemindersSchema, updateSettingsSchema } from './user.schemas';
 
 test('a settings patch may carry a single switch', () => {
     assert.equal(updateSettingsSchema.safeParse({ theme: Theme.Dark }).success, true);
@@ -54,4 +54,107 @@ test('the same reminder type cannot appear twice', () => {
     });
 
     assert.equal(parsed.success, false);
+});
+
+const ticket = { type: FeedbackType.NotWorking, description: 'Кнопка «Зберегти» не реагує' };
+const image = (n: number) => `https://cdn.example.com/feedback/${n}.jpg`;
+
+test('a ticket with only a type and a description is enough', () => {
+    const parsed = createFeedbackSchema.parse(ticket);
+
+    assert.equal(parsed.imageUrls, undefined);
+    assert.equal(parsed.replyEmail, undefined);
+    assert.equal(parsed.context, undefined);
+});
+
+test('a complete ticket passes with its reply email normalised', () => {
+    const parsed = createFeedbackSchema.parse({
+        ...ticket,
+        imageUrls: [image(1), image(2), image(3)],
+        replyEmail: '  Oleh.Test@Example.COM ',
+        context: { appVersion: '1.4.0', platform: 'ios', build: 312, tablet: false },
+    });
+
+    assert.equal(parsed.replyEmail, 'oleh.test@example.com');
+    assert.equal(parsed.imageUrls?.length, 3);
+    assert.deepEqual(parsed.context, { appVersion: '1.4.0', platform: 'ios', build: 312, tablet: false });
+});
+
+test('the description must be between 10 and 1000 characters', () => {
+    const submit = (description: string) => createFeedbackSchema.safeParse({ ...ticket, description });
+
+    assert.equal(submit('a'.repeat(9)).success, false);
+    assert.equal(submit('a'.repeat(10)).success, true);
+    assert.equal(submit('a'.repeat(1000)).success, true);
+
+    const tooLong = submit('a'.repeat(1001));
+    assert.equal(tooLong.success, false);
+    assert.equal(tooLong.error?.errors[0]?.path.join('.'), 'description');
+});
+
+test('padding around the description counts towards neither limit', () => {
+    const submit = (description: string) => createFeedbackSchema.safeParse({ ...ticket, description });
+
+    assert.equal(submit(`    ${'a'.repeat(9)}    `).success, false);
+    assert.equal(submit(' '.repeat(10)).success, false);
+
+    const padded = createFeedbackSchema.parse({ ...ticket, description: `\n ${'a'.repeat(1000)} \n` });
+    assert.equal(padded.description, 'a'.repeat(1000));
+});
+
+test('description length is counted in UTF-16 units, not in visible characters', () => {
+    // Current behaviour, not a product decision: an emoji is two units, so five
+    // of them clear the minimum of 10 and 501 overrun the maximum of 1000.
+    // The app's counter (`description.length`) counts the same way.
+    const submit = (description: string) => createFeedbackSchema.safeParse({ ...ticket, description });
+
+    assert.equal(submit('🍎'.repeat(5)).success, true);
+    assert.equal(submit('🍎'.repeat(500)).success, true);
+    assert.equal(submit('🍎'.repeat(501)).success, false);
+});
+
+test('at most three images may be attached', () => {
+    const attach = (count: number) =>
+        createFeedbackSchema.safeParse({ ...ticket, imageUrls: Array.from({ length: count }, (_, i) => image(i)) });
+
+    assert.equal(attach(0).success, true);
+    assert.equal(attach(3).success, true);
+
+    const four = attach(4);
+    assert.equal(four.success, false);
+    assert.equal(four.error?.errors[0]?.path.join('.'), 'imageUrls');
+});
+
+test('an image must be a URL', () => {
+    const parsed = createFeedbackSchema.safeParse({ ...ticket, imageUrls: [image(1), 'feedback/2.jpg'] });
+
+    assert.equal(parsed.success, false);
+    assert.equal(parsed.error?.errors[0]?.path.join('.'), 'imageUrls.1');
+});
+
+test('a ticket without a type, or with an unknown one, is rejected', () => {
+    const unknown = createFeedbackSchema.safeParse({ ...ticket, type: 'complaint' });
+    assert.equal(unknown.success, false);
+    assert.equal(unknown.error?.errors[0]?.path.join('.'), 'type');
+
+    assert.equal(createFeedbackSchema.safeParse({ description: ticket.description }).success, false);
+    assert.equal(createFeedbackSchema.safeParse({ ...ticket, type: 'Bug' }).success, false);
+});
+
+test('a malformed reply email is rejected', () => {
+    const parsed = createFeedbackSchema.safeParse({ ...ticket, replyEmail: 'oleh@' });
+
+    assert.equal(parsed.success, false);
+    assert.equal(parsed.error?.errors[0]?.path.join('.'), 'replyEmail');
+});
+
+test('a blank reply email reads as no email, not as a malformed one', () => {
+    // The form posts an untouched input as `''`; FR-006 makes the field
+    // optional, so that has to mean «no reply address», not a 422.
+    for (const blank of ['', '   ', null]) {
+        const parsed = createFeedbackSchema.safeParse({ ...ticket, replyEmail: blank });
+
+        assert.equal(parsed.success, true);
+        assert.equal(parsed.data?.replyEmail, undefined);
+    }
 });

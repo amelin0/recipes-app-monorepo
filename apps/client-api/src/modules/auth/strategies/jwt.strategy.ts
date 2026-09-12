@@ -44,6 +44,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException();
         }
 
+        // The same argument, for the revocations that used to stop at the
+        // refresh chains. «Log out everywhere» and a completed password reset
+        // delete those rows, but this token is stateless — there is nothing to
+        // delete, and it kept working for the rest of its fifteen minutes,
+        // writes included. The account records when its sessions were last
+        // ended wholesale; a token stamped before that is no longer part of one
+        // (session FR-007, password-reset FR-005).
+        if (!user.acceptsTokenIssuedAt(payload.iat)) {
+            throw new UnauthorizedException();
+        }
+
         return user;
     }
 }

@@ -1,9 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+
+import { OAuthProvider, OtpPurpose } from '@dns/shared-types';
 
 import { UserEntity } from '../../entities';
-import { profiles, userReminders, users, userSettings } from '../../schema';
+import {
+    oauthIdentities,
+    otpCodes,
+    passwordResetPermits,
+    profiles,
+    refreshTokens,
+    userReminders,
+    users,
+    userSettings,
+} from '../../schema';
 import { BaseRepository } from '../base.repository';
+import { consumeOtpCode } from '../otp-code/otp-code.repository';
 
 type InsertUser = typeof users.$inferInsert;
 type InsertProfile = typeof profiles.$inferInsert;
@@ -20,6 +32,13 @@ export interface CreateAccountInput {
     profile: Omit<InsertProfile, 'userId'>;
     settings: Omit<InsertUserSettings, 'userId'>;
     reminders: Omit<InsertUserReminder, 'userId'>[];
+    /**
+     * An account made through Apple or Google is created WITH its identity,
+     * in the same transaction. Otherwise a concurrent sign-in of the same
+     * person could see the account without the link, and a crash in between
+     * would leave an account its provider does not lead back to.
+     */
+    oauthIdentity?: { provider: OAuthProvider; providerUserId: string };
 }
 
 @Injectable()
@@ -47,10 +66,20 @@ export class UserRepository extends BaseRepository {
      * the inserts across repositories would put the transaction boundary
      * somewhere it cannot be enforced.
      */
-    async createAccount({ user, profile, settings, reminders }: CreateAccountInput): Promise<UserEntity> {
+    async createAccount({
+        user,
+        profile,
+        settings,
+        reminders,
+        oauthIdentity,
+    }: CreateAccountInput): Promise<UserEntity> {
         return this.db.transaction(async tx => {
             const [row] = await tx.insert(users).values(user).returning();
             if (!row) throw new Error('Failed to insert user');
+
+            if (oauthIdentity) {
+                await tx.insert(oauthIdentities).values({ ...oauthIdentity, userId: row.id });
+            }
 
             await tx.insert(profiles).values({ ...profile, userId: row.id });
             await tx.insert(userSettings).values({ ...settings, userId: row.id });
@@ -69,11 +98,158 @@ export class UserRepository extends BaseRepository {
         return UserEntity.from(row);
     }
 
-    async markEmailVerified(id: string): Promise<void> {
-        await this.db.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, id));
+    /**
+     * Confirms the address with a sign-up code the caller has just checked,
+     * and activates the password bound to THAT code (sign-up FR-007). One
+     * transaction; null when the code was already spent or replaced, or the
+     * account is already confirmed.
+     *
+     * - The code is spent conditionally, so of two requests carrying it only
+     *   one confirms anything.
+     * - The account is updated only `WHERE email_verified_at IS NULL`. A
+     *   confirmed account's password changes through the reset flow and
+     *   nowhere else — never through a registration that read «unconfirmed»
+     *   a moment before someone else confirmed it.
+     * - A code without a password (issued before passwords moved onto codes,
+     *   or re-issued after a reset cleared them) leaves the current one.
+     * - The user row is locked BEFORE the code, the same user-first order as
+     *   `linkOAuthIdentity` and `resetPasswordWithPermit`, which touch both
+     *   too. Code first here would deadlock against a provider sign-in
+     *   confirming the same account at the same moment.
+     */
+    async verifyEmailWithCode({ userId, codeId }: { userId: string; codeId: string }): Promise<UserEntity | null> {
+        return this.db.transaction(async tx => {
+            await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for('no key update');
+
+            const code = await consumeOtpCode(tx, codeId);
+            if (!code || code.userId !== userId) return null;
+
+            const [row] = await tx
+                .update(users)
+                .set({
+                    emailVerifiedAt: sql`now()`,
+                    updatedAt: sql`now()`,
+                    ...(code.passwordHash ? { passwordHash: code.passwordHash } : {}),
+                })
+                .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)))
+                .returning();
+
+            return row ? UserEntity.from(row) : null;
+        });
     }
 
-    async setPasswordHash(id: string, passwordHash: string): Promise<void> {
-        await this.db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, id));
+    /**
+     * Links a provider identity to an existing account (sign-in FR-006) and,
+     * if the address was still unconfirmed, confirms it — the provider has
+     * just asserted ownership, which is what the emailed code was asking for.
+     *
+     * Confirming this way also drops the account's password and any pending
+     * sign-up code. Nobody who set that password proved they own the address:
+     * a stranger can register a victim's email first, and without this the
+     * victim's «Continue with Google» would confirm an account whose password
+     * the stranger knows. The owner sets one through the reset flow (FR-013).
+     * A confirmed account is untouched — its password was set by the owner.
+     */
+    async linkOAuthIdentity({
+        userId,
+        provider,
+        providerUserId,
+    }: {
+        userId: string;
+        provider: OAuthProvider;
+        providerUserId: string;
+    }): Promise<UserEntity | null> {
+        return this.db.transaction(async tx => {
+            await tx.insert(oauthIdentities).values({ userId, provider, providerUserId });
+
+            const [confirmed] = await tx
+                .update(users)
+                .set({ emailVerifiedAt: sql`now()`, passwordHash: null, updatedAt: sql`now()` })
+                .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)))
+                .returning({ id: users.id });
+
+            if (confirmed) {
+                await tx
+                    .delete(otpCodes)
+                    .where(and(eq(otpCodes.userId, userId), eq(otpCodes.purpose, OtpPurpose.EmailVerification)));
+            }
+
+            const [row] = await tx.select().from(users).where(eq(users.id, userId));
+            return row ? UserEntity.from(row) : null;
+        });
+    }
+
+    /**
+     * Spends a reset permit and sets the new password, clearing everything the
+     * old password could still reach — every session, every permit, every
+     * outstanding code (password-reset FR-005). One transaction; false when
+     * the permit is unknown, expired or already spent.
+     *
+     * - **Single use** is the conditional UPDATE on the permit: two requests
+     *   carrying the same permit both get this far, and only the first finds
+     *   `consumed_at IS NULL`. The second changes nothing.
+     * - **Revocation wins over a refresh in flight.** The user row is locked
+     *   `FOR NO KEY UPDATE` first — the lock every session grant and rotation
+     *   conflicts with (`RefreshTokenRepository`, which takes `FOR SHARE`). A
+     *   rotation that got in first is waited for, and the DELETE below, a later
+     *   statement with a fresh snapshot, sees the token it minted. One that
+     *   comes later waits for this commit and finds its token gone.
+     * - **Lock order** is user row, then permits, then tokens — the same user-
+     *   first order as rotation. Consuming the permit before locking the user
+     *   would deadlock two resets of one account holding different permits.
+     *
+     * READ COMMITTED on purpose: each statement must see what committed while
+     * it waited for the lock. Under REPEATABLE READ the DELETE would read from
+     * the snapshot taken before the wait and miss that token.
+     */
+    async resetPasswordWithPermit({
+        userId,
+        permitId,
+        passwordHash,
+    }: {
+        userId: string;
+        permitId: string;
+        passwordHash: string;
+    }): Promise<boolean> {
+        return this.db.transaction(async tx => {
+            const [user] = await tx
+                .select({ id: users.id })
+                .from(users)
+                .where(eq(users.id, userId))
+                .for('no key update');
+            if (!user) return false;
+
+            const [permit] = await tx
+                .update(passwordResetPermits)
+                .set({ consumedAt: sql`now()` })
+                .where(
+                    and(
+                        eq(passwordResetPermits.id, permitId),
+                        eq(passwordResetPermits.userId, userId),
+                        isNull(passwordResetPermits.consumedAt),
+                        gt(passwordResetPermits.expiresAt, sql`now()`),
+                    ),
+                )
+                .returning({ id: passwordResetPermits.id });
+            if (!permit) return false;
+
+            // `sessions_valid_from` alongside the new password, so the access
+            // tokens the old one could still reach stop being accepted too —
+            // deleting the chains below cannot touch them (FR-005).
+            // `clock_timestamp()`, not `now()`: `now()` predates this
+            // transaction's wait for the row lock, and a sign-in that
+            // committed during that wait would outlive the reset.
+            await tx
+                .update(users)
+                .set({ passwordHash, sessionsValidFrom: sql`clock_timestamp()`, updatedAt: sql`now()` })
+                .where(eq(users.id, userId));
+
+            await tx.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+            await tx.delete(passwordResetPermits).where(eq(passwordResetPermits.userId, userId));
+            // Both flows' codes — «every outstanding code», not only this flow's.
+            await tx.delete(otpCodes).where(eq(otpCodes.userId, userId));
+
+            return true;
+        });
     }
 }

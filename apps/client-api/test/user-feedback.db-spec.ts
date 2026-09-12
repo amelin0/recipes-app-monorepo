@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 
-import { StorageService } from '@dns/api-infrastructure/storage';
+import { StorageErrorCode, StorageService } from '@dns/api-infrastructure/storage';
 import { UserEntity, UserRepository } from '@dns/database';
 import { FeedbackType, StorageScope } from '@dns/shared-types';
 
@@ -9,6 +9,7 @@ import { AuthService } from '../src/modules/auth/auth.service';
 import { FeedbackService } from '../src/modules/user/feedback.service';
 
 import { truncateAuthTables } from './support/db';
+import { grantOnly, upload } from './support/storage';
 import { AuthTestContext, createAuthTestContext } from './support/testing-module';
 
 const EMAIL = 'reporter@example.com';
@@ -44,23 +45,11 @@ describe('Support tickets', () => {
         user = found as UserEntity;
     });
 
-    const grantFor = async (scope: StorageScope): Promise<string> => {
-        const grant = await storage.createPresignedUpload({
-            userId: user.id,
-            scope,
-            fileName: 'shot.jpg',
-            contentType: 'image/jpeg',
-            size: 160,
-        });
-
-        return grant.publicUrl;
-    };
-
     it('stores a ticket with its attachments and free-form context', async () => {
         const created = await feedbackService.create(user.id, {
             type: FeedbackType.Bug,
             description: 'The recipe list is empty right after signing in.',
-            imageUrls: [await grantFor(StorageScope.Feedback)],
+            imageUrls: [await upload(storage, user.id, StorageScope.Feedback)],
             context: { appVersion: '1.0.0', platform: 'ios', build: 1 },
         });
 
@@ -68,8 +57,27 @@ describe('Support tickets', () => {
         expect(created.imageUrls).toHaveLength(1);
     });
 
+    it('refuses an attachment whose upload never happened, and stores nothing', async () => {
+        // One real attachment and one bare grant: the ticket must not go
+        // through with the good half, or staff get a thread with a hole in it.
+        const imageUrls = [
+            await upload(storage, user.id, StorageScope.Feedback),
+            await grantOnly(storage, user.id, StorageScope.Feedback),
+        ];
+
+        await expect(
+            feedbackService.create(user.id, {
+                type: FeedbackType.Bug,
+                description: 'The second screenshot failed to upload.',
+                imageUrls,
+            }),
+        ).rejects.toMatchObject({ response: { code: StorageErrorCode.NotUploaded } });
+
+        expect(await ctx.db.query.feedback.findMany()).toHaveLength(0);
+    });
+
     it('refuses an attachment the user uploaded for something else', async () => {
-        const avatarUrl = await grantFor(StorageScope.ProfilePhoto);
+        const avatarUrl = await upload(storage, user.id, StorageScope.ProfilePhoto);
 
         await expect(
             feedbackService.create(user.id, {

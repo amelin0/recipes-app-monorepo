@@ -3,7 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { MealLogEntryEntity, NutritionGoalEntity } from '@dns/database';
 import { MealSlot } from '@dns/shared-types';
 
-import { DailySlice } from '../../nutrition.service';
+import { RecipeCardView } from '../../../catalog/dto';
+import { DailyPlanItem, DailyPlanSlot, DailySlice } from '../../nutrition.service';
 
 export class NutritionGoalView {
     @ApiProperty() readonly dailyCalories: number;
@@ -88,6 +89,53 @@ export class DailyTotalsView {
 }
 
 /**
+ * A planned dish in «Раціон на сьогодні» (FR-006a). The recipe is the same
+ * catalogue card the plan tab shows, so the row reads the same on both screens.
+ */
+export class DailyPlanItemView {
+    @ApiProperty({ format: 'uuid', description: 'The plan item — the same id the plan tab uses.' })
+    readonly id: string;
+
+    @ApiProperty({ type: RecipeCardView }) readonly recipe: RecipeCardView;
+
+    @ApiProperty({
+        format: 'uuid',
+        nullable: true,
+        description:
+            'The meal entry that ate this dish; null while it has not been eaten. ' +
+            'Marking is POST /nutrition/days/{date}/meals with this recipe and slot; ' +
+            'unmarking is DELETE of this entry — the mark and the ring read the same log.',
+    })
+    readonly eatenEntryId: string | null;
+
+    private constructor(item: DailyPlanItem) {
+        this.id = item.id;
+        this.recipe = RecipeCardView.from(item.recipe);
+        this.eatenEntryId = item.eatenEntryId;
+    }
+
+    static from(item: DailyPlanItem): DailyPlanItemView {
+        return new DailyPlanItemView(item);
+    }
+}
+
+export class DailyPlanSlotView {
+    @ApiProperty({ enum: MealSlot }) readonly slot: MealSlot;
+
+    @ApiProperty({ type: [DailyPlanItemView], description: 'Empty means «Не заплановано» (FR-005).' })
+    readonly items: DailyPlanItemView[];
+
+    private constructor(slot: DailyPlanSlot) {
+        this.slot = slot.slot;
+        this.items = slot.items.map(DailyPlanItemView.from);
+    }
+
+    static from(slot: DailyPlanSlot): DailyPlanSlotView {
+        return new DailyPlanSlotView(slot);
+    }
+}
+
+/**
  * The whole tracking screen in one payload. `goal` is null for an account that
  * has not set one — the screen then shows a call to action instead of rings.
  */
@@ -99,7 +147,14 @@ export class DailySliceView {
 
     @ApiProperty({ type: DailyTotalsView }) readonly consumed: DailyTotalsView;
 
-    @ApiProperty({ type: [MealLogEntryView] }) readonly meals: MealLogEntryView[];
+    @ApiProperty({ type: [MealLogEntryView], description: 'What was eaten, planned or not.' })
+    readonly meals: MealLogEntryView[];
+
+    @ApiProperty({
+        type: [DailyPlanSlotView],
+        description: 'All four slots in screen order with the dishes planned for this day (FR-006a).',
+    })
+    readonly plan: DailyPlanSlotView[];
 
     @ApiProperty() readonly steps: number;
 
@@ -111,6 +166,7 @@ export class DailySliceView {
         this.goal = slice.goal ? NutritionGoalView.from(slice.goal) : null;
         this.consumed = DailyTotalsView.from(slice.totals);
         this.meals = slice.meals.map(MealLogEntryView.from);
+        this.plan = slice.plan.map(DailyPlanSlotView.from);
         this.steps = slice.steps;
         this.stepsTarget = slice.stepsTarget;
     }

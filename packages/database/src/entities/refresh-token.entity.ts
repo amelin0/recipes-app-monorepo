@@ -9,6 +9,7 @@ export class RefreshTokenEntity {
     readonly tokenHash: string;
     readonly expiresAt: Date;
     readonly rotatedAt: Date | null;
+    readonly graceUsedAt: Date | null;
     readonly createdAt: Date;
 
     private constructor(row: RefreshTokenRow) {
@@ -18,6 +19,7 @@ export class RefreshTokenEntity {
         this.tokenHash = row.tokenHash;
         this.expiresAt = row.expiresAt;
         this.rotatedAt = row.rotatedAt;
+        this.graceUsedAt = row.graceUsedAt;
         this.createdAt = row.createdAt;
     }
 

@@ -30,7 +30,9 @@ export class FeedbackController {
     @Post()
     @HttpCode(HttpStatus.CREATED)
     @ApiCreatedResponse({ type: FeedbackView })
-    @ApiBadRequestResponse({ description: 'An attachment URL is not a file this user uploaded for feedback.' })
+    @ApiBadRequestResponse({
+        description: 'An attachment URL is not a file this user uploaded for feedback, or its upload never happened.',
+    })
     async create(@CurrentUser() user: UserEntity, @Body() body: CreateFeedbackInboundDto): Promise<FeedbackView> {
         return FeedbackView.from(await this.feedbackService.create(user.id, body));
     }

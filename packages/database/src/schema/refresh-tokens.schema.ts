@@ -33,9 +33,19 @@ export const refreshTokens = pgTable(
 
         expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 
-        // Set the moment the token is exchanged. A token presented after this
-        // is a replay: the whole family is revoked.
+        // Set the moment the token is exchanged — by a conditional UPDATE
+        // (`WHERE rotated_at IS NULL`), so of two refreshes racing on one
+        // token exactly one rotates it. A token presented after this is a
+        // replay and the whole family is revoked, unless the grace below
+        // still applies.
         rotatedAt: timestamp('rotated_at', { withTimezone: true }),
+
+        // Set when a second refresh of this token, arriving within the grace
+        // window after `rotatedAt`, was given a sibling pair instead of being
+        // treated as a replay — the mobile app fires two refreshes at once.
+        // Claimed by a conditional UPDATE too, so the grace is used ONCE per
+        // rotated token: a third presentation is a replay whatever its timing.
+        graceUsedAt: timestamp('grace_used_at', { withTimezone: true }),
 
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },

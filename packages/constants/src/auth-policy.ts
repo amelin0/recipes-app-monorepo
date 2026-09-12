@@ -34,6 +34,19 @@ export const AUTH_POLICY = Object.freeze({
         resendCooldownSeconds: 30,
     },
 
+    /**
+     * A just-rotated refresh token stays acceptable for this long — ONCE.
+     *
+     * The mobile app can fire two refreshes with the same token at the same
+     * instant. Without a window the loser looks exactly like a thief and the
+     * device's chain is revoked, signing the user out. Within it, the second
+     * request gets a sibling pair on the same chain. Unlike the admin panel's
+     * window this one is capped: one extra pair per rotated token, and a third
+     * presentation is a replay however fast it arrives — so a stolen token
+     * buys at most one pair, and only inside the window.
+     */
+    refreshRotationGraceSeconds: 10,
+
     /** The one-shot right to change a password, issued after the reset code checks out. */
     passwordResetPermit: {
         ttlMinutes: 10,

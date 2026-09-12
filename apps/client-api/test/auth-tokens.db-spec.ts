@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { isNotNull } from 'drizzle-orm';
 
-import { RefreshTokenRepository, UserRepository } from '@dns/database';
+import { RefreshTokenRepository, UserRepository, schema } from '@dns/database';
 
 import { AuthService } from '../src/modules/auth/auth.service';
 import { TokenService } from '../src/modules/auth/token.service';
@@ -77,7 +78,14 @@ describe('Refresh token chains', () => {
 
         const rotated = await tokenService.rotate(deviceA.refreshToken);
 
-        // The spent token turning up again is the theft signal.
+        // Past the grace window, the spent token turning up again is the theft
+        // signal. (Inside it, one repeat is the app's own double refresh — see
+        // auth-refresh-races.db-spec.ts.)
+        await ctx.db
+            .update(schema.refreshTokens)
+            .set({ rotatedAt: new Date(Date.now() - 60_000) })
+            .where(isNotNull(schema.refreshTokens.rotatedAt));
+
         await expect(tokenService.rotate(deviceA.refreshToken)).rejects.toBeInstanceOf(UnauthorizedException);
 
         // The chain is gone — including the token that was legitimately issued

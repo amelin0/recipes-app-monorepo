@@ -5,6 +5,9 @@ export const AdminAuthErrorCode = {
     InvalidCredentials: 'admin-auth.invalid-credentials',
     InvalidRefreshToken: 'admin-auth.invalid-refresh-token',
     Forbidden: 'admin-auth.forbidden',
+    AdminNotFound: 'admin-auth.admin-not-found',
+    /** The change would leave the organisation without an active SUPER_ADMIN. */
+    LastSuperAdmin: 'admin-auth.last-super-admin',
 } as const;
 
 export type AdminAuthErrorCode = (typeof AdminAuthErrorCode)[keyof typeof AdminAuthErrorCode];

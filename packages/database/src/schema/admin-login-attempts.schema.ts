@@ -38,6 +38,10 @@ export const adminLoginAttempts = pgTable(
 
         userAgent: text('user_agent'),
 
+        // Written `false` before the password is checked and flipped on
+        // success, so an attempt still in bcrypt already counts against the
+        // address's lockout (sign-in FR-006). The per-address lockout reads
+        // this table; see `AdminLoginAttemptRepository.openAttempt`.
         succeeded: boolean('succeeded').notNull(),
 
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -174,10 +174,19 @@ export class ReferralOverviewView {
 
     @ApiProperty({ description: 'How many accounts redeemed it.' }) readonly invited: number;
 
-    @ApiProperty({ description: 'How many of them went on to a subscription — the reward condition.' })
+    @ApiProperty({
+        description:
+            'How many of them have since paid — a purchase begun after redeeming. The free month the code ' +
+            'gives and a trial do not count. This is the reward condition.',
+    })
     readonly converted: number;
 
-    @ApiProperty() readonly monthsEarned: number;
+    @ApiProperty({
+        description:
+            'Months actually granted to this account for its invitations. Equals `converted` × the reward ' +
+            'unless a grant is still pending a retry.',
+    })
+    readonly monthsEarned: number;
 
     private constructor(overview: ReferralOverview) {
         this.code = overview.code;

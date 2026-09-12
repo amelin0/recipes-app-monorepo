@@ -1,8 +1,10 @@
-import { eq, like, sql } from 'drizzle-orm';
+import { and, eq, like, lte, sql } from 'drizzle-orm';
 
-import { schema } from '@dns/database';
+import { NOTIFICATION_RETENTION_DAYS } from '@dns/constants';
+import { NotificationRepository, SubscriptionRepository, schema } from '@dns/database';
 import {
     NotificationEvent,
+    NotificationType,
     OtpPurpose,
     PurchaseStore,
     SubscriptionSource,
@@ -26,10 +28,12 @@ describe('background jobs', () => {
     let expiry: SubscriptionExpiryService;
     let pendingWork: PendingWorkService;
     let metrics: JobsMetrics;
+    let notifications: NotificationRepository;
 
     beforeAll(async () => {
         context = await createWorkerTestContext();
         cleanup = context.moduleRef.get(ExpiredRowsService);
+        notifications = context.moduleRef.get(NotificationRepository);
         expiry = context.moduleRef.get(SubscriptionExpiryService);
         pendingWork = context.moduleRef.get(PendingWorkService);
         metrics = context.moduleRef.get(JobsMetrics);
@@ -77,12 +81,65 @@ describe('background jobs', () => {
         it('is safe to run twice', async () => {
             const userId = await createUser(context, `twice${DOMAIN}`);
             await createRefreshToken(context, userId, { expiresIn: -DAY });
+            await createNotification(context, userId, { age: 100 * DAY });
 
             const first = await cleanup.run();
             const second = await cleanup.run();
 
             expect(first.refreshTokens).toBeGreaterThanOrEqual(1);
             expect(second.refreshTokens).toBe(0);
+            expect(first.notifications).toBeGreaterThanOrEqual(1);
+            expect(second.notifications).toBe(0);
+        });
+    });
+
+    describe('forgetting old notifications', () => {
+        /**
+         * Retention is counted from `created_at` and nothing else. Unread is
+         * no reprieve — see the service — so the unread old one is the row
+         * this test exists for.
+         */
+        it('deletes what is past the retention period, read or not, and keeps the rest', async () => {
+            const userId = await createUser(context, `retention${DOMAIN}`);
+            const pastRetention = (NOTIFICATION_RETENTION_DAYS + 1) * DAY;
+
+            await createNotification(context, userId, { age: pastRetention, title: 'old unread' });
+            await createNotification(context, userId, { age: pastRetention, title: 'old read', read: true });
+            await createNotification(context, userId, {
+                age: (NOTIFICATION_RETENTION_DAYS - 1) * DAY,
+                title: 'young unread',
+            });
+            await createNotification(context, userId, { age: DAY, title: 'fresh read', read: true });
+
+            const report = await cleanup.run();
+
+            expect(report.notifications).toBeGreaterThanOrEqual(2);
+            expect((await titlesOf(context, userId)).sort()).toEqual(['fresh read', 'young unread']);
+        });
+
+        /**
+         * The sweep deletes in batches, and the easy mistake is a loop that
+         * stops after the first one — it would pass every test with fewer rows
+         * than a batch holds. Five rows through a batch of two need three
+         * statements, the last of them short.
+         */
+        it('keeps going until a batch comes back short', async () => {
+            const userId = await createUser(context, `batches${DOMAIN}`);
+            for (let i = 0; i < 5; i++) {
+                await createNotification(context, userId, { age: 100 * DAY });
+            }
+
+            const cutoff = new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * DAY);
+            const deleted = await notifications.deleteCreatedBefore(cutoff, 2);
+
+            // A lower bound: the database is shared, and another suite's old
+            // row would be swept by the same predicate.
+            expect(deleted).toBeGreaterThanOrEqual(5);
+            expect(await titlesOf(context, userId)).toHaveLength(0);
+        });
+
+        it('refuses a batch size that would never finish', async () => {
+            await expect(notifications.deleteCreatedBefore(new Date(), 0)).rejects.toThrow(RangeError);
         });
     });
 
@@ -112,6 +169,71 @@ describe('background jobs', () => {
 
             expect(report.expired).toBe(0);
             expect(await eventsOf(context, userId)).not.toContain(NotificationEvent.SubscriptionExpired);
+        });
+
+        /**
+         * The job reads its list, then writes. A purchase landing in between
+         * sweeps the lapsed row itself and opens a new one —
+         * and the old job then told this person «your subscription expired»
+         * a second after they paid. The interleaving is forced here rather
+         * than hoped for: the read is wrapped so the purchase happens right
+         * after it.
+         */
+        it('says nothing to somebody whose own purchase got to the row first', async () => {
+            const userId = await createUser(context, `repurchased${DOMAIN}`);
+            await giveSubscription(context, userId, { expiresIn: -DAY });
+
+            const subscriptions = context.moduleRef.get(SubscriptionRepository, { strict: false });
+            const findLapsed = subscriptions.findLapsed.bind(subscriptions);
+            const read = jest.spyOn(subscriptions, 'findLapsed').mockImplementationOnce(async now => {
+                const lapsed = await findLapsed(now);
+
+                // What a purchase does to the lapsed row inside its own
+                // transaction — written directly, since that sweep is no longer
+                // a method of its own.
+                await context.db
+                    .update(schema.subscriptions)
+                    .set({ status: SubscriptionStatus.Expired })
+                    .where(
+                        and(
+                            eq(schema.subscriptions.userId, userId),
+                            eq(schema.subscriptions.status, SubscriptionStatus.Active),
+                            lte(schema.subscriptions.expiresAt, new Date()),
+                        ),
+                    );
+                await giveSubscription(context, userId, { expiresIn: 30 * DAY, transactionId: `txn-new-${userId}` });
+
+                return lapsed;
+            });
+
+            try {
+                await expiry.run();
+            } finally {
+                read.mockRestore();
+            }
+
+            expect(await eventsOf(context, userId)).not.toContain(NotificationEvent.SubscriptionExpired);
+
+            const statuses = await context.db
+                .select({ status: schema.subscriptions.status })
+                .from(schema.subscriptions)
+                .where(eq(schema.subscriptions.userId, userId));
+            expect(statuses.map(row => row.status).sort()).toEqual(
+                [SubscriptionStatus.Active, SubscriptionStatus.Expired].sort(),
+            );
+        });
+
+        /** At-least-once delivery means two runs can overlap; only one of them tells. */
+        it('tells the owner once when two runs overlap', async () => {
+            const userId = await createUser(context, `lapsed-twice${DOMAIN}`);
+            await giveSubscription(context, userId, { expiresIn: -DAY });
+
+            await Promise.all([expiry.run(), expiry.run()]);
+
+            const told = (await eventsOf(context, userId)).filter(
+                event => event === NotificationEvent.SubscriptionExpired,
+            );
+            expect(told).toHaveLength(1);
         });
     });
 
@@ -145,6 +267,48 @@ describe('background jobs', () => {
                 event => event === NotificationEvent.SubscriptionExpiring,
             );
             expect(warnings).toHaveLength(1);
+        });
+
+        /**
+         * The old guard read the inbox and then wrote: two overlapping runs
+         * both read «not warned yet» and both warned. The unique dedupe key
+         * lets only one insert through, however the two interleave.
+         */
+        it('warns once when two runs overlap', async () => {
+            const userId = await createUser(context, `soon-twice${DOMAIN}`);
+            await giveSubscription(context, userId, { expiresIn: 2 * DAY });
+
+            await Promise.all([expiry.run(), expiry.run(), expiry.run()]);
+
+            const warnings = (await eventsOf(context, userId)).filter(
+                event => event === NotificationEvent.SubscriptionExpiring,
+            );
+            expect(warnings).toHaveLength(1);
+        });
+
+        /**
+         * A referral reward lengthens the live row in place, so the same
+         * subscription can have a second end date worth warning about. Moved
+         * inside the window here, because running the job with a future
+         * `now` would expire other suites' rows in the shared database.
+         */
+        it('warns again once the end date has moved', async () => {
+            const userId = await createUser(context, `moved${DOMAIN}`);
+            await giveSubscription(context, userId, { expiresIn: DAY });
+
+            await expiry.run();
+
+            await context.db
+                .update(schema.subscriptions)
+                .set({ expiresAt: new Date(Date.now() + 2.5 * DAY) })
+                .where(eq(schema.subscriptions.userId, userId));
+
+            await expiry.run();
+
+            const warnings = (await eventsOf(context, userId)).filter(
+                event => event === NotificationEvent.SubscriptionExpiring,
+            );
+            expect(warnings).toHaveLength(2);
         });
 
         it('says nothing about one that runs out next month', async () => {
@@ -235,6 +399,32 @@ async function eventsOf(context: WorkerTestContext, userId: string): Promise<(st
     return rows.map(row => row.event);
 }
 
+async function titlesOf(context: WorkerTestContext, userId: string): Promise<string[]> {
+    const rows = await context.db
+        .select({ title: schema.notifications.title })
+        .from(schema.notifications)
+        .where(eq(schema.notifications.userId, userId));
+
+    return rows.map(row => row.title);
+}
+
+async function createNotification(
+    context: WorkerTestContext,
+    userId: string,
+    options: { age: number; title?: string; read?: boolean },
+): Promise<void> {
+    const createdAt = new Date(Date.now() - options.age);
+
+    await context.db.insert(schema.notifications).values({
+        userId,
+        type: NotificationType.System,
+        title: options.title ?? 'a notification',
+        body: 'body',
+        createdAt,
+        readAt: options.read ? createdAt : null,
+    });
+}
+
 async function createUser(context: WorkerTestContext, email: string): Promise<string> {
     const [row] = await context.db
         .insert(schema.users)
@@ -296,7 +486,7 @@ async function createPermit(
 async function giveSubscription(
     context: WorkerTestContext,
     userId: string,
-    options: { expiresIn: number },
+    options: { expiresIn: number; transactionId?: string },
 ): Promise<void> {
     const [plan] = await context.db.select({ id: schema.subscriptionPlans.id }).from(schema.subscriptionPlans).limit(1);
 
@@ -310,7 +500,7 @@ async function giveSubscription(
         pricePaidCents: 999,
         currency: 'UAH',
         store: PurchaseStore.Apple,
-        storeTransactionId: `txn-${userId}`,
+        storeTransactionId: options.transactionId ?? `txn-${userId}`,
     });
 }
 

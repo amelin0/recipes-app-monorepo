@@ -53,7 +53,16 @@ server {
         proxy_http_version 1.1;
 
         proxy_set_header Host              $host;
+        # X-Real-IP is what the throttler buckets anonymous requests by
+        # (CustomThrottlerGuard in @dns/api-common). `proxy_set_header`
+        # REPLACES whatever the client sent with the TCP peer nginx saw, so
+        # the header cannot be forged — keep it that way. Drop this line and
+        # every request looks like it came from nginx, so one abusive client
+        # rate-limits everybody; pass a client value through and every
+        # request can name its own bucket.
         proxy_set_header X-Real-IP         $remote_addr;
+        # Appended to, not replaced: the first entry is whatever the client
+        # wrote. Informational only (the admin sign-in journal) — never a key.
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 

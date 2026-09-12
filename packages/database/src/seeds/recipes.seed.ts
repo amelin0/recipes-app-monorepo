@@ -7,7 +7,7 @@ import { cuisines } from '../schema/cuisines.schema';
 import { diets } from '../schema/diets.schema';
 import { dishCategories } from '../schema/dish-categories.schema';
 import { productGroups } from '../schema/product-groups.schema';
-import { productTranslations, products } from '../schema/products.schema';
+import { englishNameKey, productTranslations, products } from '../schema/products.schema';
 import { recipeDiets } from '../schema/recipe-diets.schema';
 import { recipeIngredients } from '../schema/recipe-ingredients.schema';
 import { recipeStepIngredients, recipeStepTranslations, recipeSteps } from '../schema/recipe-steps.schema';
@@ -385,7 +385,18 @@ async function ensureProduct(db: PostgresJsDatabase, spec: ProductSpec, index: n
         })
         .from(products)
         .innerJoin(productTranslations, eq(productTranslations.productId, products.id))
-        .where(and(eq(productTranslations.language, 'en'), eq(productTranslations.name, spec.en)))
+        // Global only: a tester's private «Tomatoes» is not the catalogue's,
+        // and building a catalogue dish on it would pin somebody's own row.
+        // Matched through the translation rather than `name_en_key`, so the
+        // seed still finds the migrated quick-picks on a database whose key
+        // was never backfilled.
+        .where(
+            and(
+                eq(products.source, ContentSource.Global),
+                eq(productTranslations.language, 'en'),
+                eq(englishNameKey(productTranslations.name), englishNameKey(spec.en)),
+            ),
+        )
         .limit(1);
 
     if (found) {
@@ -416,6 +427,7 @@ async function ensureProduct(db: PostgresJsDatabase, spec: ProductSpec, index: n
         servingWeightG: spec.servingG === undefined ? null : String(spec.servingG),
         isQuickPick: false,
         isVerified: true,
+        nameEnKey: englishNameKey(spec.en),
     });
 
     await db.insert(productTranslations).values([
