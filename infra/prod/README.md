@@ -137,9 +137,17 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
 # 2. Застосунок
 docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml up -d
 
-# 3. Спостережуваність
+# 3. Спостережуваність. Каталог — від користувача, під яким іде деплой:
+#    інакше Docker створить його root-ом, і deploy.sh не зможе туди писати.
+mkdir -p textfile
 docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
 ```
+
+`deploy.sh` сам повідомляє про старт і результат у той самий Telegram-чат, що
+й алерти (токен — з `.env.obs`, chat id — з `contact-points.yml`), і пише
+результат у `textfile/deploy.prom`. З нього правило `dns-deploy-failed`
+нагадує про невдалий деплой, доки наступний не пройде. Обидва канали
+best-effort: без токена чи без каталогу деплой іде як завжди, лише мовчки.
 
 `--env-file` обовʼязковий у **кожній** команді до цих стеків, включно з `ps`
 і `logs`: compose автоматично читає лише файл, який називається рівно `.env`,
@@ -351,7 +359,7 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
 Звичайний `up -d` зміни у файлі не помітить. Провізіонені правила й контактні
 точки в UI **тільки для читання** — редагувати тут, не там.
 
-Перевірити, що все піднялося (9 правил, 2 контактні точки):
+Перевірити, що все піднялося (10 правил, 2 контактні точки):
 
 ```bash
 curl -su admin:$GRAFANA_ADMIN_PASSWORD \
