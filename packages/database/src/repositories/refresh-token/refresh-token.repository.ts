@@ -234,13 +234,39 @@ export class RefreshTokenRepository extends BaseRepository {
      * Takes the revoking lock first, so a refresh in flight cannot leave a
      * token behind; see the class comment. (A password reset revokes inside
      * its own transaction — `UserRepository.resetPasswordWithPermit`.)
+     *
+     * Deleting the chains is only half of it: the access tokens already handed
+     * out are stateless and cannot be deleted at all. `sessions_valid_from` is
+     * what turns them off, in this same transaction under the same lock — a
+     * marker written here but a refusal enforced in `JwtStrategy`.
      */
     async deleteAllForUser(userId: string): Promise<void> {
         await this.db.transaction(async tx => {
             await lockAccountForRevocation(tx, userId);
             await tx.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+            await endIssuedAccessTokens(tx, userId);
         });
     }
+}
+
+/**
+ * Marks every access token issued so far as no longer belonging to a session.
+ *
+ * `clock_timestamp()` rather than `now()`, and the difference is the whole
+ * point: `now()` is the TRANSACTION's start time, taken before this
+ * transaction waited for the revocation lock. A sign-in that committed during
+ * that wait would carry an `iat` later than such a marker and would survive
+ * the revocation it just lost the race to — the same lost-update this lock
+ * exists to prevent, moved from the rows to the marker. `clock_timestamp()` is
+ * read when this statement runs, which is after the wait.
+ *
+ * Caller must already hold the revocation lock on the row.
+ */
+async function endIssuedAccessTokens(tx: DrizzleExecutor, userId: string): Promise<void> {
+    await tx
+        .update(users)
+        .set({ sessionsValidFrom: sql`clock_timestamp()` })
+        .where(eq(users.id, userId));
 }
 
 /** The issuing side of the session lock — see the class comment. */

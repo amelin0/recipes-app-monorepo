@@ -44,6 +44,26 @@ export const users = pgTable(
          */
         blockedAt: timestamp('blocked_at', { withTimezone: true }),
 
+        /**
+         * When every session of this account was last ended wholesale — «log
+         * out everywhere», a completed password reset, a block.
+         *
+         * Those paths delete the refresh chains, but the access token already
+         * in someone's hands cannot be deleted: it is stateless and stays
+         * cryptographically valid for its full fifteen minutes (ADR-0003).
+         * This is the marker `JwtStrategy` compares each token's `iat`
+         * against, so «all sessions end now» ends them now rather than within
+         * a quarter of an hour (session FR-007, password-reset FR-005).
+         *
+         * Null means «never revoked» — every account until it is.
+         *
+         * Deliberately NOT written by single-device logout: that must leave
+         * the other devices signed in (FR-006), and an account-wide marker
+         * cannot express one device. The cost is that the leaving device's own
+         * access token lives out its TTL, with its chain already gone.
+         */
+        sessionsValidFrom: timestamp('sessions_valid_from', { withTimezone: true }),
+
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     },

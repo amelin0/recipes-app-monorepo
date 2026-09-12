@@ -11,6 +11,7 @@ export class AdminEntity {
     readonly fullName: string;
     readonly role: AdminRole;
     readonly isActive: boolean;
+    readonly sessionsValidFrom: Date | null;
     readonly lastLoginAt: Date | null;
     readonly createdAt: Date;
     readonly updatedAt: Date;
@@ -22,6 +23,7 @@ export class AdminEntity {
         this.fullName = row.fullName;
         this.role = row.role;
         this.isActive = row.isActive;
+        this.sessionsValidFrom = row.sessionsValidFrom;
         this.lastLoginAt = row.lastLoginAt;
         this.createdAt = row.createdAt;
         this.updatedAt = row.updatedAt;
@@ -43,5 +45,24 @@ export class AdminEntity {
      */
     canSignIn(): boolean {
         return this.isActive;
+    }
+
+    /**
+     * Whether an access token stamped with this `iat` still belongs to a live
+     * session — the staff mirror of `UserEntity.acceptsTokenIssuedAt`, and the
+     * reason «sign out everywhere» ends a session now rather than within
+     * fifteen minutes (sign-in FR-007).
+     *
+     * `iat` counts WHOLE SECONDS and the marker does not, so the second a
+     * revocation lands in is ambiguous. Resolved against the token: a strict
+     * `<` refuses one minted moments after the revocation as well, costing an
+     * extra sign-in inside a one-second window rather than letting a token
+     * minted just before it survive.
+     */
+    acceptsTokenIssuedAt(iatSeconds: number | undefined): boolean {
+        if (this.sessionsValidFrom === null) return true;
+        if (iatSeconds === undefined) return false;
+
+        return iatSeconds * 1_000 >= this.sessionsValidFrom.getTime();
     }
 }

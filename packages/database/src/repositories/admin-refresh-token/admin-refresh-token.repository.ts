@@ -205,12 +205,23 @@ export class AdminRefreshTokenRepository extends BaseRepository {
      * Every session of one account — sign-out-everywhere (FR-007). Deactivation
      * does the same inside `AdminRepository.updateAccess`, which already holds
      * the lock.
+     *
+     * The chains are only half of a session. An access token already in the
+     * browser is stateless and cannot be deleted, so `sessions_valid_from` is
+     * stamped here too and `AdminJwtStrategy` refuses anything older.
+     * `clock_timestamp()` rather than `now()`: the latter is this
+     * transaction's start time, taken before it waited for the admin lock, so
+     * a sign-in that committed during the wait would survive the sign-out.
      */
     async deleteAllForAdmin(adminId: string): Promise<void> {
         await this.db.transaction(
             async tx => {
                 await lockAdmin(tx, adminId);
                 await tx.delete(adminRefreshTokens).where(eq(adminRefreshTokens.adminId, adminId));
+                await tx
+                    .update(admins)
+                    .set({ sessionsValidFrom: sql`clock_timestamp()` })
+                    .where(eq(admins.id, adminId));
             },
             { isolationLevel: 'read committed' },
         );

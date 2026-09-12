@@ -1,4 +1,6 @@
 import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { sql } from 'drizzle-orm';
 
 import { ADMIN_AUTH_POLICY } from '@dns/constants';
@@ -12,8 +14,11 @@ import {
 } from '@dns/database';
 import { AdminRole } from '@dns/shared-types';
 
+import { AllConfig } from '../src/common/config';
 import { AdminAuthErrorCode } from '../src/modules/auth/auth.errors';
 import { AdminAuthService } from '../src/modules/auth/auth.service';
+import { AdminAccessTokenPayload } from '../src/modules/auth/auth.types';
+import { AdminJwtStrategy } from '../src/modules/auth/strategies/jwt.strategy';
 import { AdminTokenService } from '../src/modules/auth/token.service';
 
 import { truncateAdminTables } from './support/db';
@@ -29,6 +34,9 @@ describe('admin auth', () => {
     let adminRepository: AdminRepository;
     let refreshTokenRepository: AdminRefreshTokenRepository;
     let loginAttemptRepository: AdminLoginAttemptRepository;
+    let jwtStrategy: AdminJwtStrategy;
+    let jwtService: JwtService;
+    let accessSecret: string;
 
     beforeAll(async () => {
         context = await createAdminTestContext();
@@ -37,6 +45,11 @@ describe('admin auth', () => {
         adminRepository = context.moduleRef.get(AdminRepository);
         refreshTokenRepository = context.moduleRef.get(AdminRefreshTokenRepository);
         loginAttemptRepository = context.moduleRef.get(AdminLoginAttemptRepository);
+        jwtStrategy = context.moduleRef.get(AdminJwtStrategy);
+        jwtService = context.moduleRef.get(JwtService);
+        accessSecret = context.moduleRef
+            .get<ConfigService<AllConfig>>(ConfigService)
+            .getOrThrow('auth.access.secret', { infer: true });
     });
 
     afterAll(async () => {
@@ -502,6 +515,81 @@ describe('admin auth', () => {
 
             await expect(tokenService.rotate(browserA.refreshToken)).rejects.toThrow(UnauthorizedException);
             await expect(tokenService.rotate(browserB.refreshToken)).rejects.toThrow(UnauthorizedException);
+        });
+    });
+
+    /**
+     * The staff half of what black-box QA found on the client API: revoking the
+     * chains left the access token already in the browser working for the rest
+     * of its fifteen minutes. Deactivation was never affected — `is_active` is
+     * re-read per request — but signing out everywhere was.
+     */
+    describe('an access token after the sessions end', () => {
+        /** The guard's own path: verify the signature, hand the claims over. */
+        const authenticate = async (accessToken: string): Promise<AdminEntity> => {
+            const payload = await jwtService.verifyAsync<AdminAccessTokenPayload>(accessToken, {
+                secret: accessSecret,
+            });
+            return jwtStrategy.validate(payload);
+        };
+
+        /**
+         * `iat` counts whole seconds and the marker does not, so a token minted
+         * in the same second as a revocation is refused on purpose — see
+         * `AdminEntity.acceptsTokenIssuedAt`. A test proving «minted after it
+         * works» has to step past the second boundary first.
+         */
+        const nextSecond = (): Promise<void> =>
+            new Promise(resolve => setTimeout(resolve, 1_000 - (Date.now() % 1_000) + 50));
+
+        it('dies with logout-all, on every machine', async () => {
+            const admin = await createAdmin();
+            const browserA = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+            const browserB = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            // Both work before, so their refusal afterwards means something.
+            await expect(authenticate(browserA.accessToken)).resolves.toBeDefined();
+
+            await tokenService.revokeAllForAdmin(admin.id);
+
+            await expect(authenticate(browserA.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+            await expect(authenticate(browserB.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+        });
+
+        it('lets a session opened after the sign-out work normally', async () => {
+            const admin = await createAdmin();
+            await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+            await tokenService.revokeAllForAdmin(admin.id);
+
+            await nextSecond();
+            const fresh = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            await expect(authenticate(fresh.accessToken)).resolves.toBeDefined();
+        });
+
+        it('survives another browser signing itself out', async () => {
+            const admin = await createAdmin();
+            const browserA = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+            const browserB = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            await tokenService.revokeChain(browserA.refreshToken);
+
+            // One browser leaving must not sign the admin out of the others —
+            // the account-wide marker must stay out of single-chain logout.
+            await expect(authenticate(browserB.accessToken)).resolves.toBeDefined();
+        });
+
+        it('is not handed back when a deactivated account is reactivated', async () => {
+            const admin = await createAdmin();
+            const session = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            await authService.setActive(admin.id, false);
+            await expect(authenticate(session.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
+
+            // Restoring the ability to sign in is not the same as handing back
+            // the sessions the deactivation took away.
+            await authService.setActive(admin.id, true);
+            await expect(authenticate(session.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
         });
     });
 

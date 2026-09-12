@@ -10,9 +10,15 @@
 > Зрізи до 27 включно ішли однією `feat/backend-foundation` (PR #1–#10).
 > План: `C:\Users\olehc\.claude\plans\cozy-wishing-karp.md`
 
-**Останнє оновлення:** 2026-09-12 — журнал розбито на частини; десять PR зведено
-в один ([#26](https://github.com/amelin0/recipes-app-monorepo/pull/26), гілка
-`feat/client-api-hardening`), який чекає на мерж.
+**Останнє оновлення:** 2026-09-12 — перша знахідка QA доведена до коду:
+`logout-all` і зміна пароля тепер відкликають і **виданий токен доступу**
+(мітка `sessions_valid_from`, міграція `0025`, гілка `fix/session-revocation`;
+та сама діра закрита в адмінці). Фікс — у
+[PR #27](https://github.com/amelin0/recipes-app-monorepo/pull/27) поверх
+`feat/client-api-hardening`; **у `development` ще нічого не влито** —
+зведений [PR #26](https://github.com/amelin0/recipes-app-monorepo/pull/26)
+так само чекає на мерж. Дві інші знахідки QA виявились застарілою
+специфікацією, а не кодом, — див. [«Рішення»](./handoff/decisions.md).
 
 ## Де що лежить
 

@@ -13,6 +13,14 @@ export interface AccessTokenPayload {
     sub: string;
     email: string;
     type: 'access';
+    /**
+     * Seconds since the epoch, stamped by the signer — absent from the object
+     * handed to `sign`, present on every payload that comes back from
+     * `verify`. `JwtStrategy` reads it to enforce `users.sessions_valid_from`,
+     * which is what makes «log out everywhere» end this token rather than let
+     * it run out its fifteen minutes.
+     */
+    iat?: number;
 }
 
 /** `jti` is the `refresh_tokens` row id, so a refresh costs one indexed read. */
