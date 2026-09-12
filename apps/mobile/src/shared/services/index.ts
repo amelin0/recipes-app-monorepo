@@ -5,6 +5,7 @@ export {
     invalidateQueries,
     Queries,
     userKeys,
+    nutritionKeys,
     faqKeys,
     subscriptionKeys,
     recipeKeys,

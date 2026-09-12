@@ -19,9 +19,11 @@ export enum Queries {
     Referral = 'referral',
     Recipes = 'recipes',
     Recipe = 'recipe',
-    RecipeCategories = 'recipe-categories',
     Products = 'products',
     Product = 'product',
+    RecipeFilters = 'recipe-filters',
+    NutritionDay = 'nutrition-day',
+    NutritionGoal = 'nutrition-goal',
     MealPlan = 'meal-plan',
     ShoppingList = 'shopping-list',
 }
@@ -77,8 +79,17 @@ export const recipeKeys = {
     /** Single recipe detail — `GET /recipes/:id`. */
     recipe: (id: string) => [Queries.Recipe, id] as const,
 
-    /** Recipe categories — `GET /recipes/categories`. */
-    categories: () => [Queries.RecipeCategories] as const,
+    /** Everything the filter sheet offers — `GET /recipes/filters`. */
+    filters: () => [Queries.RecipeFilters] as const,
+};
+
+/** Nutrition-domain query-key factory. */
+export const nutritionKeys = {
+    /** One day's tracking payload — `GET /nutrition/days/:date`. */
+    day: (date: string) => [Queries.NutritionDay, date] as const,
+
+    /** The daily targets — `GET /nutrition/goal`. */
+    goal: () => [Queries.NutritionGoal] as const,
 };
 
 /** Product-domain query-key factory. */
@@ -92,12 +103,18 @@ export const productKeys = {
 
 /** Meal-plan-domain query-key factory. */
 export const mealPlanKeys = {
-    /** Meal plan for a day/period — `GET /meal-plan`. */
-    plan: (date?: string) => [Queries.MealPlan, date ?? ''] as const,
+    /**
+     * A closed range of days — `GET /meal-plan?from=&to=`.
+     *
+     * Keyed by the range, not by one date: the plan tab reads a fortnight at
+     * a time and the home screen a single day, and they must not share an
+     * entry that holds only part of what the other needs.
+     */
+    plan: (from: string, to: string) => [Queries.MealPlan, from, to] as const,
 };
 
 /** Shopping-list-domain query-key factory. */
 export const shoppingListKeys = {
-    /** The user's shopping list — `GET /shopping-list`. */
-    list: () => [Queries.ShoppingList] as const,
+    /** The list summed over a range of days — `GET /shopping-list?from=&to=`. */
+    list: (from: string, to: string) => [Queries.ShoppingList, from, to] as const,
 };

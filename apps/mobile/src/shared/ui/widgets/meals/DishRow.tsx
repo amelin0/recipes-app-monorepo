@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -42,8 +42,10 @@ export interface DishMacro {
 }
 
 export interface DishRowProps {
-    /** Illustrative emoji shown on the tinted tile. */
+    /** Illustrative emoji shown on the tinted tile when there is no photo. */
     emoji: string;
+    /** The dish's own picture; replaces the emoji tile when the recipe has one. */
+    photoUrl?: string | null;
     name: string;
     /** Energy line under the name, already formatted («320 ккал»). */
     calories: string;
@@ -83,6 +85,7 @@ const GRADIENT = { x1: '-0.056', y1: '0.055', x2: '1.056', y2: '0.945' };
 /** One planned dish inside a meal card (435:6025). */
 export const DishRow = ({
     emoji,
+    photoUrl,
     name,
     calories,
     macros,
@@ -118,7 +121,11 @@ export const DishRow = ({
                     </Defs>
                     <Rect x="0" y="0" width="100%" height="100%" fill="url(#dishTile)" />
                 </Svg>
-                <AppText style={styles.emoji}>{emoji}</AppText>
+                {photoUrl ? (
+                    <Image source={{ uri: photoUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                ) : (
+                    <AppText style={styles.emoji}>{emoji}</AppText>
+                )}
             </View>
 
             <View style={styles.info}>

@@ -3,7 +3,7 @@ import { ScrollView } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppScreen, SectionHeader } from '@/shared/ui/components';
+import { AppScreen, QueryState, SectionHeader } from '@/shared/ui/components';
 import { MealCard } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
 
@@ -13,6 +13,9 @@ import { useHomeScreen } from './useHomeScreen';
 export const HomeScreen = () => {
     const { t } = useAppTranslation(['tracking']);
     const {
+        isLoading,
+        isError,
+        handleRetry,
         initials,
         notificationsCount,
         dateLabel,
@@ -43,44 +46,46 @@ export const HomeScreen = () => {
                 onNotificationsPress={handleNotificationsPress}
             />
 
-            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <DailyGoalCard
-                    caloriesCurrent={calories.current}
-                    caloriesTarget={calories.target}
-                    macros={macros}
-                    onPress={handleGoalPress}
-                />
-
-                <SectionHeader title={t('tracking:home.today-ration')} />
-
-                {meals.map(meal => (
-                    <MealCard
-                        key={meal.key}
-                        title={t(`tracking:home.meals.${meal.key}`)}
-                        time={meal.time}
-                        dishes={meal.dishes}
-                        dishAction={meal.dishAction}
-                        highlighted={meal.current}
-                        onPress={meal.hasDetails ? () => handleMealPress(meal.key) : undefined}
-                        onAdd={() => handleAddMeal(meal.key)}
-                        onDishAction={dishId => handleDishAction(meal.key, dishId)}
+            <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry}>
+                <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+                    <DailyGoalCard
+                        caloriesCurrent={calories.current}
+                        caloriesTarget={calories.target}
+                        macros={macros}
+                        onPress={handleGoalPress}
                     />
-                ))}
 
-                <WaterCard
-                    current={water.current}
-                    target={water.target}
-                    onPress={handleWaterPress}
-                    onAdd={handleAddWater}
-                />
+                    <SectionHeader title={t('tracking:home.today-ration')} />
 
-                <StepsCard
-                    current={steps.current}
-                    target={steps.target}
-                    onPress={handleStepsPress}
-                    onAdd={handleAddSteps}
-                />
-            </ScrollView>
+                    {meals.map(meal => (
+                        <MealCard
+                            key={meal.key}
+                            title={t(`tracking:home.meals.${meal.key}`)}
+                            time={meal.time}
+                            dishes={meal.dishes}
+                            dishAction={meal.dishAction}
+                            highlighted={meal.current}
+                            onPress={meal.hasDetails ? () => handleMealPress(meal.key) : undefined}
+                            onAdd={() => handleAddMeal(meal.key)}
+                            onDishAction={dishId => handleDishAction(meal.key, dishId)}
+                        />
+                    ))}
+
+                    <WaterCard
+                        current={water.current}
+                        target={water.target}
+                        onPress={handleWaterPress}
+                        onAdd={handleAddWater}
+                    />
+
+                    <StepsCard
+                        current={steps.current}
+                        target={steps.target}
+                        onPress={handleStepsPress}
+                        onAdd={handleAddSteps}
+                    />
+                </ScrollView>
+            </QueryState>
         </AppScreen>
     );
 };

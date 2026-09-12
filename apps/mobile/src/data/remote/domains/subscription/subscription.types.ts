@@ -1,14 +1,9 @@
+import type { Reference } from '../catalog';
+
 export type BillingPeriod = 'month' | 'year';
 export type SubscriptionSource = 'purchase' | 'trial' | 'referral';
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled';
 export type PurchaseStore = 'apple' | 'google' | 'none';
-
-/** A named value from the catalog — used here for the paywall's feature list. */
-export interface Reference {
-    id: string;
-    slug: string;
-    name: string;
-}
 
 /** Prices are in minor units (cents): money in a float is a rounding bug waiting for a decimal. */
 export interface Plan {
@@ -33,6 +28,7 @@ export interface Plan {
 
 export interface Paywall {
     plans: Plan[];
+    /** The same list the confirmation screen shows. */
     features: Reference[];
 }
 

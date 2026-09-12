@@ -1,3 +1,4 @@
+export * from './hooks';
 export {
     createShoppingListSlice,
     selectVisibleShoppingItems,

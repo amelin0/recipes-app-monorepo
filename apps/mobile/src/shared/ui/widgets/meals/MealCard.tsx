@@ -13,6 +13,8 @@ import { DishRow, type DishAction, type DishMacro, type DishSwipeAction } from '
 export interface MealDish {
     id: string;
     emoji: string;
+    /** The recipe's picture; the emoji tile stands in when it has none. */
+    photoUrl?: string | null;
     name: string;
     calories: number;
     macros: DishMacro[];
@@ -89,6 +91,7 @@ export const MealCard = ({
                     <DishRow
                         key={dish.id}
                         emoji={dish.emoji}
+                        photoUrl={dish.photoUrl}
                         name={dish.name}
                         calories={t('tracking:home.kcal', { value: dish.calories })}
                         macros={dish.macros}
