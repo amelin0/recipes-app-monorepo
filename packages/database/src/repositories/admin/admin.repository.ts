@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import { AdminRole } from '@dns/shared-types';
 
@@ -128,7 +128,17 @@ export class AdminRepository extends BaseRepository {
 
                 const [row] = await tx
                     .update(admins)
-                    .set({ role: nextRole, isActive: nextActive, updatedAt: new Date() })
+                    .set({
+                        role: nextRole,
+                        isActive: nextActive,
+                        updatedAt: new Date(),
+                        // Deactivation ends the sessions, and an access token
+                        // already in the browser cannot be deleted with the
+                        // chains below — so it is refused by `iat` instead.
+                        // Without this, reactivating an account would hand back
+                        // any token that had not yet expired.
+                        ...(nextActive ? {} : { sessionsValidFrom: sql`clock_timestamp()` }),
+                    })
                     .where(eq(admins.id, targetId))
                     .returning();
                 if (!row) throw new Error(`Admin ${targetId} vanished while locked`);

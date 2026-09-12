@@ -233,9 +233,15 @@ export class UserRepository extends BaseRepository {
                 .returning({ id: passwordResetPermits.id });
             if (!permit) return false;
 
+            // `sessions_valid_from` alongside the new password, so the access
+            // tokens the old one could still reach stop being accepted too —
+            // deleting the chains below cannot touch them (FR-005).
+            // `clock_timestamp()`, not `now()`: `now()` predates this
+            // transaction's wait for the row lock, and a sign-in that
+            // committed during that wait would outlive the reset.
             await tx
                 .update(users)
-                .set({ passwordHash, updatedAt: sql`now()` })
+                .set({ passwordHash, sessionsValidFrom: sql`clock_timestamp()`, updatedAt: sql`now()` })
                 .where(eq(users.id, userId));
 
             await tx.delete(refreshTokens).where(eq(refreshTokens.userId, userId));

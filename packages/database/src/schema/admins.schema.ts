@@ -51,6 +51,21 @@ export const admins = pgTable(
          */
         isActive: boolean('is_active').notNull().default(true),
 
+        /**
+         * When every session of this account was last ended wholesale — «sign
+         * out everywhere», and deactivation.
+         *
+         * `is_active` above already stops a deactivated admin on the next
+         * request, but nothing stopped a *signed-out* one: the chains went and
+         * the access token in the browser kept working for its full fifteen
+         * minutes. This marker is what `AdminJwtStrategy` compares each
+         * token's `iat` against (sign-in FR-007).
+         *
+         * Not written by single-browser logout — the admin's other machines
+         * must stay signed in.
+         */
+        sessionsValidFrom: timestamp('sessions_valid_from', { withTimezone: true }),
+
         lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
