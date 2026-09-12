@@ -107,7 +107,12 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @SetThrottleKey(ThrottleKey.RefreshToken)
     @ApiOkResponse({ type: AuthTokensView })
-    @ApiUnauthorizedResponse({ description: 'Unknown, expired or already-spent token. A replay revokes the chain.' })
+    @ApiUnauthorizedResponse({
+        description:
+            'Unknown, expired or already-spent token. A replay more than 10 seconds after the rotation revokes ' +
+            'the chain; exactly one replay inside that window is answered with a sibling pair instead — see the ' +
+            'session spec, Edge Cases.',
+    })
     async refresh(@Body() body: RefreshTokenInboundDto): Promise<AuthTokensView> {
         return AuthTokensView.from(await this.tokenService.rotate(body.refreshToken));
     }
