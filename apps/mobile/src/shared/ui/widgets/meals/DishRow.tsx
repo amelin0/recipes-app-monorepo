@@ -10,7 +10,7 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import BasketAddIcon from '../../../../../assets/icons/basket-add.svg';
 import BasketCheckIcon from '../../../../../assets/icons/basket-check.svg';
-import CutleryIcon from '../../../../../assets/icons/cutlery.svg';
+import CutleryIcon from '../../../../../assets/icons/cutlery-small.svg';
 import TickCircleOutlineIcon from '../../../../../assets/icons/tick-circle-outline.svg';
 import TrashIcon from '../../../../../assets/icons/trash.svg';
 
@@ -19,7 +19,7 @@ import TrashIcon from '../../../../../assets/icons/trash.svg';
  *
  * - `eaten` — already logged; the row shows a green tick (950:54252).
  * - `eat` — the meal is happening now; the row offers the cutlery action
- *   (811:59006).
+ *   (811:59006 → RFDS `cutlery 4`, 54644:1574).
  * - `basket` — the meal plan offers adding the dish to the shopping list
  *   (435:13297).
  * - `basket-added` — already on the list; a green basket-check state

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppButton, AppText, CircleIconButton } from '@/shared/ui/components';
@@ -29,7 +30,7 @@ export const CuisineSheet = ({ visible, selected, onApply, onClose }: CuisineShe
     }, [visible, selected]);
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('common:actions.close')}
@@ -37,7 +38,7 @@ export const CuisineSheet = ({ visible, selected, onApply, onClose }: CuisineShe
                 onPress={onClose}
             />
 
-            <View style={styles.sheet}>
+            <Animated.View entering={SlideInDown.duration(280)} style={styles.sheet}>
                 <View style={styles.header}>
                     <View style={styles.labels}>
                         <AppText variant="titleMedium" accessibilityRole="header">
@@ -75,7 +76,7 @@ export const CuisineSheet = ({ visible, selected, onApply, onClose }: CuisineShe
                 </View>
 
                 <AppButton fullWidth label={t('recipes:create-dish.apply')} onPress={() => onApply(draft)} />
-            </View>
+            </Animated.View>
         </Modal>
     );
 };

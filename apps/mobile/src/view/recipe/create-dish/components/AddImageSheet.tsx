@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, View } from 'react-native';
 
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppText, CircleIconButton } from '@/shared/ui/components';
@@ -28,7 +29,7 @@ export const AddImageSheet = ({ visible, onPickPhoto, onTakePhoto, onClose }: Ad
     ];
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('common:actions.close')}
@@ -36,7 +37,7 @@ export const AddImageSheet = ({ visible, onPickPhoto, onTakePhoto, onClose }: Ad
                 onPress={onClose}
             />
 
-            <View style={styles.sheet}>
+            <Animated.View entering={SlideInDown.duration(280)} style={styles.sheet}>
                 <View style={styles.header}>
                     <AppText variant="titleMedium" accessibilityRole="header" style={styles.title}>
                         {t('recipes:create-dish.image-title')}
@@ -54,7 +55,7 @@ export const AddImageSheet = ({ visible, onPickPhoto, onTakePhoto, onClose }: Ad
                         </Pressable>
                     ))}
                 </View>
-            </View>
+            </Animated.View>
         </Modal>
     );
 };

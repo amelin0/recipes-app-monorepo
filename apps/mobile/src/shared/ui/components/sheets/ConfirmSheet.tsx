@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, View } from 'react-native';
 
+import Animated, { SlideInDown } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import CloseIcon from '../../../../../assets/icons/close.svg';
@@ -40,7 +41,7 @@ export const ConfirmSheet = ({
     const { theme } = useUnistyles();
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={closeAccessibilityLabel}
@@ -48,7 +49,7 @@ export const ConfirmSheet = ({
                 onPress={onDismiss}
             />
 
-            <View style={styles.sheet}>
+            <Animated.View entering={SlideInDown.duration(280)} style={styles.sheet}>
                 <View style={styles.header}>
                     <View style={styles.labels}>
                         <AppText variant="titleMedium" accessibilityRole="header">
@@ -76,7 +77,7 @@ export const ConfirmSheet = ({
                     <AppButton label={confirmLabel} onPress={onConfirm} fullWidth />
                     <AppButton variant="secondary" label={cancelLabel} onPress={onCancel} fullWidth />
                 </View>
-            </View>
+            </Animated.View>
         </Modal>
     );
 };

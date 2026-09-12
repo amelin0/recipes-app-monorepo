@@ -26,7 +26,7 @@ export const AccountDeleteConfirmScreen = () => {
         <AppScreen>
             <TopBar title={t('profile:delete-flow.title')} />
 
-            <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <View style={styles.content}>
                     <DangerBadge>
                         <LockIcon width={32} height={32} color={theme.colors.semantic.white} />
