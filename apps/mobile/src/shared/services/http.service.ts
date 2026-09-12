@@ -51,6 +51,13 @@ const axiosInstance: AxiosInstance = axios.create({
     },
 });
 
+/**
+ * Told when a session ends for good, so the UI can say so. Injected rather
+ * than imported: this module loads before the toast host mounts, and pulling
+ * the toast service in here would make the HTTP layer depend on the view.
+ */
+let onSessionExpired: (() => void) | undefined;
+
 /** Clear auth state and force the app back to the unauthenticated stack. */
 async function handleUnauthenticated(): Promise<void> {
     await AuthStorage.removeTokens();
@@ -87,7 +94,15 @@ async function refreshTokens(): Promise<string | null> {
             refreshToken: tokens.refreshToken,
         });
         return tokens.accessToken;
-    } catch {
+    } catch (error) {
+        // Найважливіший шлях автентифікації не має лишатись німим: коли рефреш
+        // падає, користувача викидає на екран входу, і без цього рядка
+        // причина ніде не видима — ні в логах Metro, ні на пристрої.
+        const failure = (error as AxiosError<{ code?: string; message?: string }>).response;
+        console.log(
+            `[HTTP ✕] POST ${REFRESH_PATH} → ${failure?.status ?? 'network'}`,
+            failure?.data ?? (error as Error).message,
+        );
         return null;
     }
 }
@@ -166,6 +181,9 @@ axiosInstance.interceptors.response.use(
             }
 
             await handleUnauthenticated();
+            // Без цього користувач просто опиняється на екрані входу посеред
+            // дії, яку щойно почав, і читає це як падіння застосунку.
+            onSessionExpired?.();
         }
 
         const route = formatRoute(error.config);
@@ -203,4 +221,9 @@ export const HttpService = {
     },
 
     getAccessToken: () => AuthStorage.getAccessToken(),
+
+    /** Registered once, by the root layout. */
+    setSessionExpiredHandler: (handler: () => void) => {
+        onSessionExpired = handler;
+    },
 };

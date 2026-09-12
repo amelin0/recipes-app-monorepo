@@ -9,6 +9,12 @@
 
 export enum Queries {
     Me = 'me',
+    Profile = 'profile',
+    Reminders = 'reminders',
+    Faq = 'faq',
+    Subscription = 'subscription',
+    SubscriptionPlans = 'subscription-plans',
+    Referral = 'referral',
     Recipes = 'recipes',
     Recipe = 'recipe',
     RecipeCategories = 'recipe-categories',
@@ -29,8 +35,30 @@ export type ProductsListFilters = Record<string, unknown>;
  * or read user-domain caches.
  */
 export const userKeys = {
-    /** Own profile — `GET /users/me`. */
-    me: () => [Queries.Me] as const,
+    /** Own profile — `GET /profile`. Also carries settings, so every settings
+        screen reads and writes through this one entry. */
+    profile: () => [Queries.Profile] as const,
+
+    /** Reminder schedule — `GET /profile/reminders`. */
+    reminders: () => [Queries.Reminders] as const,
+};
+
+/** FAQ-domain query-key factory. */
+export const faqKeys = {
+    /** Whole topic tree — `GET /faq`. */
+    topics: () => [Queries.Faq] as const,
+};
+
+/** Subscription-domain query-key factory. */
+export const subscriptionKeys = {
+    /** Current subscription + paywall flag — `GET /subscription`. */
+    state: () => [Queries.Subscription] as const,
+
+    /** Paywall offer — `GET /subscription/plans`. */
+    plans: () => [Queries.SubscriptionPlans] as const,
+
+    /** Own referral code and its tally — `GET /profile/referral`. */
+    referral: () => [Queries.Referral] as const,
 };
 
 /** Recipe-domain query-key factory. */

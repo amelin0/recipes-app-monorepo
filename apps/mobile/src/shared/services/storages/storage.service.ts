@@ -7,7 +7,7 @@ const storage = createMMKV();
  * Extend as new preferences are added. Keys are intentionally explicit to
  * keep the surface audit-able and prevent typos.
  */
-type LocalDataKeys = 'appLanguage' | 'onboardingCompleted' | 'themePreference';
+type LocalDataKeys = 'appLanguage' | 'onboardingCompleted' | 'themePreference' | 'accountDeletionDeadline';
 
 export const writeData = <T extends object>(key: LocalDataKeys, data: T) => {
     storage.set(key, JSON.stringify(data));

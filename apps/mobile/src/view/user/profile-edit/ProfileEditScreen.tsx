@@ -25,7 +25,7 @@ export const ProfileEditScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['profile']);
     const isKeyboardVisible = useKeyboardVisible();
-    const { initials, name, setName, canSave, handleChangePhoto, handleSave } = useProfileEditScreen();
+    const { initials, photoUrl, name, setName, canSave, handleChangePhoto, handleSave } = useProfileEditScreen();
 
     return (
         <AppScreen>
@@ -40,6 +40,7 @@ export const ProfileEditScreen = () => {
                     <View style={styles.avatarBlock}>
                         <Avatar
                             label={initials}
+                            photoUrl={photoUrl}
                             size={64}
                             labelVariant="titleSmall"
                             onPress={handleChangePhoto}

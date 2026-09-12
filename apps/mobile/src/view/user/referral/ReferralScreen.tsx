@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppCard, AppScreen, AppText, TopBar } from '@/shared/ui/components';
+import { AppButton, AppCard, AppScreen, AppText, QueryState, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import CopyIcon from '../../../../assets/icons/copy.svg';
@@ -18,83 +18,85 @@ const HOW_IT_WORKS = ['send', 'install', 'reward'] as const;
 export const ReferralScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['profile']);
-    const { code, joined, earned, handleCopy, handleShare } = useReferralScreen();
+    const { code, joined, earned, isLoading, isError, handleRetry, handleCopy, handleShare } = useReferralScreen();
 
     return (
         <AppScreen>
             <TopBar title={t('profile:referral-screen.title')} />
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <AppCard style={styles.card}>
-                    <View style={styles.pitch}>
-                        <AppText variant="bodyLargeBold" style={styles.centered}>
-                            {t('profile:referral-screen.pitch-title')}
-                        </AppText>
-                        <AppText variant="bodySmallReg" style={[styles.centered, styles.muted]}>
-                            {t('profile:referral-screen.pitch-description')}
-                        </AppText>
-                    </View>
-
-                    <View style={styles.stats}>
-                        <ReferralStatBox
-                            label={t('profile:referral-screen.joined-label')}
-                            value={String(joined)}
-                            caption={t('profile:referral-screen.joined-caption', { count: joined })}
-                        />
-                        <ReferralStatBox
-                            label={t('profile:referral-screen.earned-label')}
-                            value={String(earned)}
-                            caption={t('profile:referral-screen.earned-caption', { count: earned })}
-                        />
-                    </View>
-                </AppCard>
-
-                <AppCard style={styles.card}>
-                    <AppText variant="bodyMediumBold" style={styles.left}>
-                        {t('profile:referral-screen.code-title')}
-                    </AppText>
-                    <View style={styles.codeBox}>
-                        <AppText variant="titleMedium" style={styles.centered}>
-                            {code}
-                        </AppText>
-                    </View>
-                    <View style={styles.codeActions}>
-                        <AppButton
-                            variant="secondary"
-                            size="md"
-                            label={t('profile:referral-screen.copy')}
-                            onPress={handleCopy}
-                            leftSlot={<CopyIcon width={20} height={20} color={theme.colors.elements.primary} />}
-                            style={styles.codeAction}
-                        />
-                        <AppButton
-                            size="md"
-                            label={t('profile:referral-screen.share')}
-                            onPress={handleShare}
-                            leftSlot={<ExportIcon width={20} height={20} color={theme.colors.semantic.white} />}
-                            style={styles.codeAction}
-                        />
-                    </View>
-                </AppCard>
-
-                <AppCard style={styles.card}>
-                    <AppText variant="bodyMediumBold" style={styles.left}>
-                        {t('profile:referral-screen.how-title')}
-                    </AppText>
-                    {HOW_IT_WORKS.map((step, index) => (
-                        <View key={step} style={styles.stepRow}>
-                            <View style={styles.stepBadge}>
-                                <AppText variant="bodySmallBold" style={styles.stepNumber}>
-                                    {String(index + 1)}
-                                </AppText>
-                            </View>
-                            <AppText variant="bodySmallReg" style={styles.stepText}>
-                                {t(`profile:referral-screen.how.${step}`)}
+            <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry}>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                    <AppCard style={styles.card}>
+                        <View style={styles.pitch}>
+                            <AppText variant="bodyLargeBold" style={styles.centered}>
+                                {t('profile:referral-screen.pitch-title')}
+                            </AppText>
+                            <AppText variant="bodySmallReg" style={[styles.centered, styles.muted]}>
+                                {t('profile:referral-screen.pitch-description')}
                             </AppText>
                         </View>
-                    ))}
-                </AppCard>
-            </ScrollView>
+
+                        <View style={styles.stats}>
+                            <ReferralStatBox
+                                label={t('profile:referral-screen.joined-label')}
+                                value={String(joined)}
+                                caption={t('profile:referral-screen.joined-caption', { count: joined })}
+                            />
+                            <ReferralStatBox
+                                label={t('profile:referral-screen.earned-label')}
+                                value={String(earned)}
+                                caption={t('profile:referral-screen.earned-caption', { count: earned })}
+                            />
+                        </View>
+                    </AppCard>
+
+                    <AppCard style={styles.card}>
+                        <AppText variant="bodyMediumBold" style={styles.left}>
+                            {t('profile:referral-screen.code-title')}
+                        </AppText>
+                        <View style={styles.codeBox}>
+                            <AppText variant="titleMedium" style={styles.centered}>
+                                {code}
+                            </AppText>
+                        </View>
+                        <View style={styles.codeActions}>
+                            <AppButton
+                                variant="secondary"
+                                size="md"
+                                label={t('profile:referral-screen.copy')}
+                                onPress={handleCopy}
+                                leftSlot={<CopyIcon width={20} height={20} color={theme.colors.elements.primary} />}
+                                style={styles.codeAction}
+                            />
+                            <AppButton
+                                size="md"
+                                label={t('profile:referral-screen.share')}
+                                onPress={handleShare}
+                                leftSlot={<ExportIcon width={20} height={20} color={theme.colors.semantic.white} />}
+                                style={styles.codeAction}
+                            />
+                        </View>
+                    </AppCard>
+
+                    <AppCard style={styles.card}>
+                        <AppText variant="bodyMediumBold" style={styles.left}>
+                            {t('profile:referral-screen.how-title')}
+                        </AppText>
+                        {HOW_IT_WORKS.map((step, index) => (
+                            <View key={step} style={styles.stepRow}>
+                                <View style={styles.stepBadge}>
+                                    <AppText variant="bodySmallBold" style={styles.stepNumber}>
+                                        {String(index + 1)}
+                                    </AppText>
+                                </View>
+                                <AppText variant="bodySmallReg" style={styles.stepText}>
+                                    {t(`profile:referral-screen.how.${step}`)}
+                                </AppText>
+                            </View>
+                        ))}
+                    </AppCard>
+                </ScrollView>
+            </QueryState>
         </AppScreen>
     );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -10,6 +10,8 @@ import { AppText } from '../texts';
 export interface AvatarProps {
     /** Initials shown inside the circle (RFDS avatar type=text). */
     label: string;
+    /** Uploaded photo; the initials stay as the fallback while it is absent. */
+    photoUrl?: string | null;
     /** Diameter in px. @default 48 */
     size?: number;
     /** Typography of the initials — larger avatars use bigger type. @default 'bodyLargeBold' */
@@ -27,6 +29,7 @@ export interface AvatarProps {
 /** Circle avatar — RFDS `avatar` (type=text). Image variant arrives with real profiles. */
 export const Avatar = ({
     label,
+    photoUrl,
     size = 48,
     labelVariant = 'bodyLargeBold',
     onPress,
@@ -42,7 +45,11 @@ export const Avatar = ({
             onPress={onPress}
             style={[styles.circle(size), style]}
         >
-            <AppText variant={labelVariant}>{label}</AppText>
+            {photoUrl ? (
+                <Image source={{ uri: photoUrl }} style={styles.photo} resizeMode="cover" />
+            ) : (
+                <AppText variant={labelVariant}>{label}</AppText>
+            )}
             {badge ? <View style={styles.badge}>{badge}</View> : null}
         </Pressable>
     );
@@ -57,6 +64,13 @@ const styles = StyleSheet.create(theme => ({
         justifyContent: 'center',
         backgroundColor: theme.colors.active.tertiary,
     }),
+    // Rounded on the image itself rather than clipping the circle: the badge
+    // hangs outside the bounds, and `overflow: hidden` would cut it off.
+    photo: {
+        width: '100%',
+        height: '100%',
+        borderRadius: theme.radius.full,
+    },
     // The design hangs the badge just outside the circle (804:24621).
     badge: {
         position: 'absolute',

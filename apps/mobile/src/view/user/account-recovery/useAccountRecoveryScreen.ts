@@ -2,8 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { router } from 'expo-router';
 
+import { AccountStorage } from '@/data/local/domains/user';
+import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
-import { useStore } from '@/state';
+import { useSignOut } from '@/state/domains/auth';
+import { useCancelAccountDeletion } from '@/state/domains/user';
 
 import { ACCOUNT_RECOVERY_DAYS } from '../user.constants';
 
@@ -12,13 +15,18 @@ const pad = (value: number) => String(value).padStart(2, '0');
 
 export const useAccountRecoveryScreen = () => {
     const { t } = useAppTranslation(['profile', 'common']);
-    const reset = useStore(state => state.reset);
+    const cancelDeletion = useCancelAccountDeletion();
+    const signOut = useSignOut();
 
-    // TODO: the deadline comes with the deletion request from the API. The mock
-    // adds the design's own remainder so the clock reads like 804:25380.
-    const [deadline] = useState(
-        () => Date.now() + ACCOUNT_RECOVERY_DAYS * 24 * 60 * 60 * SECOND + ((14 * 60 + 32) * 60 + 7) * SECOND,
-    );
+    // Дедлайн приходить у відповіді на запит видалення і лежить на пристрої:
+    // ендпоінта, який читає незавершений запит, у API немає. Якщо його там
+    // немає (вхід з іншого пристрою) — показуємо повне вікно, бо коротший
+    // відлік злякав би сильніше, ніж є підстав.
+    const [deadline] = useState(() => {
+        const stored = AccountStorage.getDeletionDeadline();
+        const parsed = stored ? Date.parse(stored) : NaN;
+        return Number.isNaN(parsed) ? Date.now() + ACCOUNT_RECOVERY_DAYS * 24 * 60 * 60 * SECOND : parsed;
+    });
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
@@ -33,10 +41,16 @@ export const useAccountRecoveryScreen = () => {
     const seconds = Math.floor(left / SECOND) % 60;
 
     const handleRestore = useCallback(() => {
-        // TODO: POST /me/restore once the API ships — mock success for now; the
-        // failure path is 804:25402.
-        router.replace('/(app)/account-restored');
-    }, []);
+        if (cancelDeletion.isPending) return;
+
+        cancelDeletion.mutate(undefined, {
+            onSuccess: () => router.replace('/(app)/account-restored'),
+            onError: () => {
+                ToastService.error(t('common:states.error'));
+                router.replace('/(app)/account-restore-failed');
+            },
+        });
+    }, [cancelDeletion, t]);
 
     return {
         countdown: t('profile:account-recovery.countdown', {
@@ -44,7 +58,8 @@ export const useAccountRecoveryScreen = () => {
             clock: `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`,
             count: days,
         }),
+        isRestoring: cancelDeletion.isPending,
         handleRestore,
-        handleLogout: reset,
+        handleLogout: () => void signOut(),
     };
 };

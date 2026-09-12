@@ -31,6 +31,8 @@ export const ProfileScreen = () => {
     const {
         name,
         email,
+        showEmail,
+        photoUrl,
         initials,
         subscriptionTag,
         subscriptionUntil,
@@ -64,15 +66,18 @@ export const ProfileScreen = () => {
                 <View style={styles.userBlock}>
                     <Avatar
                         label={initials}
+                        photoUrl={photoUrl}
                         size={64}
                         labelVariant="titleSmall"
                         accessibilityLabel={t('profile:avatar-a11y')}
                     />
                     <View style={styles.identity}>
                         <AppText variant="titleSmall">{name}</AppText>
-                        <AppText variant="bodyMediumReg" style={styles.email}>
-                            {email}
-                        </AppText>
+                        {showEmail ? (
+                            <AppText variant="bodyMediumReg" style={styles.email}>
+                                {email}
+                            </AppText>
+                        ) : null}
                     </View>
                     <Pressable accessibilityRole="button" hitSlop={8} onPress={handleEdit}>
                         <AppText variant="bodySmallReg" style={styles.editLink}>

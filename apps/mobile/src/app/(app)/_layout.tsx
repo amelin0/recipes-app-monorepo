@@ -1,9 +1,13 @@
 import { Stack } from 'expo-router';
 
 import { useStore } from '@/state';
+import { useSyncSettings } from '@/state/domains/user';
 
 export default function AppLayout() {
     const isAuthenticated = useStore(state => state.isAuthenticated);
+    // Mirrors the server's units/theme/language into the store once the
+    // profile lands — the screens read them synchronously in render.
+    useSyncSettings();
 
     return (
         <Stack screenOptions={{ headerShown: false }}>
