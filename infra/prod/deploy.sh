@@ -141,6 +141,7 @@ notify() {
         --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
         --data-urlencode "text=$text" \
         --data-urlencode "disable_notification=$silent" \
+        --data-urlencode 'link_preview_options={"is_disabled":true}' \
         "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" 2>/dev/null ||
         echo "    (telegram notification failed — the deploy is not affected)" >&2
 }
@@ -176,6 +177,7 @@ write_deploy_state() {
 # with the step it happened in.
 OUTCOME=''
 REASON=''
+OBS_NOTE=''
 STEP='start'
 TAG=''
 STARTED_AT="$(date +%s)"
@@ -186,7 +188,7 @@ on_exit() {
     case "$OUTCOME" in
         deployed)
             write_deploy_state 1
-            notify "✅ Deployed $label (was $was, $(($(date +%s) - STARTED_AT))s)" ;;
+            notify "✅ Deployed $label (was $was, $(($(date +%s) - STARTED_AT))s)${OBS_NOTE:+$'\n'$OBS_NOTE}" ;;
         migrations-failed)
             write_deploy_state 0
             notify "❌ Deploy $label failed: migrations. Nothing was swapped — $was is still serving." ;;
@@ -394,7 +396,86 @@ if [ "$HEALTHY" -eq 0 ]; then
     exit 1
 fi
 
-# ── 5. done ──────────────────────────────────────────────────────────────
+# ── 5. monitoring ────────────────────────────────────────────────────────
+# The observability stack reads its scrape targets, alert rules and dashboards
+# from files in this checkout, and only when a container starts. A deploy that
+# changes them has to restart the services that own them, or the change simply
+# never happens — which is how the server's monitoring spent 2026-09-09…13 on
+# a second checkout nobody pulled, without the worker's scrape job or alerts.
+#
+# Best-effort: the application is already deployed and healthy, and nothing
+# that goes wrong with monitoring may roll it back. It is reported instead.
+sync_observability() {
+    local obs_env="$PROD/.env.obs" obs_dir range_ok=0 compose_changed=0 failed=()
+    local obs=(docker compose -p dns-obs --env-file "$obs_env" -f "$PROD/docker-compose.obs.yml")
+    local pairs=(prometheus:prometheus grafana:grafana loki:loki promtail:promtail blackbox:blackbox-exporter)
+    local changed=() pair port
+
+    obs_dir="$(docker ps --filter label=com.docker.compose.project=dns-obs \
+        --format '{{.Label "com.docker.compose.project.working_dir"}}' 2>/dev/null | sort -u || true)"
+    if [ -z "$obs_dir" ]; then
+        OBS_NOTE='⚠️ Monitoring stack is not running.'
+        return
+    fi
+    # Physical paths: a stack started through a symlinked directory is still
+    # this checkout.
+    if [ "$(cd "$obs_dir" 2>/dev/null && pwd -P)" != "$(cd "$PROD" && pwd -P)" ]; then
+        OBS_NOTE="⚠️ Monitoring runs from $obs_dir, not from this checkout — its config was not updated."
+        return
+    fi
+    if [ ! -f "$obs_env" ]; then
+        OBS_NOTE="⚠️ No $obs_env — monitoring config was not updated."
+        return
+    fi
+
+    # Without a previous commit to compare with (first deploy, a hand-reset
+    # box) everything counts as changed: a needless restart is cheap, a
+    # skipped one is the failure this step exists to prevent.
+    if [ -n "$PREVIOUS_TAG" ] && git cat-file -e "$PREVIOUS_TAG^{commit}" 2>/dev/null; then
+        range_ok=1
+    fi
+    obs_changed() { [ "$range_ok" -eq 0 ] || ! git diff --quiet "$PREVIOUS_TAG" "$TAG" -- "infra/prod/$1"; }
+
+    for pair in "${pairs[@]}"; do
+        if obs_changed "${pair%%:*}"; then changed+=("${pair#*:}"); fi
+    done
+    if obs_changed docker-compose.obs.yml; then compose_changed=1; fi
+    [ "${#changed[@]}" -gt 0 ] || [ "$compose_changed" -eq 1 ] || return 0
+
+    echo "── monitoring: restarting ${changed[*]:-changed services}"
+    # A changed compose file recreates what it changed; a changed config file
+    # does not alter the service definition, so those need forcing.
+    if [ "$compose_changed" -eq 1 ]; then "${obs[@]}" up -d || failed+=(compose); fi
+    if [ "${#changed[@]}" -gt 0 ]; then "${obs[@]}" up -d --force-recreate "${changed[@]}" || failed+=(compose); fi
+
+    # A bad provisioning file does not break one alert, it stops Grafana from
+    # starting at all — so a restarted Grafana has to be seen answering.
+    if [[ " ${changed[*]} " == *" grafana "* || "$compose_changed" -eq 1 ]]; then
+        port="$(grep -E '^GRAFANA_HTTP_PORT=' "$obs_env" | tail -1 | cut -d= -f2- | tr -d '"'"'"' ' || true)"
+        wait_healthy grafana "http://127.0.0.1:${port:-3030}/api/health" || failed+=(grafana)
+    fi
+    if [[ " ${changed[*]} " == *" prometheus "* || "$compose_changed" -eq 1 ]]; then
+        port="$(grep -E '^PROMETHEUS_HTTP_PORT=' "$obs_env" | tail -1 | cut -d= -f2- | tr -d '"'"'"' ' || true)"
+        wait_healthy prometheus "http://127.0.0.1:${port:-3031}/-/ready" || failed+=(prometheus)
+    fi
+
+    if [ "${#failed[@]}" -gt 0 ]; then
+        OBS_NOTE="⚠️ Monitoring update failed (${failed[*]}) — alerts may be down, check the obs stack."
+    else
+        OBS_NOTE="📈 Monitoring updated: ${changed[*]:-compose}."
+    fi
+}
+
+# --tag deploys an image without moving the checkout, so the files on disk
+# are not that build's — restarting monitoring against them would be wrong.
+# Called through `||`, which also switches errexit off inside it: an
+# unexpected error there becomes a note on the success message, not a
+# «deploy failed» about an application that is up and healthy.
+if [ -z "$EXPLICIT_TAG" ]; then
+    sync_observability || OBS_NOTE='⚠️ Monitoring update errored — check the obs stack.'
+fi
+
+# ── 6. done ──────────────────────────────────────────────────────────────
 OUTCOME='deployed'
 echo "── 6/6  deployed $TAG"
 "${COMPOSE[@]}" ps
