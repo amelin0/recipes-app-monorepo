@@ -93,7 +93,8 @@ export const TARGET_WEIGHT_KG_MAX = WEIGHT_KG_MAX;
 /**
  * Daily goals. The recommendations stand in for the values the API will compute
  * from the questionnaire; the increments are not stated in the design.
- * TODO: replace with GET /profile/recommendations once the API ships.
+ * Only used while `GET /profile/recommendations` has nothing to say —
+ * the questionnaire needs enough answers before it can compute a norm.
  */
 export const CALORIE_GOAL_DEFAULT = 2000;
 export const CALORIE_GOAL_STEP = 50;
