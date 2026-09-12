@@ -13,9 +13,11 @@
 **Останнє оновлення:** 2026-09-12 — перша знахідка QA доведена до коду:
 `logout-all` і зміна пароля тепер відкликають і **виданий токен доступу**
 (мітка `sessions_valid_from`, міграція `0025`, гілка `fix/session-revocation`;
-та сама діра закрита в адмінці). Зведений PR
-[#26](https://github.com/amelin0/recipes-app-monorepo/pull/26) разом із цим
-фіксом влито в `development`. Дві інші знахідки QA виявились застарілою
+та сама діра закрита в адмінці). Фікс — у
+[PR #27](https://github.com/amelin0/recipes-app-monorepo/pull/27) поверх
+`feat/client-api-hardening`; **у `development` ще нічого не влито** —
+зведений [PR #26](https://github.com/amelin0/recipes-app-monorepo/pull/26)
+так само чекає на мерж. Дві інші знахідки QA виявились застарілою
 специфікацією, а не кодом, — див. [«Рішення»](./handoff/decisions.md).
 
 ## Де що лежить
