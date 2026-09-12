@@ -193,11 +193,12 @@ if ! "${COMPOSE[@]}" up -d; then
 fi
 
 # ── 4. verify ────────────────────────────────────────────────────────────
-wait_healthy() {
-    local label=$1 url=$2 deadline
+wait_for() {
+    local label=$1 deadline
+    shift
     deadline=$(($(date +%s) + HEALTH_TIMEOUT))
     while [ "$(date +%s)" -lt "$deadline" ]; do
-        if curl -fsS -o /dev/null --max-time 3 "$url"; then
+        if "$@" >/dev/null 2>&1; then
             echo "    $label ok"
             return 0
         fi
@@ -207,6 +208,8 @@ wait_healthy() {
     return 1
 }
 
+wait_healthy() { wait_for "$1" curl -fsS -o /dev/null --max-time 3 "$2"; }
+
 if [ "$HEALTHY" -eq 1 ]; then
     echo "── 5/6  health"
     # /health/ready, not /health: the latter answers ok with a dead database, so it
@@ -215,13 +218,12 @@ if [ "$HEALTHY" -eq 1 ]; then
     wait_healthy admin-api "http://127.0.0.1:$ADMIN_PORT/api/v1/health" || HEALTHY=0
 
     # The worker publishes no port — asked from inside the compose network, which
-    # is also the only place Prometheus reaches it from.
-    if ! "${COMPOSE[@]}" exec -T worker node -e     "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
-        echo "    worker did NOT answer /health" >&2
+    # is also the only place Prometheus reaches it from. Polled like the APIs:
+    # asked once, straight after them, it was still connecting to its queue and
+    # a healthy build got rolled back (2026-09-12).
+    wait_for worker "${COMPOSE[@]}" exec -T worker node -e \
+        "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" ||
         HEALTHY=0
-    else
-        echo "    worker ok"
-    fi
 fi
 
 if [ "$HEALTHY" -eq 0 ]; then

@@ -85,6 +85,11 @@ jobs:
                     exit 1
                   fi
                   cd "$PROD_REPO"
+                  # Check out the target first. deploy.sh updates this checkout
+                  # itself, but bash keeps reading the file it opened, so a change
+                  # to deploy.sh would otherwise run one deploy late.
+                  git fetch origin "$REF"
+                  git checkout -B "$REF" FETCH_HEAD
                   bash infra/prod/deploy.sh --ref "$REF"
 
             # Runs even when the deploy failed and rolled back, so the run page
