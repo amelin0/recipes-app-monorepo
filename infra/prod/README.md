@@ -157,6 +157,19 @@ Prometheus піднялись; результат — окремим рядко�
 так моніторинг на сервері відстав на 123 коміти, живучи в другому checkout,
 який ніхто не оновлював.
 
+Checkout належить користувачу раннера, і для решти тека закрита — це
+навмисна ізоляція, а не поломка. Керувати стеком руками — через `sudo` з
+абсолютними шляхами, без `cd` (compose нічого не створює на диску, тож root
+тут нічого не зіпсує):
+
+```bash
+P=/home/actions/recipes-app-monorepo/infra/prod
+O=(sudo docker compose -p dns-obs --project-directory $P --env-file $P/.env.obs -f $P/docker-compose.obs.yml)
+"${O[@]}" ps
+"${O[@]}" logs --tail 50 grafana
+"${O[@]}" up -d --force-recreate grafana
+```
+
 `--env-file` обовʼязковий у **кожній** команді до цих стеків, включно з `ps`
 і `logs`: compose автоматично читає лише файл, який називається рівно `.env`,
 а `:?`-гварди в compose-файлах зупиняють інтерполяцію ще до запуску.
