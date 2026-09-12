@@ -15,7 +15,18 @@ import { useCopyPlanScreen } from './useCopyPlanScreen';
 export const CopyPlanScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['meal-plan', 'common']);
-    const { activeTab, setActiveTab, days, selected, handleToggle, handleClose, handleApply } = useCopyPlanScreen();
+    const {
+        activeTab,
+        setActiveTab,
+        days,
+        sourceLabel,
+        selected,
+        canApply,
+        isCopying,
+        handleToggle,
+        handleClose,
+        handleApply,
+    } = useCopyPlanScreen();
 
     return (
         <View style={styles.root}>
@@ -32,6 +43,11 @@ export const CopyPlanScreen = () => {
                         <AppText variant="titleMedium">{t('meal-plan:copy.title')}</AppText>
                         <AppText variant="bodyMediumReg" style={styles.subtitle}>
                             {t('meal-plan:copy.subtitle')}
+                        </AppText>
+                        {/* Без дати-джерела список цілей читається двозначно:
+                            незрозуміло, що саме копіюємо. */}
+                        <AppText variant="bodySmallReg" style={styles.subtitle}>
+                            {sourceLabel}
                         </AppText>
                     </View>
                     <Pressable
@@ -67,6 +83,7 @@ export const CopyPlanScreen = () => {
                             key={day.key}
                             name={day.name}
                             date={day.date}
+                            note={day.isToday ? t('meal-plan:copy.today') : undefined}
                             selected={selected.includes(day.key)}
                             onPress={() => handleToggle(day.key)}
                         />
@@ -75,8 +92,9 @@ export const CopyPlanScreen = () => {
 
                 <ScreenActions style={styles.footer}>
                     <AppButton
+                        disabled={!canApply}
+                        isLoading={isCopying}
                         label={t('meal-plan:copy.apply')}
-                        disabled={selected.length === 0}
                         onPress={handleApply}
                         fullWidth
                     />

@@ -4,9 +4,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
-import { useStore } from '@/state';
 import { useGetRecipe, useToggleFavorite } from '@/state/domains/catalog';
-import { buildPlanDish, pickedPlanId, resolvePlanTarget } from '@/state/domains/meal-plan';
+import { resolvePlanDate, resolvePlanMeal, useAddPlanItem } from '@/state/domains/meal-plan';
 
 import { RECIPE_PLACEHOLDER_IMAGE, type MealIngredient, type MealStep } from '../recipe.constants';
 
@@ -29,9 +28,9 @@ export const useMealDetailsScreen = () => {
 
     // Відкрито з пікера — CTA додає страву до прийому (984:58839).
     const isPlanMode = params.mode === 'plan';
-    const planWeek = useStore(state => state.planWeek);
-    const addPlanDishes = useStore(state => state.addPlanDishes);
-    const { day, meal: mealKey } = resolvePlanTarget(planWeek, params.day, params.meal);
+    const addPlanItem = useAddPlanItem();
+    const day = resolvePlanDate(params.day);
+    const mealKey = resolvePlanMeal(params.meal);
 
     // Інгредієнти — перша вкладка й та, з якої екран відкривається (984:58839).
     const [activeTab, setActiveTab] = useState<MealDetailsTab>('ingredients');
@@ -97,23 +96,25 @@ export const useMealDetailsScreen = () => {
     // Guard: навігація асинхронна — подвійний тап не має дублювати страву.
     const addedToPlan = useRef(false);
     const handleAddToPlan = useCallback(() => {
-        if (addedToPlan.current || !recipe) return;
+        if (addedToPlan.current || !recipe || addPlanItem.isPending) return;
         addedToPlan.current = true;
-        addPlanDishes(day, mealKey, [
-            buildPlanDish({
-                // id рядка пікера — його тік у списку підсвітиться (984:58839).
-                id: pickedPlanId(recipe.id),
-                emoji: meal.emoji,
-                name: recipe.title,
-                calories: Math.round(recipe.perServing.calories),
-                protein: Math.round(recipe.perServing.proteinG),
-                fats: Math.round(recipe.perServing.fatsG),
-                carbs: Math.round(recipe.perServing.carbsG),
-            }),
-        ]);
-        if (router.canGoBack()) router.back();
-        else router.replace('/(app)/(tabs)/meal-plan');
-    }, [addPlanDishes, day, meal.emoji, mealKey, recipe]);
+
+        addPlanItem.mutate(
+            { date: day, slot: mealKey, recipeId: recipe.id },
+            {
+                onSuccess: () => {
+                    if (router.canGoBack()) router.back();
+                    else router.replace('/(app)/(tabs)/meal-plan');
+                },
+                onError: () => {
+                    // Не вийшло — знімаємо запобіжник, інакше друга спроба
+                    // мовчки нічого не зробить.
+                    addedToPlan.current = false;
+                    ToastService.error(t('common:states.error'));
+                },
+            },
+        );
+    }, [addPlanItem, day, mealKey, recipe, t]);
 
     return {
         meal,
@@ -132,6 +133,7 @@ export const useMealDetailsScreen = () => {
         handleEdit: showComingSoon,
         handleShare: showComingSoon,
         handleAddToPlan,
+        isAddingToPlan: addPlanItem.isPending,
         // Logging a meal starts with how much of it was eaten.
         handleLogMeal: () => router.push({ pathname: '/(app)/meal-portions', params: { id: meal.id } }),
     };

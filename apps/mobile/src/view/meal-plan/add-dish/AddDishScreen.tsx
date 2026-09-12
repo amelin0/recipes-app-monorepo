@@ -25,6 +25,9 @@ import { RAIL_CATEGORY_IMAGES, RECIPE_PLACEHOLDER_IMAGE } from '../../recipe/rec
 
 import { useAddDishScreen } from './useAddDishScreen';
 
+/** Нічого у відповіді не каже, як виглядає страва — одна плитка на всіх. */
+const DISH_FALLBACK_EMOJI = '🍽️';
+
 /** Додавання страв до прийому — the meal plan's dish picker (594:30106). */
 export const AddDishScreen = () => {
     const { theme } = useUnistyles();
@@ -176,13 +179,13 @@ export const AddDishScreen = () => {
                         <PickRow
                             key={dish.id}
                             title={dish.title}
-                            subtitle={t('recipes:list.kcal', { count: dish.kcal })}
-                            emoji={dish.emoji}
-                            protein={dish.protein}
-                            fats={dish.fats}
-                            carbs={dish.carbs}
+                            subtitle={t('recipes:list.kcal', { count: Math.round(dish.perServing.calories) })}
+                            emoji={DISH_FALLBACK_EMOJI}
+                            protein={Math.round(dish.perServing.proteinG)}
+                            fats={Math.round(dish.perServing.fatsG)}
+                            carbs={Math.round(dish.perServing.carbsG)}
                             added={isAdded(dish.id)}
-                            onAdd={() => handleToggleDish(dish)}
+                            onAdd={() => handleToggleDish(dish.id)}
                             onPress={() => handleDishPress(dish.id)}
                         />
                     ))
@@ -190,11 +193,11 @@ export const AddDishScreen = () => {
                     ingredients.map(item => (
                         <PickRow
                             key={item.id}
-                            title={item.title}
-                            subtitle={item.subtitle}
-                            protein={item.protein}
-                            fats={item.fats}
-                            carbs={item.carbs}
+                            title={item.name}
+                            subtitle={`100 г · ${Math.round(item.caloriesPer100g)} ккал`}
+                            protein={Math.round(item.proteinPer100g)}
+                            fats={Math.round(item.fatsPer100g)}
+                            carbs={Math.round(item.carbsPer100g)}
                             onAdd={handleIngredientPress}
                         />
                     ))

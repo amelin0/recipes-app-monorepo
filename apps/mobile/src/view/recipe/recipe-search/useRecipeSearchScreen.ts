@@ -6,9 +6,14 @@ import type { Product, RecipeCard } from '@/data';
 import { useDebouncedValue } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
-import { useStore } from '@/state';
 import { useGetProducts, useGetRecipeFilters, useGetRecipes } from '@/state/domains/catalog';
-import { buildPlanDish, pickedInMeal, pickedPlanId, resolvePlanTarget } from '@/state/domains/meal-plan';
+import {
+    resolvePlanDate,
+    resolvePlanMeal,
+    useAddPlanItem,
+    useGetPlan,
+    useRemovePlanItem,
+} from '@/state/domains/meal-plan';
 
 export const useRecipeSearchScreen = () => {
     const { t } = useAppTranslation();
@@ -31,11 +36,21 @@ export const useRecipeSearchScreen = () => {
 
     // Відкрито з пікера страв — результати додаються прямо до прийому (594:41918).
     const isPicker = params.picker === '1';
-    const planWeek = useStore(state => state.planWeek);
-    const addPlanDishes = useStore(state => state.addPlanDishes);
-    const removePlanDish = useStore(state => state.removePlanDish);
-    const { day, meal } = resolvePlanTarget(planWeek, params.day, params.meal);
-    const picked = pickedInMeal(planWeek, day, meal);
+    const day = resolvePlanDate(params.day);
+    const meal = resolvePlanMeal(params.meal);
+
+    const addItem = useAddPlanItem();
+    const removeItem = useRemovePlanItem();
+    // Тік читається з самого плану — те саме джерело, що й у пікері.
+    const { data: planDays } = useGetPlan(day, day);
+    const plannedItems = useMemo(
+        () => (isPicker ? (planDays?.[0]?.slots.find(slot => slot.slot === meal)?.items ?? []) : []),
+        [isPicker, meal, planDays],
+    );
+    const plannedItemOf = useCallback(
+        (recipeId: string) => plannedItems.find(item => item.recipe.id === recipeId)?.id ?? null,
+        [plannedItems],
+    );
 
     // Сітка категорій лишається, доки відкладений запит порожній (594:43001);
     // очищення поля скидає результати одразу, без вікна дебаунсу.
@@ -89,27 +104,26 @@ export const useRecipeSearchScreen = () => {
         [isPicker, day, meal],
     );
 
-    // Той самий тогл, що й у пікері: тік читається зі стору.
+    // Той самий тогл, що й у пікері.
     const handleToggleSearchDish = useCallback(
         (dish: RecipeCard) => {
-            const planId = picked.lastPlanIdOf(dish.id);
-            if (planId !== null) {
-                removePlanDish(day, meal, planId);
+            if (addItem.isPending || removeItem.isPending) return;
+
+            const itemId = plannedItemOf(dish.id);
+            if (itemId) {
+                removeItem.mutate(
+                    { date: day, itemId },
+                    { onError: () => ToastService.error(t('common:states.error')) },
+                );
                 return;
             }
-            addPlanDishes(day, meal, [
-                buildPlanDish({
-                    id: pickedPlanId(dish.id),
-                    emoji: '🍽️',
-                    name: dish.title,
-                    calories: Math.round(dish.perServing.calories),
-                    protein: Math.round(dish.perServing.proteinG),
-                    fats: Math.round(dish.perServing.fatsG),
-                    carbs: Math.round(dish.perServing.carbsG),
-                }),
-            ]);
+
+            addItem.mutate(
+                { date: day, slot: meal, recipeId: dish.id },
+                { onError: () => ToastService.error(t('common:states.error')) },
+            );
         },
-        [picked, addPlanDishes, removePlanDish, day, meal],
+        [addItem, day, meal, plannedItemOf, removeItem, t],
     );
 
     return {
@@ -123,7 +137,7 @@ export const useRecipeSearchScreen = () => {
         dishResults,
         isSearching: isFetchingRecipes || isFetchingProducts,
         isPicker,
-        isAdded: picked.isAdded,
+        isAdded: (recipeId: string) => plannedItemOf(recipeId) !== null,
         handleToggleSearchDish,
         handleClear: () => setQuery(''),
         // Контекст пікера їде разом у режим категорії (594:41918).

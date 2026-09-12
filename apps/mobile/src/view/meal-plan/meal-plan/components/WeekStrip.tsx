@@ -66,13 +66,17 @@ const styles = StyleSheet.create(theme => ({
         justifyContent: 'center',
         gap: theme.spacing[1],
         borderRadius: theme.radius.lg,
+        // Чотири стани, як просив власник: обрана — темна, норма — зелена,
+        // перебір — червона, недобір — помаранчева, порожній день — сірий.
         backgroundColor: selected
             ? theme.colors.branding.primary
             : status === 'ok'
               ? theme.colors.semantic.lightPositive
               : status === 'over'
                 ? theme.colors.semantic.lightNegative
-                : theme.colors.semantic.lightGrey,
+                : status === 'under'
+                  ? theme.colors.semantic.lightOrange
+                  : theme.colors.semantic.lightGrey,
     }),
     weekday: (selected: boolean) => ({
         color: selected ? theme.colors.elements.white : theme.colors.semantic.darkGrey,

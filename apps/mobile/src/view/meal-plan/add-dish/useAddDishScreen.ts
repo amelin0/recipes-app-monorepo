@@ -1,23 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
+import type { RecipeTab } from '@/data';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
-import { useGetRecipeFilters } from '@/state/domains/catalog';
+import { useGetProducts, useGetRecipeFilters, useGetRecipes } from '@/state/domains/catalog';
+import {
+    useAddPlanItem,
+    useGetPlan,
+    useRemovePlanItem,
+    resolvePlanDate,
+    resolvePlanMeal,
+} from '@/state/domains/meal-plan';
 import { countRecipeFilters, RECIPE_FILTER_GROUPS, type RecipeFilterGroup } from '@/state/domains/recipe';
 
-import { buildPlanDish, pickedInMeal, pickedPlanId, resolvePlanTarget } from '@/state/domains/meal-plan';
-
-import {
-    ADD_DISH_TABS,
-    MOCK_PICKER_DISHES,
-    MOCK_PICKER_INGREDIENTS,
-    MOCK_PICKER_RESULTS_COUNT,
-    type AddDishTabKey,
-    type PickerDish,
-} from '../meal-plan.constants';
+import { useRecipeQuery } from '../../recipe/useRecipeQuery';
+import { ADD_DISH_TABS, type AddDishTabKey } from '../meal-plan.constants';
 
 export interface AppliedFilterChip {
     key: string;
@@ -26,32 +26,43 @@ export interface AppliedFilterChip {
     label: string;
 }
 
+/** Which cut of the catalogue each picker tab reads. */
+const TAB_TO_RECIPE_TAB: Record<Exclude<AddDishTabKey, 'ingredients' | 'create'>, RecipeTab> = {
+    dishes: 'all',
+    own: 'own',
+    favorites: 'favorite',
+};
+
 export const useAddDishScreen = () => {
     const { t } = useAppTranslation(['meal-plan', 'recipes', 'common']);
     const params = useLocalSearchParams<{ day?: string; meal?: string }>();
 
+    const day = resolvePlanDate(params.day);
+    const meal = resolvePlanMeal(params.meal);
+
     const { data: filterOptions } = useGetRecipeFilters();
-    const planWeek = useStore(state => state.planWeek);
     const recipeFilters = useStore(state => state.recipeFilters);
     const toggleRecipeFilter = useStore(state => state.toggleRecipeFilter);
-    const addPlanDishes = useStore(state => state.addPlanDishes);
-    const removePlanDish = useStore(state => state.removePlanDish);
 
-    // A deep link may carry anything — an unknown day/meal must not silently
-    // no-op in the store while the rows still flip to «додано».
-    const { day, meal } = resolvePlanTarget(planWeek, params.day, params.meal);
+    const addItem = useAddPlanItem();
+    const removeItem = useRemovePlanItem();
 
-    // Тік і лічильник читаються зі стору — додавання з деталей страви
-    // (984:58839) підсвічує рядок так само, як «+» у списку.
-    const picked = pickedInMeal(planWeek, day, meal);
+    // Тік читається з самого плану, а не з локального набору: додавання з
+    // деталей страви має підсвічувати той самий рядок, і другого джерела
+    // правди для «вже додано» бути не повинно.
+    const { data: planDays } = useGetPlan(day, day);
+    const plannedItems = useMemo(
+        () => planDays?.[0]?.slots.find(slot => slot.slot === meal)?.items ?? [],
+        [meal, planDays],
+    );
 
     const [activeTab, setActiveTab] = useState<AddDishTabKey>('dishes');
 
     /** Quick rail pick — local, unlike the filter screen's shared set (594:30462). */
     const [railCategory, setRailCategory] = useState<string | null>(null);
 
-    // Applied chips mirror the recipes tab (594:30640) — plain labels, removable.
-    // Labels are resolved against the filter payload because the store keeps ids.
+    // Applied chips mirror the recipes tab (594:30640) — labels resolved from
+    // the filter payload because the store keeps ids.
     const appliedFilters = useMemo<AppliedFilterChip[]>(() => {
         if (!filterOptions) return [];
 
@@ -71,16 +82,21 @@ export const useAddDishScreen = () => {
         );
     }, [filterOptions, recipeFilters]);
 
-    // Мок звужується рейкою або категоріями зі спільних фільтрів (594:31262);
-    // решту груп (інгредієнти, продукти, кухні, дієти, ккал) фільтрує система.
-    const categoryFilters = recipeFilters.categories;
-    const dishes = useMemo(() => {
-        const base =
-            activeTab === 'favorites' ? MOCK_PICKER_DISHES.filter(dish => dish.isFavorite) : MOCK_PICKER_DISHES;
-        if (railCategory !== null) return base.filter(dish => dish.category === railCategory);
-        if (categoryFilters.length > 0) return base.filter(dish => categoryFilters.includes(dish.category));
-        return base;
-    }, [activeTab, railCategory, categoryFilters]);
+    const recipeTab = activeTab === 'ingredients' || activeTab === 'create' ? 'all' : TAB_TO_RECIPE_TAB[activeTab];
+    const baseQuery = useRecipeQuery(recipeTab);
+    // Рейка звужує понад спільні фільтри й живе лише на цьому екрані.
+    const query = useMemo(
+        () => (railCategory ? { ...baseQuery, categories: [railCategory] } : baseQuery),
+        [baseQuery, railCategory],
+    );
+
+    const { data: recipePages, isLoading: isLoadingDishes, isError: isDishesError, refetch } = useGetRecipes(query);
+    const dishes = useMemo(() => recipePages?.pages.flatMap(page => page.data) ?? [], [recipePages]);
+    const dishesTotal = recipePages?.pages[0]?.meta.total ?? 0;
+
+    const { data: productPages } = useGetProducts();
+    const ingredients = useMemo(() => productPages?.pages.flatMap(page => page.data) ?? [], [productPages]);
+    const ingredientsTotal = productPages?.pages[0]?.meta.total ?? 0;
 
     // The chips replace the rail (594:30640) — a hidden rail pick must not keep
     // narrowing the list with nothing to show or clear it.
@@ -102,24 +118,32 @@ export const useAddDishScreen = () => {
         setRailCategory(null);
     };
 
-    const handleToggleDish = (dish: PickerDish) => {
-        const planId = picked.lastPlanIdOf(dish.id);
-        if (planId !== null) {
-            removePlanDish(day, meal, planId);
-            return;
-        }
-        addPlanDishes(day, meal, [
-            buildPlanDish({
-                id: pickedPlanId(dish.id),
-                emoji: dish.emoji,
-                name: dish.title,
-                calories: dish.kcal,
-                protein: dish.protein,
-                fats: dish.fats,
-                carbs: dish.carbs,
-            }),
-        ]);
-    };
+    /** The plan item holding this recipe in this meal, if any. */
+    const plannedItemOf = useCallback(
+        (recipeId: string) => plannedItems.find(item => item.recipe.id === recipeId)?.id ?? null,
+        [plannedItems],
+    );
+
+    const handleToggleDish = useCallback(
+        (recipeId: string) => {
+            if (addItem.isPending || removeItem.isPending) return;
+
+            const itemId = plannedItemOf(recipeId);
+            if (itemId) {
+                removeItem.mutate(
+                    { date: day, itemId },
+                    { onError: () => ToastService.error(t('common:states.error')) },
+                );
+                return;
+            }
+
+            addItem.mutate(
+                { date: day, slot: meal, recipeId },
+                { onError: () => ToastService.error(t('common:states.error')) },
+            );
+        },
+        [addItem, day, meal, plannedItemOf, removeItem, t],
+    );
 
     return {
         mealKey: meal,
@@ -128,32 +152,28 @@ export const useAddDishScreen = () => {
         handleTabChange,
         railCategory,
         railCategories: filterOptions?.categories ?? [],
-        handleRailPress: (key: string) => setRailCategory(prev => (prev === key ? null : key)),
+        handleRailPress: (id: string) => setRailCategory(prev => (prev === id ? null : id)),
         appliedFilters,
         filtersCount: countRecipeFilters(recipeFilters),
         handleRemoveFilter: (chip: AppliedFilterChip) => toggleRecipeFilter(chip.group, chip.value),
-        // «Інгредієнти» завжди цитує мок-загал (594:30951); «Улюблені» —
-        // власну довжину (594:31435); решта списків — кількість збігів,
-        // щойно діє будь-яке звуження (594:31262).
-        resultsCount:
-            activeTab === 'favorites'
-                ? dishes.length
-                : activeTab !== 'ingredients' && (railCategory !== null || appliedFilters.length > 0)
-                  ? dishes.length
-                  : MOCK_PICKER_RESULTS_COUNT,
+        isLoading: isLoadingDishes,
+        isError: isDishesError,
+        handleRetry: refetch,
+        resultsCount: activeTab === 'ingredients' ? ingredientsTotal : dishesTotal,
         dishes,
-        ingredients: MOCK_PICKER_INGREDIENTS,
-        isAdded: picked.isAdded,
-        addedCount: picked.addedCount,
+        ingredients,
+        isAdded: (recipeId: string) => plannedItemOf(recipeId) !== null,
+        addedCount: plannedItems.length,
         handleToggleDish,
         // Тап по рядку — деталі страви з CTA «Додати до раціону» (984:58839).
-        handleDishPress: (dishId: string) =>
-            router.push({ pathname: '/(app)/meal-details', params: { id: dishId, mode: 'plan', day, meal } }),
+        handleDishPress: (recipeId: string) =>
+            router.push({ pathname: '/(app)/meal-details', params: { id: recipeId, mode: 'plan', day, meal } }),
         handleCreateDish,
         // Пошук у режимі пікера — результати додаються до цього прийому (594:41918).
         handleSearchPress: () => router.push({ pathname: '/(app)/recipe-search', params: { picker: '1', day, meal } }),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
-        // TODO: додавання інгредієнта як страви прийому — контракт уточнюється.
+        // TODO: додавання окремого продукту як страви прийому — план приймає
+        // лише рецепти (`AddPlanItemInboundDto` несе `recipeId`).
         handleIngredientPress: () => ToastService.info(t('common:states.coming-soon')),
         handleDone: () => {
             if (router.canGoBack()) router.back();

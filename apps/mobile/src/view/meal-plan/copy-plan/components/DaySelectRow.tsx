@@ -10,12 +10,14 @@ import TickIcon from '../../../../../assets/icons/check-small.svg';
 export interface DaySelectRowProps {
     name: string;
     date: string;
+    /** Extra note beside the date — marks «сьогодні» among plain dates. */
+    note?: string;
     selected: boolean;
     onPress: () => void;
 }
 
 /** Selectable day of the copy sheet — green border + check when picked (435:14669). */
-export const DaySelectRow = ({ name, date, selected, onPress }: DaySelectRowProps) => {
+export const DaySelectRow = ({ name, date, note, selected, onPress }: DaySelectRowProps) => {
     const { theme } = useUnistyles();
 
     return (
@@ -28,7 +30,7 @@ export const DaySelectRow = ({ name, date, selected, onPress }: DaySelectRowProp
             <View style={styles.texts}>
                 <AppText variant="bodyLargeBold">{name}</AppText>
                 <AppText variant="bodySmallReg" style={styles.date}>
-                    {date}
+                    {note ? `${date} · ${note}` : date}
                 </AppText>
             </View>
             {selected ? <TickIcon width={24} height={24} color={theme.colors.semantic.positive} /> : null}
