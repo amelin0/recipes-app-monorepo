@@ -195,7 +195,8 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml   --p
 кладе окремий сід:
 
 ```bash
-docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \n  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
+docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
+  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
 ```
 
 Ідемпотентний — повторний запуск нічого не змінює. Це **риштування, не
