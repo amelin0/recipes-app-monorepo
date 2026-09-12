@@ -103,7 +103,14 @@ ADMIN_IMAGE_REPO="${ADMIN_IMAGE_REPO:-dns/admin-api}"
 WORKER_IMAGE_REPO="${WORKER_IMAGE_REPO:-dns/worker}"
 
 # Captured before anything overwrites it — this is the rollback target.
-PREVIOUS_TAG="$(read_env IMAGE_TAG)"
+#
+# What is actually serving beats what .env.prod says. The tag is written before
+# the swap, so a deploy that dies in between leaves the file naming a build that
+# never ran — and a rollback "back" to it would be a rollback to nowhere. That
+# is exactly the state four failed deploys (2026-09-08…12) left behind.
+running_tag() { docker inspect -f '{{.Config.Image}}' dns-client-api 2>/dev/null | sed -n 's/.*://p' || true; }
+PREVIOUS_TAG="$(running_tag)"
+PREVIOUS_TAG="${PREVIOUS_TAG:-$(read_env IMAGE_TAG)}"
 
 cd "$ROOT"
 
@@ -152,6 +159,13 @@ else
     docker build $NO_CACHE -f infra/docker/api.Dockerfile \
         --build-arg APP_PKG=@dns/admin-api --build-arg APP_DIR=apps/admin-api \
         -t "$ADMIN_IMAGE_REPO:$TAG" .
+    # The worker's image is never pulled from anywhere: without this build the
+    # compose file names a tag that exists nowhere, `up` asks Docker Hub for
+    # `dns/worker` and the whole deploy stops there — after the migrations.
+    # shellcheck disable=SC2086
+    docker build $NO_CACHE -f infra/docker/api.Dockerfile \
+        --build-arg APP_PKG=@dns/worker --build-arg APP_DIR=apps/worker \
+        -t "$WORKER_IMAGE_REPO:$TAG" .
 fi
 
 write_tag "$TAG"
@@ -168,8 +182,15 @@ if ! "${COMPOSE[@]}" --profile migrate run --rm migrator; then
 fi
 
 # ── 3. swap ──────────────────────────────────────────────────────────────
+# A failing `up` must reach the rollback below rather than end the script
+# through `set -e`: that is how a missing image used to stop the deploy with the
+# new tag already written and nothing put back.
 echo "── 4/6  up"
-"${COMPOSE[@]}" up -d
+HEALTHY=1
+if ! "${COMPOSE[@]}" up -d; then
+    echo "    compose up failed" >&2
+    HEALTHY=0
+fi
 
 # ── 4. verify ────────────────────────────────────────────────────────────
 wait_healthy() {
@@ -186,20 +207,21 @@ wait_healthy() {
     return 1
 }
 
-echo "── 5/6  health"
-HEALTHY=1
-# /health/ready, not /health: the latter answers ok with a dead database, so it
-# would call a deploy good that cannot serve a single request.
-wait_healthy client-api "http://127.0.0.1:$CLIENT_PORT/api/v1/health/ready" || HEALTHY=0
-wait_healthy admin-api "http://127.0.0.1:$ADMIN_PORT/api/v1/health" || HEALTHY=0
+if [ "$HEALTHY" -eq 1 ]; then
+    echo "── 5/6  health"
+    # /health/ready, not /health: the latter answers ok with a dead database, so it
+    # would call a deploy good that cannot serve a single request.
+    wait_healthy client-api "http://127.0.0.1:$CLIENT_PORT/api/v1/health/ready" || HEALTHY=0
+    wait_healthy admin-api "http://127.0.0.1:$ADMIN_PORT/api/v1/health" || HEALTHY=0
 
-# The worker publishes no port — asked from inside the compose network, which
-# is also the only place Prometheus reaches it from.
-if ! "${COMPOSE[@]}" exec -T worker node -e     "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
-    echo "    worker did NOT answer /health" >&2
-    HEALTHY=0
-else
-    echo "    worker ok"
+    # The worker publishes no port — asked from inside the compose network, which
+    # is also the only place Prometheus reaches it from.
+    if ! "${COMPOSE[@]}" exec -T worker node -e     "fetch('http://127.0.0.1:'+(process.env.WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+        echo "    worker did NOT answer /health" >&2
+        HEALTHY=0
+    else
+        echo "    worker ok"
+    fi
 fi
 
 if [ "$HEALTHY" -eq 0 ]; then
@@ -207,15 +229,31 @@ if [ "$HEALTHY" -eq 0 ]; then
     "${COMPOSE[@]}" logs --tail 40 client-api admin-api worker >&2 || true
     echo >&2
 
-    if [ -z "$PREVIOUS_TAG" ] || ! docker image inspect "$IMAGE_REPO:$PREVIOUS_TAG" >/dev/null 2>&1; then
-        echo "DEPLOY FAILED and there is no previous image to fall back to." >&2
-        echo "The new containers are up but unhealthy — fix forward." >&2
+    # Roll back each service that has an image at the previous tag. A tag built
+    # before the worker had a build step has no worker image at all; demanding a
+    # complete set would refuse to restore the two APIs over the one service that
+    # never ran there.
+    ROLLBACK_SERVICES=()
+    for pair in "client-api:$IMAGE_REPO" "admin-api:$ADMIN_IMAGE_REPO" "worker:$WORKER_IMAGE_REPO"; do
+        if [ -n "$PREVIOUS_TAG" ] && docker image inspect "${pair#*:}:$PREVIOUS_TAG" >/dev/null 2>&1; then
+            ROLLBACK_SERVICES+=("${pair%%:*}")
+        fi
+    done
+
+    if [[ " ${ROLLBACK_SERVICES[*]} " != *" client-api "* || " ${ROLLBACK_SERVICES[*]} " != *" admin-api "* ]]; then
+        echo "DEPLOY FAILED and there is no previous API image to fall back to." >&2
+        echo "Whatever is running now stays — fix forward." >&2
         exit 1
     fi
 
-    echo "rolling back to $PREVIOUS_TAG" >&2
+    echo "rolling back ${ROLLBACK_SERVICES[*]} to $PREVIOUS_TAG" >&2
     write_tag "$PREVIOUS_TAG"
-    "${COMPOSE[@]}" up -d
+    "${COMPOSE[@]}" up -d "${ROLLBACK_SERVICES[@]}" || true
+
+    if [[ " ${ROLLBACK_SERVICES[*]} " != *" worker "* ]]; then
+        echo "NOTE: $PREVIOUS_TAG has no worker image, so the worker was not rolled back —" >&2
+        echo "it is left as the failed deploy left it (possibly not running)." >&2
+    fi
 
     if wait_healthy client-api "http://127.0.0.1:$CLIENT_PORT/api/v1/health/ready"; then
         echo >&2
