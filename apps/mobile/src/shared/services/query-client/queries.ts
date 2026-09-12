@@ -10,6 +10,8 @@
 export enum Queries {
     Me = 'me',
     Profile = 'profile',
+    Onboarding = 'onboarding',
+    Recommendations = 'recommendations',
     Reminders = 'reminders',
     Faq = 'faq',
     Subscription = 'subscription',
@@ -41,6 +43,12 @@ export const userKeys = {
 
     /** Reminder schedule — `GET /profile/reminders`. */
     reminders: () => [Queries.Reminders] as const,
+
+    /** Questionnaire answers and progress — `GET /profile/onboarding`. */
+    onboarding: () => [Queries.Onboarding] as const,
+
+    /** Computed daily norms — `GET /profile/recommendations`. */
+    recommendations: () => [Queries.Recommendations] as const,
 };
 
 /** FAQ-domain query-key factory. */

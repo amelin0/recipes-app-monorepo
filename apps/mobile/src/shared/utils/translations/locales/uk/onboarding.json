@@ -194,6 +194,7 @@
             "macro-protein": "Б",
             "macro-fat": "Ж",
             "macro-carbs": "В",
+            "macro-grams": "{{value}}г",
             "water-label": "Вода",
             "water": "{{value}} мл / день",
             "steps-label": "Кроки",

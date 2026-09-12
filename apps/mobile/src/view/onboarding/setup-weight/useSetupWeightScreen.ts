@@ -10,11 +10,14 @@ import { useStore } from '@/state';
 import { DEFAULT_WEIGHT_KG, WEIGHT_KG_MAX, WEIGHT_KG_MIN } from '../onboarding.constants';
 import { kgToLb, lbToKg, nearestIndex } from '../onboarding.helpers';
 
+import { useOnboardingStep } from '../useOnboardingStep';
+
 export const useSetupWeightScreen = () => {
     const { t } = useAppTranslation(['onboarding']);
     const unitSystem = useStore(state => state.profileSetup.unitSystem);
     const weightKg = useStore(state => state.profileSetup.weightKg) ?? DEFAULT_WEIGHT_KG;
     const setAnswer = useStore(state => state.setProfileSetupAnswerAction);
+    const saveStep = useOnboardingStep(6);
 
     const isMetric = unitSystem !== 'imperial';
 
@@ -46,8 +49,11 @@ export const useSetupWeightScreen = () => {
 
     const handleNext = useCallback(() => {
         setAnswer('weightKg', weightKg);
+        // Округлюємо: імперська шкала конвертує у дробові кілограми, а сервер
+        // зберігає вагу з однією десятковою.
+        saveStep({ weightKg: Math.round(weightKg * 10) / 10 });
         router.push('/(app)/setup-height');
-    }, [setAnswer, weightKg]);
+    }, [saveStep, setAnswer, weightKg]);
 
     return { columns, handleNext };
 };

@@ -1,13 +1,16 @@
 import { Stack } from 'expo-router';
 
 import { useStore } from '@/state';
-import { useSyncSettings } from '@/state/domains/user';
+import { useSyncOnboarding, useSyncSettings } from '@/state/domains/user';
 
 export default function AppLayout() {
     const isAuthenticated = useStore(state => state.isAuthenticated);
     // Mirrors the server's units/theme/language into the store once the
     // profile lands — the screens read them synchronously in render.
     useSyncSettings();
+    // Seeds the questionnaire slice from the server, so a fresh install
+    // resumes instead of starting the fourteen steps over.
+    useSyncOnboarding();
 
     return (
         <Stack screenOptions={{ headerShown: false }}>

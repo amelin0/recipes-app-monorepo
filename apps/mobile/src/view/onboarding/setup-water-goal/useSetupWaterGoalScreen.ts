@@ -3,14 +3,16 @@ import { useCallback } from 'react';
 import { router } from 'expo-router';
 
 import { useStore } from '@/state';
+import { useGetRecommendations } from '@/state/domains/user';
 
 import { WATER_GOAL_ML_DEFAULT, WATER_GOAL_ML_STEP } from '../onboarding.constants';
 
 export const useSetupWaterGoalScreen = () => {
     const stored = useStore(state => state.profileSetup.waterGoalMl);
     const setAnswer = useStore(state => state.setProfileSetupAnswerAction);
+    const { data: recommendations } = useGetRecommendations();
 
-    const recommended = WATER_GOAL_ML_DEFAULT;
+    const recommended = recommendations?.waterMl ?? WATER_GOAL_ML_DEFAULT;
     const value = stored ?? recommended;
 
     const setValue = useCallback(
