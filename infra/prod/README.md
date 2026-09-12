@@ -195,7 +195,8 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml   --p
 кладе окремий сід:
 
 ```bash
-docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \n  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
+docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
+  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
 ```
 
 Ідемпотентний — повторний запуск нічого не змінює. Це **риштування, не
@@ -383,11 +384,18 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
 Перевірити, що все піднялося (10 правил, 2 контактні точки):
 
 ```bash
-curl -su admin:$GRAFANA_ADMIN_PASSWORD \
-  http://localhost:$GRAFANA_HTTP_PORT/api/v1/provisioning/alert-rules | jq length
-curl -su admin:$GRAFANA_ADMIN_PASSWORD \
-  http://localhost:$GRAFANA_HTTP_PORT/api/v1/provisioning/contact-points | jq '.[].name'
+P=/home/actions/recipes-app-monorepo/infra/prod
+sudo bash -c "source $P/.env.obs && curl -s -o /tmp/rules.json -w '%{http_code}\n' \
+  -u \$GRAFANA_ADMIN_USER:\$GRAFANA_ADMIN_PASSWORD \
+  http://localhost:\$GRAFANA_HTTP_PORT/api/v1/provisioning/alert-rules"       # 200
+sudo jq 'if type == "array" then {rules: length, titles: map(.title)} else . end' /tmp/rules.json
 ```
+
+**Спершу HTTP-код, потім лічба.** Користувач — `$GRAFANA_ADMIN_USER` з
+`.env.obs`, не `admin`. З чужим іменем Grafana відповідає `401` об'єктом
+помилки з п'ятьма ключами, і `jq length` рахує **ключі** — виходить
+правдоподібні «5 правил». Так цю перевірку двічі прочитали неправильно
+(2026-09-13).
 
 Кнопка «Test» на контактній точці недоступна (вона read-only) — щоб перевірити
 доставку, простіше зупинити `client-api` на дві хвилини й дочекатися
