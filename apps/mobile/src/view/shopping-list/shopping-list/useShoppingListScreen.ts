@@ -6,7 +6,12 @@ import type { ShoppingItem } from '@/data';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
-import { useGetShoppingList, useTogglePlanImport, useTogglePurchased } from '@/state/domains/shopping-list';
+import {
+    useGetShoppingList,
+    useRemoveShoppingItem,
+    useTogglePlanImport,
+    useTogglePurchased,
+} from '@/state/domains/shopping-list';
 
 export const useShoppingListScreen = () => {
     const { t } = useAppTranslation(['shopping', 'common']);
@@ -17,6 +22,7 @@ export const useShoppingListScreen = () => {
     const { data, isLoading, isError, refetch } = useGetShoppingList(from, to);
     const togglePurchased = useTogglePurchased();
     const togglePlanImport = useTogglePlanImport();
+    const removeItem = useRemoveShoppingItem();
 
     const handleToggleItem = useCallback(
         (item: ShoppingItem) => {
@@ -27,6 +33,23 @@ export const useShoppingListScreen = () => {
             );
         },
         [t, togglePurchased],
+    );
+
+    /**
+     * Прибрати рядок, доданий руками.
+     *
+     * Рядок з плану свого рядка не має — він зникає разом зі стравою, і
+     * сервер відповів би 404, — тож свайп дається лише ручним.
+     */
+    const handleRemoveItem = useCallback(
+        (item: ShoppingItem) => {
+            if (removeItem.isPending) return;
+            removeItem.mutate(item.productId, {
+                onSuccess: () => ToastService.success(t('shopping:list.removed')),
+                onError: () => ToastService.error(t('common:states.error')),
+            });
+        },
+        [removeItem, t],
     );
 
     const handleSwitchAddFromPlan = useCallback(
@@ -53,6 +76,7 @@ export const useShoppingListScreen = () => {
         addFromPlan: data?.importFromPlan ?? true,
         switchAddFromPlan: handleSwitchAddFromPlan,
         toggleShoppingItem: handleToggleItem,
+        removeShoppingItem: handleRemoveItem,
         handleAddProduct: () => router.push('/(app)/add-product'),
     };
 };

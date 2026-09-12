@@ -15,6 +15,7 @@ import StepsIcon from '../../../../assets/icons/steps.svg';
 import WaterDropIcon from '../../../../assets/icons/water-drop.svg';
 import {
     ChartLegend,
+    EmptyMetricNote,
     MetricActions,
     MetricBarChart,
     MetricHeadline,
@@ -42,6 +43,7 @@ export const MetricDetailScreen = () => {
     const {
         metric,
         isReading,
+        hasReadings,
         canAdd,
         chartTitle,
         headline,
@@ -172,7 +174,9 @@ export const MetricDetailScreen = () => {
                             {chartTitle}
                         </AppText>
 
-                        {isReading ? (
+                        {isReading && !hasReadings ? (
+                            <EmptyMetricNote label={t('progress:labels.no-readings')} />
+                        ) : isReading ? (
                             <>
                                 <MetricLineChart points={linePoints} axis={lineAxis} />
                                 {metric === 'waist' ? <ChartLegend items={legend} /> : null}
@@ -189,6 +193,12 @@ export const MetricDetailScreen = () => {
                         <AppText variant="bodyLargeBold" style={styles.cardTitle}>
                             {t('progress:detail.records')}
                         </AppText>
+
+                        {records.length === 0 ? (
+                            <AppText variant="bodyMediumReg" style={styles.emptyRecords}>
+                                {t('progress:labels.no-readings')}
+                            </AppText>
+                        ) : null}
 
                         <View style={styles.list}>
                             {records.map((record, index) => (
@@ -289,5 +299,10 @@ const styles = StyleSheet.create(theme => ({
     },
     list: {
         width: '100%',
+    },
+    emptyRecords: {
+        width: '100%',
+        textAlign: 'center',
+        color: theme.colors.semantic.darkGrey,
     },
 }));

@@ -40,8 +40,20 @@ export const buildAxis = (values: number[], extra: (number | null)[] = []): numb
     // чотири однакові підписи — розсуваємо його на 10%, щоб лінія лягла всередину.
     const pad = max === min ? Math.max(Math.abs(max) * 0.1, 1) : (max - min) * 0.15;
 
-    const top = Math.ceil(max + pad);
-    const bottom = Math.floor(Math.max(min - pad, 0));
+    let top = Math.ceil(max + pad);
+    let bottom = Math.floor(Math.max(min - pad, 0));
+
+    // Чотири підписи — цілі числа, тож діапазон має бути кратний трьом і не
+    // вужчий за три: інакше підписи або повторюються (84,5 і 84,6 давали
+    // «85 85 84 84»), або стоять нерівно («74 72 71 69»).
+    const span = top - bottom;
+    const widen = Math.max(3 - span, (3 - (span % 3)) % 3);
+    if (widen > 0) {
+        const below = Math.min(Math.floor(widen / 2), bottom);
+        bottom -= below;
+        top += widen - below;
+    }
+
     const step = (top - bottom) / 3;
 
     return [0, 1, 2, 3].map(index => Math.round(top - step * index));

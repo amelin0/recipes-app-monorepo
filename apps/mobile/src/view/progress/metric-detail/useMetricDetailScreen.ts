@@ -72,6 +72,8 @@ export const useMetricDetailScreen = () => {
     const points = useMemo(() => card?.points ?? [], [card]);
     const recent = useMemo(() => points.slice(-BAR_DAYS), [points]);
     const current = card?.current ?? 0;
+    /** Жодного виміру — картці немає що стверджувати, і вона не вигадує нуль. */
+    const hasReadings = points.length > 0;
     const goalValue = card?.goal ?? 0;
 
     /** Latest value of a daily metric — «Сьогодні» on the headline. */
@@ -90,8 +92,8 @@ export const useMetricDetailScreen = () => {
                 return [
                     {
                         label: t('progress:labels.current-f'),
-                        value: current.toFixed(1),
-                        unit: units.weight,
+                        value: hasReadings ? current.toFixed(1) : '—',
+                        unit: hasReadings ? units.weight : '',
                         // `difference` — поточне мінус ціль, тобто зі знаком
                         // напрямку. Підпис каже «до цілі», тож напрямок у
                         // ньому вже є: показуємо саму відстань, інакше
@@ -142,7 +144,11 @@ export const useMetricDetailScreen = () => {
                 ];
             case 'waist':
                 return [
-                    { label: t('progress:waist.current'), value: String(current), unit: units.waist },
+                    {
+                        label: t('progress:waist.current'),
+                        value: hasReadings ? String(current) : '—',
+                        unit: hasReadings ? units.waist : '',
+                    },
                     // Межу дає ВООЗ і знає сервер (вона різна за статтю) —
                     // без неї друга картка не має що стверджувати.
                     ...(card?.recommendedMax === null || card?.recommendedMax === undefined
@@ -157,9 +163,15 @@ export const useMetricDetailScreen = () => {
                           ]),
                 ];
             default:
-                return [{ label: t('progress:height.current'), value: current.toFixed(1), unit: units.height }];
+                return [
+                    {
+                        label: t('progress:height.current'),
+                        value: hasReadings ? current.toFixed(1) : '—',
+                        unit: hasReadings ? units.height : '',
+                    },
+                ];
         }
-    }, [card, current, data, format, goalValue, metric, t, theme, todayValue, units]);
+    }, [card, current, data, format, goalValue, hasReadings, metric, t, theme, todayValue, units]);
 
     const statRows: MetricStatBox[][] = useMemo(() => {
         if (!summary) return [];
@@ -377,6 +389,7 @@ export const useMetricDetailScreen = () => {
         isError,
         handleRetry: refetch,
         isReading,
+        hasReadings,
         canAdd: ADDABLE_METRICS.includes(metric),
         /** The design gives these two a period label; weight and height differ. */
         chartTitle:

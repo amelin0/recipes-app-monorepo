@@ -54,6 +54,8 @@ export const useProgressOverviewScreen = () => {
             const card = cardOf(metric);
             const points = toLinePoints(card?.points ?? []);
             return {
+                /** Без жодного виміру картка не має що показувати — і не вигадує. */
+                hasReadings: points.length > 0,
                 start: card?.initial ?? card?.current ?? 0,
                 current: card?.current ?? 0,
                 goal: card?.goal ?? null,

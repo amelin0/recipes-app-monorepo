@@ -6,7 +6,15 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppScreen, AppText, PageDots, QueryState, SegmentedControl } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
-import { ChartLegend, MetricActions, MetricBarChart, MetricCard, MetricLineChart, MetricStats } from '../components';
+import {
+    ChartLegend,
+    EmptyMetricNote,
+    MetricActions,
+    MetricBarChart,
+    MetricCard,
+    MetricLineChart,
+    MetricStats,
+} from '../components';
 
 import { useProgressOverviewScreen } from './useProgressOverviewScreen';
 
@@ -58,13 +66,17 @@ export const ProgressOverviewScreen = () => {
                             stats={[
                                 {
                                     key: 'start',
-                                    value: t('progress:weight.kg', { value: weight.start.toFixed(1) }),
+                                    value: weight.hasReadings
+                                        ? t('progress:weight.kg', { value: weight.start.toFixed(1) })
+                                        : '—',
                                     label: t('progress:labels.start'),
                                     color: theme.colors.semantic.orange,
                                 },
                                 {
                                     key: 'current',
-                                    value: t('progress:weight.kg', { value: weight.current.toFixed(1) }),
+                                    value: weight.hasReadings
+                                        ? t('progress:weight.kg', { value: weight.current.toFixed(1) })
+                                        : '—',
                                     label: t('progress:labels.current-f'),
                                 },
                                 {
@@ -81,7 +93,11 @@ export const ProgressOverviewScreen = () => {
                                 },
                             ]}
                         />
-                        <MetricLineChart points={weight.points} axis={weight.axis} />
+                        {weight.hasReadings ? (
+                            <MetricLineChart points={weight.points} axis={weight.axis} />
+                        ) : (
+                            <EmptyMetricNote label={t('progress:labels.no-readings')} />
+                        )}
                         <MetricActions
                             actions={[
                                 editGoal('weight'),
@@ -217,18 +233,22 @@ export const ProgressOverviewScreen = () => {
                             stats={[
                                 {
                                     key: 'start',
-                                    value: t('progress:waist.cm', { value: waist.start }),
+                                    value: waist.hasReadings ? t('progress:waist.cm', { value: waist.start }) : '—',
                                     label: t('progress:labels.start'),
                                     color: theme.colors.semantic.orange,
                                 },
                                 {
                                     key: 'current',
-                                    value: t('progress:waist.cm', { value: waist.current }),
+                                    value: waist.hasReadings ? t('progress:waist.cm', { value: waist.current }) : '—',
                                     label: t('progress:labels.current-f'),
                                 },
                             ]}
                         />
-                        <MetricLineChart points={waist.points} axis={waist.axis} />
+                        {waist.hasReadings ? (
+                            <MetricLineChart points={waist.points} axis={waist.axis} />
+                        ) : (
+                            <EmptyMetricNote label={t('progress:labels.no-readings')} />
+                        )}
                         <MetricActions
                             outlined
                             actions={[
@@ -246,18 +266,24 @@ export const ProgressOverviewScreen = () => {
                             stats={[
                                 {
                                     key: 'start',
-                                    value: t('progress:height.cm', { value: height.start }),
+                                    value: height.hasReadings ? t('progress:height.cm', { value: height.start }) : '—',
                                     label: t('progress:labels.start'),
                                     color: theme.colors.semantic.orange,
                                 },
                                 {
                                     key: 'current',
-                                    value: t('progress:height.cm', { value: height.current }),
+                                    value: height.hasReadings
+                                        ? t('progress:height.cm', { value: height.current })
+                                        : '—',
                                     label: t('progress:labels.current-m'),
                                 },
                             ]}
                         />
-                        <MetricLineChart points={height.points} axis={height.axis} />
+                        {height.hasReadings ? (
+                            <MetricLineChart points={height.points} axis={height.axis} />
+                        ) : (
+                            <EmptyMetricNote label={t('progress:labels.no-readings')} />
+                        )}
                         <MetricActions
                             outlined
                             actions={[

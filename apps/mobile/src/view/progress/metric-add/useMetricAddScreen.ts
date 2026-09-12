@@ -146,10 +146,11 @@ export const useMetricAddScreen = () => {
         }
 
         if (!isGoal) {
-            // Дата не передається — сервер ставить сьогодні, і це правильно:
-            // шит фіксує щойно зняте показання.
+            // Дату називає пристрій, а не сервер: о 00:43 за Києвом на сервері
+            // ще вчора, і зважування, зроблене «сьогодні», лягало вчорашнім
+            // днем — квитанція казала 13-те, а графік малював 12-те.
             recordMeasurement.mutate(
-                { metric: metric as MeasurableMetric, value: parsed },
+                { metric: metric as MeasurableMetric, value: parsed, measuredOn: today },
                 { onSuccess: finish, onError },
             );
             return;

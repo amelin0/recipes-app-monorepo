@@ -25,6 +25,7 @@ export const ShoppingListScreen = () => {
         addFromPlan,
         switchAddFromPlan,
         toggleShoppingItem,
+        removeShoppingItem,
         handleAddProduct,
     } = useShoppingListScreen();
 
@@ -71,6 +72,7 @@ export const ShoppingListScreen = () => {
                                         key={`${item.origin}:${item.productId}`}
                                         item={item}
                                         onToggle={() => toggleShoppingItem(item)}
+                                        onRemove={item.origin === 'manual' ? () => removeShoppingItem(item) : undefined}
                                     />
                                 ))}
                             </View>

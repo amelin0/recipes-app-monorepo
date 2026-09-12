@@ -11,7 +11,8 @@
         "min": "Мін",
         "max": "Макс",
         "average-f": "Середня",
-        "average-n": "Середнє"
+        "average-n": "Середнє",
+        "no-readings": "Ще немає вимірів"
     },
     "actions": {
         "edit-goal": "Змінити ціль",

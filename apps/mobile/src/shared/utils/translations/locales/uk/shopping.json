@@ -9,7 +9,9 @@
         "add-product": "Додати продукт",
         "kcal": "{{count}} ккал",
         "grams": "{{value}}г",
-        "ml": "{{value}} мл"
+        "ml": "{{value}} мл",
+        "remove-a11y": "Прибрати {{name}} зі списку",
+        "removed": "Продукт прибрано зі списку"
     },
     "categories": {
         "meat": "М'ясні",
