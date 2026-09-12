@@ -103,10 +103,17 @@ export const STEPS_GOAL_DEFAULT = 15000;
 export const STEPS_GOAL_STEP = 500;
 
 /**
- * How far the calorie goal may drift from the recommendation before the screen
- * warns about it. The design shows the states but not the thresholds.
+ * How far a calorie goal may sit from the computed recommendation before the
+ * screen calls it too little or too much (owner, 12.09).
+ *
+ * An absolute figure, not a percentage: 20 % of 1500 kcal and 20 % of 3000
+ * are different amounts of harm, and what a body feels is the deficit itself,
+ * not its share.
+ *
+ * TODO: move to `@dns/constants` once the backend adopts it, so the app and
+ * the server cannot drift apart on where the band sits (see TODO_BE.md §4).
  */
-export const CALORIE_WARNING_RATIO = 0.2;
+export const CALORIE_GOAL_TOLERANCE = 600;
 
 /**
  * 12%-alpha halos around the dial (shadow/positive and friends). The orange one

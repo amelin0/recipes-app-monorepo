@@ -39,7 +39,9 @@
         "params": {
             "weight": "Вага",
             "height": "Зріст",
-            "activity": "Активність"
+            "activity": "Активність",
+            "kg": "{{value}} кг",
+            "cm": "{{value}} см"
         },
         "quick-title": "Швидкий вибір цілі",
         "goals": {

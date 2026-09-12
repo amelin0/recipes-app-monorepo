@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useStore } from '@/state';
 import { useGetRecommendations } from '@/state/domains/user';
 
-import { CALORIE_GOAL_DEFAULT, CALORIE_GOAL_STEP, CALORIE_WARNING_RATIO } from '../onboarding.constants';
+import { CALORIE_GOAL_DEFAULT, CALORIE_GOAL_STEP, CALORIE_GOAL_TOLERANCE } from '../onboarding.constants';
 
 export type CalorieDrift = 'ok' | 'low' | 'high';
 
@@ -24,10 +24,12 @@ export const useSetupCalorieGoalScreen = () => {
         [setAnswer],
     );
 
+    // Коридор ±600 ккал від розрахованої норми (власник, 12.09): нижче —
+    // недобір, вище — перебір. Попередження, не заборона.
     const drift: CalorieDrift =
-        value < recommended * (1 - CALORIE_WARNING_RATIO)
+        value < recommended - CALORIE_GOAL_TOLERANCE
             ? 'low'
-            : value > recommended * (1 + CALORIE_WARNING_RATIO)
+            : value > recommended + CALORIE_GOAL_TOLERANCE
               ? 'high'
               : 'ok';
 
