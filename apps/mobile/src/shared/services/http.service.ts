@@ -17,6 +17,23 @@ interface AuthTokensOutboundDto {
 
 const REFRESH_PATH = '/auth/refresh';
 
+/**
+ * Публічні маршрути автентифікації. Їхній 401 — це «невірний пароль», а не
+ * «сесія протухла»: рефреш тут не допоможе, а вихід із застосунку через
+ * `handleUnauthenticated` вибив би вже залогіненого користувача через одну
+ * помилку введення.
+ */
+const PUBLIC_AUTH_PATHS = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/verify-email',
+    '/auth/resend-code',
+    '/auth/oauth',
+    '/auth/password-reset',
+];
+
+const isPublicAuthPath = (url?: string) => Boolean(url && PUBLIC_AUTH_PATHS.some(path => url.startsWith(path)));
+
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
     /** Set after a 401 retry so we don't loop forever if the refreshed token also fails. */
     _retried?: boolean;
@@ -96,7 +113,11 @@ function formatRoute(config?: { method?: string; url?: string; baseURL?: string 
  */
 function unwrapEnvelope<T>(body: unknown): T {
     if (body && typeof body === 'object' && 'data' in body) {
-        return (body as { data: T }).data;
+        const envelope = body as { data: T; meta?: unknown };
+        // Сторінковані відповіді несуть `meta` (total/page/limit/totalPages) —
+        // їх віддаємо цілими, інакше лічильник «Показати N результатів» і
+        // useInfiniteQuery лишаються без даних. Решта розгортається до `data`.
+        return envelope.meta === undefined ? envelope.data : (envelope as unknown as T);
     }
     return body as T;
 }
@@ -131,7 +152,7 @@ axiosInstance.interceptors.response.use(
         const status = error.response?.status;
         const original = error.config as RetryableRequestConfig | undefined;
 
-        if (status === 401 && original) {
+        if (status === 401 && original && !isPublicAuthPath(original.url)) {
             const isRefreshCall = original.url?.endsWith(REFRESH_PATH);
             const alreadyRetried = original._retried === true;
 
