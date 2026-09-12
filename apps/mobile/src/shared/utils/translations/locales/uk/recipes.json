@@ -221,6 +221,15 @@
         "add-step": "Додати крок",
         "step-time-decrease": "Зменшити час",
         "step-time-increase": "Збільшити час",
-        "step-page-a11y": "Крок {{number}}"
+        "step-page-a11y": "Крок {{number}}",
+        "ingredient-picker-title": "Додати інгредієнт",
+        "ingredient-picker-subtitle": "Оберіть продукти зі складу страви",
+        "ingredient-picker-apply_zero": "Оберіть інгредієнти",
+        "ingredient-picker-apply_one": "Додати {{count}} інгредієнт",
+        "ingredient-picker-apply_few": "Додати {{count}} інгредієнти",
+        "ingredient-picker-apply_many": "Додати {{count}} інгредієнтів",
+        "per-100g": "100 г · {{value}} ккал",
+        "cuisine-placeholder": "Оберіть кухню",
+        "ingredients-required": "Додайте хоча б один інгредієнт"
     }
 }

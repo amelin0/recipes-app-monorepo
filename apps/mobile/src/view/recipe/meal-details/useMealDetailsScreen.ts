@@ -134,7 +134,13 @@ export const useMealDetailsScreen = () => {
         handleShare: showComingSoon,
         handleAddToPlan,
         isAddingToPlan: addPlanItem.isPending,
-        // Logging a meal starts with how much of it was eaten.
-        handleLogMeal: () => router.push({ pathname: '/(app)/meal-portions', params: { id: meal.id } }),
+        // Logging a meal starts with how much of it was eaten. The slot and
+        // day travel along when the screen was opened from a plan meal —
+        // otherwise the entry would land in today's lunch by default.
+        handleLogMeal: () =>
+            router.push({
+                pathname: '/(app)/meal-portions',
+                params: isPlanMode ? { id: meal.id, slot: mealKey, date: day } : { id: meal.id },
+            }),
     };
 };

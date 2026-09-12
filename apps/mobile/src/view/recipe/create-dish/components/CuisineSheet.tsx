@@ -7,22 +7,25 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppButton, AppText, CircleIconButton } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
+import type { Reference } from '@/data';
+
 import CheckIcon from '../../../../../assets/icons/check.svg';
 import CloseIcon from '../../../../../assets/icons/close.svg';
-import { CREATE_DISH_CUISINES, OPTION_EMOJI } from '../../recipe.constants';
 
 export interface CuisineSheetProps {
     visible: boolean;
-    selected: string;
-    onApply: (key: string) => void;
+    /** Cuisines as the catalogue lists them — names and emoji come with them. */
+    options: Reference[];
+    selected: string | null;
+    onApply: (id: string) => void;
     onClose: () => void;
 }
 
 /** Шторка «Кухня» — вибір країни походження страви (626:24661). */
-export const CuisineSheet = ({ visible, selected, onApply, onClose }: CuisineSheetProps) => {
+export const CuisineSheet = ({ visible, options, selected, onApply, onClose }: CuisineSheetProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes', 'common']);
-    const [draft, setDraft] = useState(selected);
+    const [draft, setDraft] = useState<string | null>(selected);
 
     // Нове відкриття стартує з поточного вибору форми.
     useEffect(() => {
@@ -54,18 +57,18 @@ export const CuisineSheet = ({ visible, selected, onApply, onClose }: CuisineShe
                 </View>
 
                 <View style={styles.options}>
-                    {CREATE_DISH_CUISINES.map(key => {
-                        const active = draft === key;
+                    {options.map(option => {
+                        const active = draft === option.id;
                         return (
                             <Pressable
-                                key={key}
+                                key={option.id}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: active }}
-                                onPress={() => setDraft(key)}
+                                onPress={() => setDraft(option.id)}
                                 style={styles.option(active)}
                             >
                                 <AppText variant="bodyLargeBold" style={styles.optionLabel}>
-                                    {`${OPTION_EMOJI[key]} ${t(`recipes:options.${key}`)}`}
+                                    {option.emoji ? `${option.emoji} ${option.name}` : option.name}
                                 </AppText>
                                 {active ? (
                                     <CheckIcon width={24} height={24} color={theme.colors.semantic.positive} />
@@ -75,7 +78,12 @@ export const CuisineSheet = ({ visible, selected, onApply, onClose }: CuisineShe
                     })}
                 </View>
 
-                <AppButton fullWidth label={t('recipes:create-dish.apply')} onPress={() => onApply(draft)} />
+                <AppButton
+                    fullWidth
+                    disabled={draft === null}
+                    label={t('recipes:create-dish.apply')}
+                    onPress={() => draft && onApply(draft)}
+                />
             </Animated.View>
         </Modal>
     );

@@ -8,9 +8,15 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import ArrowDownIcon from '../../../../assets/icons/arrow-down-large.svg';
 import CameraLargeIcon from '../../../../assets/icons/camera-large.svg';
-import { OPTION_EMOJI } from '../recipe.constants';
 
-import { AddImageSheet, CuisineSheet, IngredientEditRow, StepsEditorModal, TakePhotoModal } from './components';
+import {
+    AddImageSheet,
+    CuisineSheet,
+    IngredientEditRow,
+    IngredientPickerSheet,
+    StepsEditorModal,
+    TakePhotoModal,
+} from './components';
 
 import { useCreateDishScreen } from './useCreateDishScreen';
 
@@ -21,7 +27,9 @@ export const CreateDishScreen = () => {
     const {
         name,
         nameError,
-        cuisine,
+        cuisines,
+        cuisineId,
+        cuisineName,
         photo,
         ingredients,
         steps,
@@ -29,6 +37,9 @@ export const CreateDishScreen = () => {
         imageSheetVisible,
         photoModalVisible,
         cuisineSheetVisible,
+        ingredientSheetVisible,
+        handleAddIngredients,
+        handleIngredientSheetClose,
         saveSheetVisible,
         handleNameChange,
         handleGramsChange,
@@ -86,7 +97,7 @@ export const CreateDishScreen = () => {
                     >
                         {photo ? (
                             <Image
-                                source={photo}
+                                source={{ uri: photo }}
                                 accessibilityLabel={t('recipes:create-dish.photo-a11y')}
                                 style={styles.photo}
                                 resizeMode="cover"
@@ -117,7 +128,7 @@ export const CreateDishScreen = () => {
                             style={styles.dropdown}
                         >
                             <AppText variant="bodyMediumReg" style={styles.dropdownValue}>
-                                {`${OPTION_EMOJI[cuisine]} ${t(`recipes:options.${cuisine}`)}`}
+                                {cuisineName || t('recipes:create-dish.cuisine-placeholder')}
                             </AppText>
                             <ArrowDownIcon width={20} height={20} color={theme.colors.elements.primary} />
                         </Pressable>
@@ -166,9 +177,16 @@ export const CreateDishScreen = () => {
             />
             <CuisineSheet
                 visible={cuisineSheetVisible}
-                selected={cuisine}
+                options={cuisines}
+                selected={cuisineId}
                 onApply={handleCuisineApply}
                 onClose={handleCuisineSheetClose}
+            />
+            <IngredientPickerSheet
+                visible={ingredientSheetVisible}
+                selectedIds={ingredients.map(item => item.id)}
+                onApply={handleAddIngredients}
+                onClose={handleIngredientSheetClose}
             />
             <ConfirmSheet
                 visible={saveSheetVisible}
