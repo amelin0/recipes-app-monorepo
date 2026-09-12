@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppScreen, AppText, SegmentedTabs, TopBar } from '@/shared/ui/components';
+import { AppScreen, AppText, QueryState, SegmentedTabs, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { NotificationCard } from './components';
@@ -12,14 +12,31 @@ import { useNotificationsListScreen } from './useNotificationsListScreen';
 /** Everything the app has told the user (811:67086). */
 export const NotificationsListScreen = () => {
     const { t } = useAppTranslation(['notifications']);
-    const { tabs, activeTab, setActiveTab, groups, hasUnread, handleReadAll, handleOpen } =
-        useNotificationsListScreen();
+    const {
+        tabs,
+        activeTab,
+        setActiveTab,
+        groups,
+        isLoading,
+        isError,
+        isEmpty,
+        handleRetry,
+        handleEndReached,
+        hasUnread,
+        handleReadAll,
+        handleOpen,
+    } = useNotificationsListScreen();
 
     return (
         <AppScreen>
             <TopBar title={t('notifications:title')} />
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+                onScrollEndDrag={handleEndReached}
+                onMomentumScrollEnd={handleEndReached}
+            >
                 <View style={styles.filters}>
                     <SegmentedTabs
                         contentSized
@@ -41,28 +58,35 @@ export const NotificationsListScreen = () => {
                     </Pressable>
                 </View>
 
-                {groups.map(group => (
-                    <View key={group.key} style={styles.group}>
-                        <AppText variant="bodySmallBold" style={styles.groupLabel}>
-                            {group.label}
-                        </AppText>
-                        {group.items.map(item => (
-                            <NotificationCard key={item.id} item={item} onPress={() => handleOpen(item.id)} />
-                        ))}
-                    </View>
-                ))}
-
-                {groups.length === 0 ? (
-                    <AppText variant="bodyMediumReg" style={styles.empty}>
-                        {t('notifications:empty')}
-                    </AppText>
-                ) : null}
+                <QueryState
+                    isLoading={isLoading}
+                    isError={isError}
+                    isEmpty={isEmpty}
+                    emptyMessage={t('notifications:empty')}
+                    onRetry={handleRetry}
+                    style={styles.stateBox}
+                >
+                    {groups.map(group => (
+                        <View key={group.key} style={styles.group}>
+                            <AppText variant="bodySmallBold" style={styles.groupLabel}>
+                                {group.label}
+                            </AppText>
+                            {group.items.map(item => (
+                                <NotificationCard key={item.id} item={item} onPress={() => handleOpen(item.id)} />
+                            ))}
+                        </View>
+                    ))}
+                </QueryState>
             </ScrollView>
         </AppScreen>
     );
 };
 
 const styles = StyleSheet.create(theme => ({
+    stateBox: {
+        flex: 0,
+        paddingVertical: theme.spacing[8],
+    },
     content: {
         gap: theme.spacing[4],
         paddingHorizontal: theme.spacing[4],

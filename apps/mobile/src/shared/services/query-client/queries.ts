@@ -24,6 +24,8 @@ export enum Queries {
     RecipeFilters = 'recipe-filters',
     NutritionDay = 'nutrition-day',
     NutritionGoal = 'nutrition-goal',
+    Notifications = 'notifications',
+    NotificationsUnread = 'notifications-unread',
     ProgressMetrics = 'progress-metrics',
     ProgressMetric = 'progress-metric',
     MealPlan = 'meal-plan',
@@ -83,6 +85,15 @@ export const recipeKeys = {
 
     /** Everything the filter sheet offers — `GET /recipes/filters`. */
     filters: () => [Queries.RecipeFilters] as const,
+};
+
+/** Notification-domain query-key factory. */
+export const notificationKeys = {
+    /** Paginated list — `GET /notifications`. */
+    list: (unreadOnly: boolean) => [Queries.Notifications, unreadOnly] as const,
+
+    /** Badge count — `GET /notifications/unread-count`. */
+    unreadCount: () => [Queries.NotificationsUnread] as const,
 };
 
 /** Progress-domain query-key factory. */

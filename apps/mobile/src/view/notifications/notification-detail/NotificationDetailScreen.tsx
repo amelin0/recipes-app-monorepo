@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppButton, AppCard, AppScreen, AppText, TopBar } from '@/shared/ui/components';
+import { AppButton, AppCard, AppScreen, AppText, QueryState, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { useNotificationDetailScreen } from './useNotificationDetailScreen';
@@ -11,58 +11,65 @@ import { useNotificationDetailScreen } from './useNotificationDetailScreen';
 /** One notification in full (811:67419, 1000:81573, 1022:79488). */
 export const NotificationDetailScreen = () => {
     const { t } = useAppTranslation(['notifications']);
-    const { item, handleAction } = useNotificationDetailScreen();
-
-    if (!item) return <AppScreen />;
+    const { item, isLoading, isError, handleRetry, handleAction } = useNotificationDetailScreen();
 
     return (
         <AppScreen>
             <TopBar title={t('notifications:title')} />
 
-            <View style={styles.content}>
-                <AppCard style={styles.card}>
-                    <View style={styles.header}>
-                        <AppText variant="bodyLargeBold" accessibilityRole="header">
-                            {item.title}
-                        </AppText>
-                        {item.subtitle ? (
-                            <AppText variant="bodySmallReg" style={styles.muted}>
-                                {item.subtitle}
-                            </AppText>
-                        ) : null}
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    <View style={styles.details}>
-                        {item.detailsTitle ? <AppText variant="bodyMediumBold">{item.detailsTitle}</AppText> : null}
-                        <View style={styles.bullets}>
-                            {(item.bullets ?? [item.body]).map(line => (
-                                <AppText key={line} variant="bodyMediumReg" style={styles.muted}>
-                                    {item.bullets ? `• ${line}` : line}
+            <QueryState
+                isLoading={isLoading}
+                isError={isError}
+                // Немає ендпоінта на одне сповіщення, тож діплінк із пуша,
+                // відкритий на холодну, нічого не знайде — кажемо про це, а не
+                // показуємо порожній екран (handoff §4.3).
+                isEmpty={!item}
+                emptyMessage={t('notifications:not-found')}
+                onRetry={handleRetry}
+            >
+                {item ? (
+                    <View style={styles.content}>
+                        <AppCard style={styles.card}>
+                            <View style={styles.header}>
+                                <AppText variant="bodyLargeBold" accessibilityRole="header">
+                                    {item.title}
                                 </AppText>
-                            ))}
-                        </View>
+                                {item.subtitle ? (
+                                    <AppText variant="bodySmallReg" style={styles.muted}>
+                                        {item.subtitle}
+                                    </AppText>
+                                ) : null}
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            <View style={styles.details}>
+                                <View style={styles.bullets}>
+                                    {/* Порожній `items` — звичайне коротке сповіщення:
+                                тоді тіло йде суцільним абзацом, без маркерів. */}
+                                    {(item.items.length > 0 ? item.items : [item.body]).map((line, index) => (
+                                        <AppText key={`${index}-${line}`} variant="bodyMediumReg" style={styles.muted}>
+                                            {item.items.length > 0 ? `• ${line}` : line}
+                                        </AppText>
+                                    ))}
+                                </View>
+                            </View>
+
+                            {item.metaLabel ? (
+                                <View style={styles.tag}>
+                                    <AppText variant="bodySmallReg" style={styles.tagLabel}>
+                                        {item.metaLabel}
+                                    </AppText>
+                                </View>
+                            ) : null}
+
+                            {item.actionLabel && item.actionRoute ? (
+                                <AppButton size="md" fullWidth label={item.actionLabel} onPress={handleAction} />
+                            ) : null}
+                        </AppCard>
                     </View>
-
-                    {item.tag ? (
-                        <View style={styles.tag}>
-                            <AppText variant="bodySmallReg" style={styles.tagLabel}>
-                                {item.tag}
-                            </AppText>
-                        </View>
-                    ) : null}
-
-                    {item.action ? (
-                        <AppButton
-                            size="md"
-                            fullWidth
-                            label={t(`notifications:actions.${item.action}`)}
-                            onPress={handleAction}
-                        />
-                    ) : null}
-                </AppCard>
-            </View>
+                ) : null}
+            </QueryState>
         </AppScreen>
     );
 };

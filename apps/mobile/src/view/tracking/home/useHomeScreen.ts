@@ -7,6 +7,7 @@ import { formatDayHeader, toIsoDay } from '@/shared/helpers';
 import { ToastService } from '@/shared/services';
 import type { DishAction, MealDish } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { useUnreadCount } from '@/state/domains/notification';
 import { useGetDay, useLogMeal, useLogWater, useDeleteMeal } from '@/state/domains/nutrition';
 import { useGetPlan } from '@/state/domains/meal-plan';
 import { useGetProfile, useGetReminders } from '@/state/domains/user';
@@ -64,6 +65,7 @@ export const useHomeScreen = () => {
     const { data: planDays } = useGetPlan(today, today);
     const { data: profile } = useGetProfile();
     const { data: reminders } = useGetReminders();
+    const { data: unread } = useUnreadCount();
 
     const logMeal = useLogMeal();
     const deleteMeal = useDeleteMeal();
@@ -199,8 +201,7 @@ export const useHomeScreen = () => {
         isError,
         handleRetry: refetch,
         initials: profile?.initials || (profile?.email?.charAt(0).toUpperCase() ?? ''),
-        // TODO: значок лічильника — `GET /notifications/unread-count`.
-        notificationsCount: 0,
+        notificationsCount: unread?.count ?? 0,
         dateLabel: formatDayHeader(new Date()),
         calories: {
             current: Math.round(day?.consumed.calories ?? 0),

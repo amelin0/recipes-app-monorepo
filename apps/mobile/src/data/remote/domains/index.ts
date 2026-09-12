@@ -2,6 +2,7 @@ export * from './auth';
 export * from './catalog';
 export * from './faq';
 export * from './meal-plan';
+export * from './notification';
 export * from './nutrition';
 export * from './progress';
 export * from './shopping-list';

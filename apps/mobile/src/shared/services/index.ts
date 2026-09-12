@@ -7,6 +7,7 @@ export {
     userKeys,
     nutritionKeys,
     progressKeys,
+    notificationKeys,
     faqKeys,
     subscriptionKeys,
     recipeKeys,
