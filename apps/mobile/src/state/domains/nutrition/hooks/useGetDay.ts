@@ -11,13 +11,13 @@ import { useStore } from '@/state';
  * belongs to the night before for the person eating it, and only the device
  * knows which day that was.
  */
-export const useGetDay = (date: string) => {
+export const useGetDay = (date: string, options?: { enabled?: boolean }) => {
     const isAuthenticated = useStore(state => state.isAuthenticated);
 
     return useQuery({
         queryKey: nutritionKeys.day(date),
         queryFn: () => NutritionApi.getDay(date),
-        enabled: isAuthenticated && Boolean(date),
+        enabled: isAuthenticated && Boolean(date) && (options?.enabled ?? true),
         // Короткий, але не нульовий: екран часто перемальовується при поверненні
         // з шитів, і кожне таке повернення не має коштувати запиту.
         staleTime: 30_000,

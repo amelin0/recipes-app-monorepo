@@ -1,10 +1,10 @@
 import { deleteLocalData, readLocalData, writeLocalData } from '@/shared/services';
 
 /**
- * The deletion deadline, kept on the device because the API exposes no route
- * that reads a pending request back (`handoff/mobile-ui-review.md` §4).
- * Losing it only costs the countdown, never the deletion — the server holds
- * the schedule either way.
+ * A device-side copy of the deletion deadline. The source is the server —
+ * `GET /auth/me` returns `deletionScheduledFor` on every launch — and this
+ * copy exists only so the countdown survives a launch without network.
+ * Losing it costs nothing but the countdown: the schedule is the server's.
  */
 export class AccountStorage {
     /** ISO instant from `POST /profile/deletion-request`. */

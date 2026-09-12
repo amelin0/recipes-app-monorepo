@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -72,82 +72,86 @@ export const IngredientPickerSheet = ({ visible, selectedIds, onApply, onClose }
                 onPress={onClose}
             />
 
-            <Animated.View entering={SlideInDown.duration(280)} style={styles.sheet}>
-                <View style={styles.header}>
-                    <View style={styles.labels}>
-                        <AppText variant="titleMedium" accessibilityRole="header">
-                            {t('recipes:create-dish.ingredient-picker-title')}
-                        </AppText>
-                        <AppText variant="bodyMediumReg" style={styles.subtitle}>
-                            {t('recipes:create-dish.ingredient-picker-subtitle')}
-                        </AppText>
+            {/* Пошук у шторці відкриває клавіатуру, а кнопка «Додати» стоїть
+                під списком: без цього вона лишається під клавіатурою. */}
+            <KeyboardAvoidingView style={styles.sheetWrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <Animated.View entering={SlideInDown.duration(280)} style={styles.sheet}>
+                    <View style={styles.header}>
+                        <View style={styles.labels}>
+                            <AppText variant="titleMedium" accessibilityRole="header">
+                                {t('recipes:create-dish.ingredient-picker-title')}
+                            </AppText>
+                            <AppText variant="bodyMediumReg" style={styles.subtitle}>
+                                {t('recipes:create-dish.ingredient-picker-subtitle')}
+                            </AppText>
+                        </View>
+                        <CircleIconButton accessibilityLabel={t('common:actions.close')} onPress={onClose}>
+                            <CloseIcon width={20} height={20} color={theme.colors.elements.primary} />
+                        </CircleIconButton>
                     </View>
-                    <CircleIconButton accessibilityLabel={t('common:actions.close')} onPress={onClose}>
-                        <CloseIcon width={20} height={20} color={theme.colors.elements.primary} />
-                    </CircleIconButton>
-                </View>
 
-                <AppInput
-                    placeholder={t('recipes:filter.catalog-placeholder')}
-                    value={query}
-                    onChangeText={setQuery}
-                    autoCorrect={false}
-                    leftSlot={<SearchIcon width={20} height={20} color={theme.colors.elements.tertiary} />}
-                />
+                    <AppInput
+                        placeholder={t('recipes:filter.catalog-placeholder')}
+                        value={query}
+                        onChangeText={setQuery}
+                        autoCorrect={false}
+                        leftSlot={<SearchIcon width={20} height={20} color={theme.colors.elements.tertiary} />}
+                    />
 
-                <ScrollView
-                    style={styles.list}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    onScrollEndDrag={handleEndReached}
-                    onMomentumScrollEnd={handleEndReached}
-                >
-                    <QueryState
-                        isLoading={isLoading}
-                        isError={isError}
-                        isEmpty={!isLoading && !isError && products.length === 0}
-                        emptyMessage={t('recipes:list.empty')}
-                        onRetry={refetch}
-                        style={styles.stateBox}
+                    <ScrollView
+                        style={styles.list}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        onScrollEndDrag={handleEndReached}
+                        onMomentumScrollEnd={handleEndReached}
                     >
-                        {products.map(product => {
-                            const picked = draft.some(item => item.id === product.id);
-                            const already = selectedIds.includes(product.id);
-                            return (
-                                <Pressable
-                                    key={product.id}
-                                    accessibilityRole="button"
-                                    accessibilityState={{ selected: picked, disabled: already }}
-                                    disabled={already}
-                                    onPress={() => toggle(product)}
-                                    style={styles.option(picked, already)}
-                                >
-                                    <AppText variant="bodyMediumBold" style={styles.optionLabel}>
-                                        {product.group?.emoji ? `${product.group.emoji} ` : ''}
-                                        {product.name}
-                                    </AppText>
-                                    <AppText variant="bodySmallReg" style={styles.subtitle}>
-                                        {t('recipes:create-dish.per-100g', {
-                                            value: Math.round(product.caloriesPer100g),
-                                        })}
-                                    </AppText>
-                                    {picked ? (
-                                        <CheckIcon width={24} height={24} color={theme.colors.semantic.positive} />
-                                    ) : null}
-                                </Pressable>
-                            );
-                        })}
-                    </QueryState>
-                </ScrollView>
+                        <QueryState
+                            isLoading={isLoading}
+                            isError={isError}
+                            isEmpty={!isLoading && !isError && products.length === 0}
+                            emptyMessage={t('recipes:list.empty')}
+                            onRetry={refetch}
+                            style={styles.stateBox}
+                        >
+                            {products.map(product => {
+                                const picked = draft.some(item => item.id === product.id);
+                                const already = selectedIds.includes(product.id);
+                                return (
+                                    <Pressable
+                                        key={product.id}
+                                        accessibilityRole="button"
+                                        accessibilityState={{ selected: picked, disabled: already }}
+                                        disabled={already}
+                                        onPress={() => toggle(product)}
+                                        style={styles.option(picked, already)}
+                                    >
+                                        <AppText variant="bodyMediumBold" style={styles.optionLabel}>
+                                            {product.group?.emoji ? `${product.group.emoji} ` : ''}
+                                            {product.name}
+                                        </AppText>
+                                        <AppText variant="bodySmallReg" style={styles.subtitle}>
+                                            {t('recipes:create-dish.per-100g', {
+                                                value: Math.round(product.caloriesPer100g),
+                                            })}
+                                        </AppText>
+                                        {picked ? (
+                                            <CheckIcon width={24} height={24} color={theme.colors.semantic.positive} />
+                                        ) : null}
+                                    </Pressable>
+                                );
+                            })}
+                        </QueryState>
+                    </ScrollView>
 
-                <AppButton
-                    fullWidth
-                    disabled={draft.length === 0}
-                    label={t('recipes:create-dish.ingredient-picker-apply', { count: draft.length })}
-                    onPress={() => onApply(draft)}
-                />
-            </Animated.View>
+                    <AppButton
+                        fullWidth
+                        disabled={draft.length === 0}
+                        label={t('recipes:create-dish.ingredient-picker-apply', { count: draft.length })}
+                        onPress={() => onApply(draft)}
+                    />
+                </Animated.View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 };
@@ -156,6 +160,9 @@ const styles = StyleSheet.create(theme => ({
     scrim: {
         flex: 1,
         backgroundColor: theme.colors.background.overlay,
+    },
+    sheetWrap: {
+        justifyContent: 'flex-end',
     },
     sheet: {
         // Шторка займає фіксовану частку екрана: список каталогу довгий, і

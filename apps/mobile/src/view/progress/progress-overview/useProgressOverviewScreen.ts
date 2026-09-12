@@ -6,7 +6,6 @@ import { useUnistyles } from 'react-native-unistyles';
 
 import type { ProgressCard, ProgressMetric } from '@/data';
 import { formatThousands, shiftIsoDay, toIsoDay } from '@/shared/helpers';
-import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useGetPlan } from '@/state/domains/meal-plan';
 import { useGetProgressMetrics } from '@/state/domains/progress';
@@ -48,10 +47,6 @@ export const useProgressOverviewScreen = () => {
         (metric: ProgressMetric): ProgressCard | undefined => data?.find(card => card.metric === metric),
         [data],
     );
-
-    const comingSoon = useCallback(() => {
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
 
     /** A one-off metric card: first reading, latest, goal, and the line. */
     const lineMetric = useCallback(
@@ -208,7 +203,5 @@ export const useProgressOverviewScreen = () => {
                 : router.push({ pathname: '/(app)/metric-add', params: { metric, mode: 'goal' } }),
         handleReminders: () => router.push('/(app)/weigh-in-reminder'),
         handleAdd: (metric: ReadingMetricKey) => router.push({ pathname: '/(app)/metric-add', params: { metric } }),
-        // Steps come from the day, not from a reading sheet — no design yet.
-        handleAddSteps: comingSoon,
     };
 };

@@ -1,3 +1,4 @@
+export { useGetCurrentUser } from './useGetCurrentUser';
 export { useRequestPasswordReset, useSetNewPassword, useVerifyPasswordReset } from './usePasswordReset';
 export { useResendCode } from './useResendCode';
 export { useRestoreSession } from './useRestoreSession';

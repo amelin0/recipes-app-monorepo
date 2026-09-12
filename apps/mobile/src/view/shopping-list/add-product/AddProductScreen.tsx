@@ -48,6 +48,9 @@ export const AddProductScreen = () => {
                 contentContainerStyle={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                // Список довший за екран: цей проп на iOS додає нижній contentInset на
+                // висоту клавіатури, тож нижні рядки лишаються досяжними.
+                automaticallyAdjustKeyboardInsets
                 onScrollEndDrag={handleEndReached}
                 onMomentumScrollEnd={handleEndReached}
             >

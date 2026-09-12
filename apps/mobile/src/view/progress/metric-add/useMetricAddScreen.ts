@@ -3,10 +3,10 @@ import { useCallback, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import type { MeasurableMetric, PatchGoalPayload } from '@/data';
-import { formatThousands } from '@/shared/helpers';
+import { formatThousands, toIsoDay } from '@/shared/helpers';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
-import { useGetNutritionGoal, usePatchNutritionGoal } from '@/state/domains/nutrition';
+import { useGetDay, useGetNutritionGoal, usePatchNutritionGoal, useSetSteps } from '@/state/domains/nutrition';
 import { useGetProgressMetrics, useRecordMeasurement } from '@/state/domains/progress';
 import { useGetOnboarding, useGetProfile, useUpdateProfile } from '@/state/domains/user';
 
@@ -41,9 +41,15 @@ const toNumber = (text: string) => Number(text.replace(/,(?=\d{3}\b)/g, '').repl
 
 export const useMetricAddScreen = () => {
     const { t } = useAppTranslation(['common']);
-    const { metric = 'weight', mode = 'reading' } = useLocalSearchParams<{
+    const {
+        metric = 'weight',
+        mode = 'reading',
+        from,
+    } = useLocalSearchParams<{
         metric?: ReadingMetricKey | GoalMetricKey;
         mode?: MetricEntryMode;
+        /** Which tab the receipt should return to; the progress tab by default. */
+        from?: string;
     }>();
 
     const isGoal = mode === 'goal';
@@ -57,7 +63,13 @@ export const useMetricAddScreen = () => {
     const { data: profile } = useGetProfile();
     const { data: onboarding } = useGetOnboarding();
 
+    const today = toIsoDay();
+    // Кроки — денний підсумок, а не вимір: сьогоднішнє значення живе в зрізі
+    // дня, і саме воно має стояти в полі, бо PUT замінює його, а не додає.
+    const { data: day } = useGetDay(today, { enabled: !isGoal && metric === 'steps' });
+
     const recordMeasurement = useRecordMeasurement();
+    const setSteps = useSetSteps();
     const patchGoal = usePatchNutritionGoal();
     const updateProfile = useUpdateProfile();
 
@@ -82,7 +94,9 @@ export const useMetricAddScreen = () => {
         ? metric === 'weight'
             ? (profile?.targetWeightKg ?? middle)
             : (goal?.[GOAL_FIELD[metric as Exclude<GoalMetricKey, 'weight'>]] ?? middle)
-        : (lastReading ?? fromQuestionnaire ?? middle);
+        : metric === 'steps'
+          ? (day?.steps ?? 0)
+          : (lastReading ?? fromQuestionnaire ?? middle);
 
     // expo-router reuses this screen when the same route is opened with
     // different params, so the field is keyed to what it is editing rather than
@@ -106,7 +120,8 @@ export const useMetricAddScreen = () => {
     const parsed = toNumber(value);
     const isValid = !Number.isNaN(parsed) && parsed >= config.min && parsed <= config.max;
 
-    const isSaving = recordMeasurement.isPending || patchGoal.isPending || updateProfile.isPending;
+    const isSaving =
+        recordMeasurement.isPending || setSteps.isPending || patchGoal.isPending || updateProfile.isPending;
 
     const finish = useCallback(() => {
         if (isMacroGoal) {
@@ -115,13 +130,20 @@ export const useMetricAddScreen = () => {
             router.back();
             return;
         }
-        router.replace({ pathname: '/(app)/metric-updated', params: { metric, value, mode } });
-    }, [isMacroGoal, metric, mode, value]);
+        router.replace({ pathname: '/(app)/metric-updated', params: { metric, value, mode, from } });
+    }, [from, isMacroGoal, metric, mode, value]);
 
     const handleSave = useCallback(() => {
         if (!isValid || isSaving) return;
 
         const onError = () => ToastService.error(t('common:states.error'));
+
+        if (!isGoal && metric === 'steps') {
+            // Кроки пишуться в день, а не в таблицю вимірів: ендпоінт вимірів
+            // відповідає 422 на щоденний показник у шляху.
+            setSteps.mutate({ date: today, steps: Math.round(parsed) }, { onSuccess: finish, onError });
+            return;
+        }
 
         if (!isGoal) {
             // Дата не передається — сервер ставить сьогодні, і це правильно:
@@ -145,7 +167,20 @@ export const useMetricAddScreen = () => {
             { [GOAL_FIELD[metric as Exclude<GoalMetricKey, 'weight'>]]: Math.round(parsed) },
             { onSuccess: finish, onError },
         );
-    }, [finish, isGoal, isSaving, isValid, metric, parsed, patchGoal, recordMeasurement, t, updateProfile]);
+    }, [
+        finish,
+        isGoal,
+        isSaving,
+        isValid,
+        metric,
+        parsed,
+        patchGoal,
+        recordMeasurement,
+        setSteps,
+        t,
+        today,
+        updateProfile,
+    ]);
 
     return {
         metric,

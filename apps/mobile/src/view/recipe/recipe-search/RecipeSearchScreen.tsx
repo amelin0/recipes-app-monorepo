@@ -168,6 +168,9 @@ export const RecipeSearchScreen = () => {
                 contentContainerStyle={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                // Результати довші за екран — інсет під клавіатуру, щоб нижні
+                // картки не лишились під нею.
+                automaticallyAdjustKeyboardInsets
             >
                 {showCategories ? (
                     <View style={styles.section}>

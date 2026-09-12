@@ -18,10 +18,13 @@ export const useMetricUpdatedScreen = () => {
         metric = 'weight',
         value = '',
         mode = 'reading',
+        from,
     } = useLocalSearchParams<{
         metric?: ReadingMetricKey | GoalMetricKey;
         value?: string;
         mode?: MetricEntryMode;
+        /** The tab the sheet was opened from; the progress tab by default. */
+        from?: string;
     }>();
 
     const numeric = Number(value.replace(/,(?=\d{3}\b)/g, '').replace(',', '.'));
@@ -37,8 +40,8 @@ export const useMetricUpdatedScreen = () => {
     const waistBound = cards?.find(card => card.metric === 'waist')?.recommendedMax ?? null;
 
     const handleDone = useCallback(() => {
-        router.dismissTo('/(app)/(tabs)/progress');
-    }, []);
+        router.dismissTo(from === 'home' ? '/(app)/(tabs)/home' : '/(app)/(tabs)/progress');
+    }, [from]);
 
     const handleConfirmGoal = useCallback(() => {
         if (recommendedCalories === null || patchGoal.isPending) {

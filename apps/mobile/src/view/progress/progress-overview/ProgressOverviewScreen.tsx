@@ -31,7 +31,6 @@ export const ProgressOverviewScreen = () => {
         handleEditGoal,
         handleReminders,
         handleAdd,
-        handleAddSteps,
     } = useProgressOverviewScreen();
 
     const editGoal = (metric: 'weight' | 'steps' | 'water' | 'calories') => ({
@@ -204,7 +203,7 @@ export const ProgressOverviewScreen = () => {
                         <PageDots count={2} activeIndex={1} size="lg" />
                         <MetricActions
                             actions={[editGoal('steps')]}
-                            onAdd={handleAddSteps}
+                            onAdd={() => handleAdd('steps')}
                             addLabel={t('progress:steps.add-a11y')}
                         />
                     </MetricCard>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -66,174 +66,171 @@ export const PaywallScreen = () => {
                 />
             </View>
 
-            {/* Поле реферального коду стоїть унизу довгого скрола: без цього
-                клавіатура накриває і його, і кнопку, а догортати нікуди — весь
-                вміст уже видно. KAV стискає в'юпорт на висоту клавіатури, і
-                рядок коду знову можна підняти над нею. */}
-            <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <ScrollView
-                    style={styles.fill}
-                    contentContainerStyle={styles.content}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="interactive"
-                >
-                    <View style={styles.header}>
-                        <AppText variant="titleMedium" accessibilityRole="header" style={styles.centered}>
-                            {t('subscription:paywall.title', { name })}
-                        </AppText>
-                        <AppText variant="bodyLargeReg" style={[styles.centered, styles.muted]}>
-                            {t('subscription:paywall.subtitle', { weight: targetWeight, calories })}
-                        </AppText>
-                    </View>
+            <ScrollView
+                style={styles.fill}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                // Поле реферального коду стоїть унизу довгого скрола: без цього
+                // клавіатура накриває і його, і кнопку, а догортати нікуди —
+                // весь вміст уже видно. Цей проп на iOS додає нижній
+                // contentInset на висоту клавіатури й докручує сфокусоване
+                // поле над нею; той самий патерн, що у формі відгуку.
+                automaticallyAdjustKeyboardInsets
+                keyboardDismissMode="interactive"
+            >
+                <View style={styles.header}>
+                    <AppText variant="titleMedium" accessibilityRole="header" style={styles.centered}>
+                        {t('subscription:paywall.title', { name })}
+                    </AppText>
+                    <AppText variant="bodyLargeReg" style={[styles.centered, styles.muted]}>
+                        {t('subscription:paywall.subtitle', { weight: targetWeight, calories })}
+                    </AppText>
+                </View>
 
-                    <View style={styles.includedCard}>
-                        <AppText variant="bodyLargeBold" style={styles.cardTitle}>
-                            {t('subscription:paywall.included.title')}
-                        </AppText>
+                <View style={styles.includedCard}>
+                    <AppText variant="bodyLargeBold" style={styles.cardTitle}>
+                        {t('subscription:paywall.included.title')}
+                    </AppText>
 
-                        {/* Назви переваг редакційні — приходять із довідника, а не
+                    {/* Назви переваг редакційні — приходять із довідника, а не
                         з локалей: контент-команда міняє їх без релізу. */}
-                        <FeatureList items={features.map(feature => feature.name)} />
+                    <FeatureList items={features.map(feature => feature.name)} />
 
-                        <SocialProof
-                            rating={STORE_RATING}
-                            users={t('subscription:paywall.social.users')}
-                            quote={t('subscription:paywall.social.quote')}
-                            author={t('subscription:paywall.social.author')}
+                    <SocialProof
+                        rating={STORE_RATING}
+                        users={t('subscription:paywall.social.users')}
+                        quote={t('subscription:paywall.social.quote')}
+                        author={t('subscription:paywall.social.author')}
+                    />
+                </View>
+
+                <View style={styles.plansCard}>
+                    <GradientOutline radius={CARD_RADIUS} />
+
+                    <AppText variant="bodyLargeBold" style={styles.cardTitle}>
+                        {t('subscription:paywall.plans-title')}
+                    </AppText>
+
+                    <View style={styles.plans}>
+                        <PlanOption
+                            title={t('subscription:plans.year')}
+                            listPrice={
+                                yearPlan?.fullPriceCents
+                                    ? formatPrice(yearPlan.fullPriceCents, yearPlan.currency)
+                                    : undefined
+                            }
+                            price={yearPlan ? formatPrice(yearPlan.priceCents, yearPlan.currency) : undefined}
+                            period={t('subscription:paywall.per-year-suffix')}
+                            trailing={t('subscription:period.month-short', {
+                                price: formatPrice(yearPlan?.monthlyPriceCents ?? 0, yearPlan?.currency),
+                            })}
+                            selected={selectedPlanId === 'year'}
+                            tone={tone}
+                            onPress={() => selectPlan('year')}
                         />
+
+                        <PlanOption
+                            title={t('subscription:plans.month')}
+                            caption={t('subscription:paywall.no-trial')}
+                            trailing={
+                                appliedCode
+                                    ? t('subscription:plans.free')
+                                    : t('subscription:period.month-short', {
+                                          price: formatPrice(monthPlan?.monthlyPriceCents ?? 0, monthPlan?.currency),
+                                      })
+                            }
+                            selected={selectedPlanId === 'month'}
+                            tone={tone}
+                            onPress={() => selectPlan('month')}
+                        />
+
+                        {yearPlan?.savingsPercent ? (
+                            <View style={styles.savingBadge}>
+                                <AppText variant="bodySmallBold" style={styles.savingLabel}>
+                                    {t('subscription:paywall.saving', { percent: yearPlan.savingsPercent })}
+                                </AppText>
+                            </View>
+                        ) : null}
                     </View>
 
-                    <View style={styles.plansCard}>
-                        <GradientOutline radius={CARD_RADIUS} />
+                    {appliedCode ? (
+                        <ReferralBanner
+                            title={t('subscription:paywall.referral.applied-title', { code: appliedCode })}
+                            description={t('subscription:paywall.referral.applied-subtitle')}
+                            removeLabel={t('subscription:paywall.referral.remove')}
+                            onRemove={removeCode}
+                        />
+                    ) : (
+                        <>
+                            <View style={styles.trialRow}>
+                                <AppSwitch
+                                    value={trialEnabled}
+                                    onValueChange={toggleTrial}
+                                    tone="positive"
+                                    accessibilityLabel={t('subscription:paywall.trial', {
+                                        days: yearPlan?.trialDays ?? 0,
+                                    })}
+                                />
+                                <AppText style={styles.trialLabel}>
+                                    {t('subscription:paywall.trial', { days: yearPlan?.trialDays ?? 0 })}
+                                </AppText>
+                            </View>
 
-                        <AppText variant="bodyLargeBold" style={styles.cardTitle}>
-                            {t('subscription:paywall.plans-title')}
+                            {isCodeFieldOpen ? (
+                                <AppInput
+                                    value={codeDraft}
+                                    onChangeText={setCodeDraft}
+                                    autoCapitalize="characters"
+                                    autoCorrect={false}
+                                    placeholder={t('subscription:paywall.referral.placeholder')}
+                                    onSubmitEditing={applyCode}
+                                    returnKeyType="done"
+                                    rightSlot={
+                                        <Pressable accessibilityRole="button" hitSlop={8} onPress={applyCode}>
+                                            <AppText variant="bodyMediumBold" style={styles.accent}>
+                                                {t('subscription:paywall.referral.apply')}
+                                            </AppText>
+                                        </Pressable>
+                                    }
+                                />
+                            ) : (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    onPress={openCodeField}
+                                    style={styles.referralPrompt}
+                                >
+                                    <AppText variant="titleSmall">🎟️</AppText>
+                                    <AppText variant="bodyMediumBold" style={styles.accent}>
+                                        {t('subscription:paywall.referral.prompt')}
+                                    </AppText>
+                                </Pressable>
+                            )}
+                        </>
+                    )}
+
+                    <View style={styles.cta}>
+                        <AppButton
+                            fullWidth
+                            label={t(isFree ? 'subscription:paywall.cta-free' : 'subscription:paywall.cta')}
+                            isLoading={isSubscribing}
+                            onPress={handleSubscribe}
+                        />
+                        <AppText variant="bodySmallReg" style={[styles.centered, styles.muted]}>
+                            {isFree
+                                ? t('subscription:paywall.disclaimer-free')
+                                : trialEnabled
+                                  ? t('subscription:paywall.disclaimer-trial', {
+                                        days: yearPlan?.trialDays ?? 0,
+                                        price: formatPrice(selectedPlan?.priceCents ?? 0, selectedPlan?.currency),
+                                    })
+                                  : t('subscription:paywall.disclaimer', {
+                                        price: formatPrice(selectedPlan?.priceCents ?? 0, selectedPlan?.currency),
+                                    })}
                         </AppText>
-
-                        <View style={styles.plans}>
-                            <PlanOption
-                                title={t('subscription:plans.year')}
-                                listPrice={
-                                    yearPlan?.fullPriceCents
-                                        ? formatPrice(yearPlan.fullPriceCents, yearPlan.currency)
-                                        : undefined
-                                }
-                                price={yearPlan ? formatPrice(yearPlan.priceCents, yearPlan.currency) : undefined}
-                                period={t('subscription:paywall.per-year-suffix')}
-                                trailing={t('subscription:period.month-short', {
-                                    price: formatPrice(yearPlan?.monthlyPriceCents ?? 0, yearPlan?.currency),
-                                })}
-                                selected={selectedPlanId === 'year'}
-                                tone={tone}
-                                onPress={() => selectPlan('year')}
-                            />
-
-                            <PlanOption
-                                title={t('subscription:plans.month')}
-                                caption={t('subscription:paywall.no-trial')}
-                                trailing={
-                                    appliedCode
-                                        ? t('subscription:plans.free')
-                                        : t('subscription:period.month-short', {
-                                              price: formatPrice(
-                                                  monthPlan?.monthlyPriceCents ?? 0,
-                                                  monthPlan?.currency,
-                                              ),
-                                          })
-                                }
-                                selected={selectedPlanId === 'month'}
-                                tone={tone}
-                                onPress={() => selectPlan('month')}
-                            />
-
-                            {yearPlan?.savingsPercent ? (
-                                <View style={styles.savingBadge}>
-                                    <AppText variant="bodySmallBold" style={styles.savingLabel}>
-                                        {t('subscription:paywall.saving', { percent: yearPlan.savingsPercent })}
-                                    </AppText>
-                                </View>
-                            ) : null}
-                        </View>
-
-                        {appliedCode ? (
-                            <ReferralBanner
-                                title={t('subscription:paywall.referral.applied-title', { code: appliedCode })}
-                                description={t('subscription:paywall.referral.applied-subtitle')}
-                                removeLabel={t('subscription:paywall.referral.remove')}
-                                onRemove={removeCode}
-                            />
-                        ) : (
-                            <>
-                                <View style={styles.trialRow}>
-                                    <AppSwitch
-                                        value={trialEnabled}
-                                        onValueChange={toggleTrial}
-                                        tone="positive"
-                                        accessibilityLabel={t('subscription:paywall.trial', {
-                                            days: yearPlan?.trialDays ?? 0,
-                                        })}
-                                    />
-                                    <AppText style={styles.trialLabel}>
-                                        {t('subscription:paywall.trial', { days: yearPlan?.trialDays ?? 0 })}
-                                    </AppText>
-                                </View>
-
-                                {isCodeFieldOpen ? (
-                                    <AppInput
-                                        value={codeDraft}
-                                        onChangeText={setCodeDraft}
-                                        autoCapitalize="characters"
-                                        autoCorrect={false}
-                                        placeholder={t('subscription:paywall.referral.placeholder')}
-                                        onSubmitEditing={applyCode}
-                                        returnKeyType="done"
-                                        rightSlot={
-                                            <Pressable accessibilityRole="button" hitSlop={8} onPress={applyCode}>
-                                                <AppText variant="bodyMediumBold" style={styles.accent}>
-                                                    {t('subscription:paywall.referral.apply')}
-                                                </AppText>
-                                            </Pressable>
-                                        }
-                                    />
-                                ) : (
-                                    <Pressable
-                                        accessibilityRole="button"
-                                        onPress={openCodeField}
-                                        style={styles.referralPrompt}
-                                    >
-                                        <AppText variant="titleSmall">🎟️</AppText>
-                                        <AppText variant="bodyMediumBold" style={styles.accent}>
-                                            {t('subscription:paywall.referral.prompt')}
-                                        </AppText>
-                                    </Pressable>
-                                )}
-                            </>
-                        )}
-
-                        <View style={styles.cta}>
-                            <AppButton
-                                fullWidth
-                                label={t(isFree ? 'subscription:paywall.cta-free' : 'subscription:paywall.cta')}
-                                isLoading={isSubscribing}
-                                onPress={handleSubscribe}
-                            />
-                            <AppText variant="bodySmallReg" style={[styles.centered, styles.muted]}>
-                                {isFree
-                                    ? t('subscription:paywall.disclaimer-free')
-                                    : trialEnabled
-                                      ? t('subscription:paywall.disclaimer-trial', {
-                                            days: yearPlan?.trialDays ?? 0,
-                                            price: formatPrice(selectedPlan?.priceCents ?? 0, selectedPlan?.currency),
-                                        })
-                                      : t('subscription:paywall.disclaimer', {
-                                            price: formatPrice(selectedPlan?.priceCents ?? 0, selectedPlan?.currency),
-                                        })}
-                            </AppText>
-                        </View>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                </View>
+            </ScrollView>
         </AppScreen>
     );
 };

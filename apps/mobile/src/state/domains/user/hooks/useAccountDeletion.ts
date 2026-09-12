@@ -7,9 +7,8 @@ import { queryClient } from '@/shared/services';
 /**
  * Schedules the erasure and remembers the deadline on this device.
  *
- * The API has no route that reads a pending request back, so a restart would
- * otherwise leave the recovery screen with no clock to show — see
- * `handoff/mobile-ui-review.md` §4.
+ * `GET /auth/me` returns the same deadline on every launch, so the device copy
+ * is only a fallback for a launch without network.
  *
  * 409 `user.deletion-already-pending` means a request is already in flight;
  * the recovery screen is the right destination either way.

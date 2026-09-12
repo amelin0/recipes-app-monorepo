@@ -38,6 +38,15 @@ export type RecipesListFilters = Record<string, unknown>;
 export type ProductsListFilters = Record<string, unknown>;
 
 /**
+ * Auth-domain query-key factory. The account's own state — read before the
+ * app decides which screen to open.
+ */
+export const authKeys = {
+    /** Account state — `GET /auth/me`: verification and pending deletion. */
+    me: () => [Queries.Me] as const,
+};
+
+/**
  * User-domain query-key factory. Used by hooks in
  * `state/domains/user/hooks/` and by any consumer that needs to invalidate
  * or read user-domain caches.

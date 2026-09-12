@@ -1,7 +1,7 @@
 export type MetricKey = 'weight' | 'calories' | 'water' | 'steps' | 'waist' | 'height';
 
 /** Metrics the user can log a reading for by hand. */
-export type ReadingMetricKey = 'weight' | 'waist' | 'height';
+export type ReadingMetricKey = 'weight' | 'waist' | 'height' | 'steps';
 
 export interface ReadingMetricConfig {
     /** Nudge per tap on the stepper. */
@@ -16,6 +16,9 @@ export const READING_METRIC_CONFIG: Record<ReadingMetricKey, ReadingMetricConfig
     weight: { step: 0.1, min: 20, max: 300, precision: 1 },
     waist: { step: 0.1, min: 30, max: 200, precision: 1 },
     height: { step: 0.1, min: 50, max: 250, precision: 1 },
+    // Кроки — не вимір тіла, а денний підсумок: PUT замінює його цілком, тож
+    // верхня межа тут щедра (добовий рекорд, а не реалістична ціль).
+    steps: { step: 500, min: 0, max: 100000, precision: 0 },
 };
 
 /** Macro goals are edited from the goal screen, not the progress screens. */

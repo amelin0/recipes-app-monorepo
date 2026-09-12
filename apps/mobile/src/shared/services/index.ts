@@ -4,6 +4,7 @@ export {
     queryClient,
     invalidateQueries,
     Queries,
+    authKeys,
     userKeys,
     nutritionKeys,
     progressKeys,

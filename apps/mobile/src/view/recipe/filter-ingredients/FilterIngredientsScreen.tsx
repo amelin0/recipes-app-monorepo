@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -41,90 +41,95 @@ export const FilterIngredientsScreen = () => {
                 style={styles.overlay}
             />
 
-            <View style={styles.sheet}>
-                <View style={styles.headerBar}>
-                    <AppText variant="titleMedium" style={styles.headerTitle}>
-                        {t('recipes:filter.catalog-title')}
-                    </AppText>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t('common:actions.close')}
-                        hitSlop={8}
-                        onPress={handleClose}
-                        style={styles.closeButton}
-                    >
-                        <Ionicons name="close" size={24} color={theme.colors.elements.primary} />
-                    </Pressable>
-                </View>
+            {/* Шторка має фіксовану висоту й футер під скролом: без цього
+                клавіатура накриває і кнопку «Застосувати», і низ каталогу, а
+                догортати нікуди — скрол закінчується під нею. */}
+            <KeyboardAvoidingView style={styles.sheetWrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <View style={styles.sheet}>
+                    <View style={styles.headerBar}>
+                        <AppText variant="titleMedium" style={styles.headerTitle}>
+                            {t('recipes:filter.catalog-title')}
+                        </AppText>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t('common:actions.close')}
+                            hitSlop={8}
+                            onPress={handleClose}
+                            style={styles.closeButton}
+                        >
+                            <Ionicons name="close" size={24} color={theme.colors.elements.primary} />
+                        </Pressable>
+                    </View>
 
-                <View style={styles.searchField}>
-                    <AppInput
-                        placeholder={t('recipes:filter.catalog-placeholder')}
-                        value={query}
-                        onChangeText={setQuery}
-                        autoCorrect={false}
-                        leftSlot={<SearchIcon width={20} height={20} color={theme.colors.elements.tertiary} />}
-                        rightSlot={
-                            query.length > 0 ? (
-                                <Pressable
-                                    accessibilityRole="button"
-                                    accessibilityLabel={t('recipes:search.clear-a11y')}
-                                    hitSlop={8}
-                                    onPress={handleClear}
-                                >
-                                    <Ionicons
-                                        name="close-circle-outline"
-                                        size={20}
-                                        color={theme.colors.elements.tertiary}
+                    <View style={styles.searchField}>
+                        <AppInput
+                            placeholder={t('recipes:filter.catalog-placeholder')}
+                            value={query}
+                            onChangeText={setQuery}
+                            autoCorrect={false}
+                            leftSlot={<SearchIcon width={20} height={20} color={theme.colors.elements.tertiary} />}
+                            rightSlot={
+                                query.length > 0 ? (
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t('recipes:search.clear-a11y')}
+                                        hitSlop={8}
+                                        onPress={handleClear}
+                                    >
+                                        <Ionicons
+                                            name="close-circle-outline"
+                                            size={20}
+                                            color={theme.colors.elements.tertiary}
+                                        />
+                                    </Pressable>
+                                ) : undefined
+                            }
+                        />
+                    </View>
+
+                    <ScrollView
+                        style={styles.scrollArea}
+                        contentContainerStyle={styles.scroll}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        onScrollEndDrag={handleEndReached}
+                        onMomentumScrollEnd={handleEndReached}
+                    >
+                        <QueryState
+                            isLoading={isLoading}
+                            isError={isError}
+                            isEmpty={isEmpty}
+                            emptyMessage={t('recipes:list.empty')}
+                            onRetry={handleRetry}
+                            style={styles.stateBox}
+                        >
+                            <View style={styles.chipsWrap}>
+                                {catalog.map(product => (
+                                    <Chip
+                                        key={product.id}
+                                        label={product.name}
+                                        selected={isSelected(product.id)}
+                                        onPress={() => handleToggle(product.id)}
                                     />
-                                </Pressable>
-                            ) : undefined
-                        }
-                    />
+                                ))}
+                            </View>
+                        </QueryState>
+                    </ScrollView>
+
+                    <ScreenActions style={styles.footer}>
+                        <AppButton
+                            label={
+                                selectedCount > 0
+                                    ? t('recipes:filter.apply-count', { count: selectedCount })
+                                    : t('recipes:filter.apply')
+                            }
+                            disabled={selectedCount === 0}
+                            onPress={handleApply}
+                            fullWidth
+                        />
+                    </ScreenActions>
                 </View>
-
-                <ScrollView
-                    style={styles.scrollArea}
-                    contentContainerStyle={styles.scroll}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    onScrollEndDrag={handleEndReached}
-                    onMomentumScrollEnd={handleEndReached}
-                >
-                    <QueryState
-                        isLoading={isLoading}
-                        isError={isError}
-                        isEmpty={isEmpty}
-                        emptyMessage={t('recipes:list.empty')}
-                        onRetry={handleRetry}
-                        style={styles.stateBox}
-                    >
-                        <View style={styles.chipsWrap}>
-                            {catalog.map(product => (
-                                <Chip
-                                    key={product.id}
-                                    label={product.name}
-                                    selected={isSelected(product.id)}
-                                    onPress={() => handleToggle(product.id)}
-                                />
-                            ))}
-                        </View>
-                    </QueryState>
-                </ScrollView>
-
-                <ScreenActions style={styles.footer}>
-                    <AppButton
-                        label={
-                            selectedCount > 0
-                                ? t('recipes:filter.apply-count', { count: selectedCount })
-                                : t('recipes:filter.apply')
-                        }
-                        disabled={selectedCount === 0}
-                        onPress={handleApply}
-                        fullWidth
-                    />
-                </ScreenActions>
-            </View>
+            </KeyboardAvoidingView>
         </View>
     );
 };
@@ -132,6 +137,9 @@ export const FilterIngredientsScreen = () => {
 const styles = StyleSheet.create(theme => ({
     root: {
         flex: 1,
+        justifyContent: 'flex-end',
+    },
+    sheetWrap: {
         justifyContent: 'flex-end',
     },
     overlay: {

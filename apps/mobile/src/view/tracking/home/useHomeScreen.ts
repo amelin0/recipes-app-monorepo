@@ -220,6 +220,8 @@ export const useHomeScreen = () => {
         handleWaterPress: comingSoon,
         handleAddWater,
         handleStepsPress: comingSoon,
-        handleAddSteps: comingSoon,
+        // Кроки — денний підсумок: той самий шит, що й на прогресі, лише
+        // повертає він на головну, звідки його відкрили.
+        handleAddSteps: () => router.push({ pathname: '/(app)/metric-add', params: { metric: 'steps', from: 'home' } }),
     };
 };
