@@ -390,6 +390,65 @@ groups:
                       maxDataPoints: 43200
 
     - orgId: 1
+      name: deploy
+      folder: 'DNS'
+      interval: 1m
+      rules:
+          # The Telegram message from deploy.sh says a deploy failed the moment
+          # it happens. This says it is STILL the case: a failed or rolled-back
+          # deploy leaves healthy containers, so no other rule here notices
+          # that the server runs an older build than development.
+          #
+          # noDataState is OK: the metric exists only once a deploy.sh that
+          # writes it has run, and paging before that would be about nothing.
+          # It does not see a deploy that never started (runner offline) —
+          # that needs a signal from outside the server.
+          - uid: dns-deploy-failed
+            title: last deploy did not ship
+            condition: C
+            for: 15m
+            noDataState: OK
+            execErrState: Error
+            labels:
+                severity: warning
+                service: deploy
+            annotations:
+                summary: 'The last deploy failed or was rolled back — the dev server is running an older build than development'
+                description: >-
+                    deploy.sh reports every outcome to Telegram when it happens; this rule
+                    keeps saying so until a deploy succeeds. Open the last run of the deploy
+                    workflow in GitHub Actions. A rollback leaves the migrations of the failed
+                    build applied, so fix forward rather than waiting.
+                runbook_url: https://github.com/amelin0/recipes-app-monorepo/blob/development/infra/prod/README.md
+            data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: prometheus
+                  model:
+                      refId: A
+                      editorMode: code
+                      expr: 'dns_deploy_last_run_success'
+                      instant: true
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                - refId: C
+                  relativeTimeRange: { from: 0, to: 0 }
+                  datasourceUid: __expr__
+                  model:
+                      refId: C
+                      type: threshold
+                      expression: A
+                      datasource: { type: __expr__, uid: __expr__ }
+                      conditions:
+                          - evaluator: { type: lt, params: [1] }
+                            operator: { type: and }
+                            query: { params: [] }
+                            reducer: { type: last, params: [] }
+                            type: query
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+
+    - orgId: 1
       name: host
       folder: 'DNS'
       interval: 1m
