@@ -184,8 +184,18 @@ export class TokenService {
         };
     }
 
+    /**
+     * `user` must be the row read when the session was granted: its revocation
+     * marker decides `iat`. `jsonwebtoken` counts `exp` from a supplied `iat`,
+     * so the token's lifetime stays the configured one.
+     */
     private signAccessToken(user: UserEntity): Promise<string> {
-        const payload: AccessTokenPayload = { sub: user.id, email: user.email, type: 'access' };
+        const payload: AccessTokenPayload = {
+            sub: user.id,
+            email: user.email,
+            type: 'access',
+            iat: user.accessTokenIssuedAt(),
+        };
 
         return this.jwtService.signAsync(payload, {
             secret: this.configService.getOrThrow('auth.access.secret', { infer: true }),
