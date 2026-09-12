@@ -62,7 +62,10 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={styles.flex}>
                 <SafeAreaProvider>
-                    <StatusBar style="auto" />
+                    {/* Застосунок завжди світлий (darkTheme = дзеркало
+                        lightTheme), тож «auto» при системній темній темі робив
+                        іконки статус-бару білими на білому екрані. */}
+                    <StatusBar style="dark" />
                     <Slot />
                     <RNToast config={toastConfig} />
                 </SafeAreaProvider>

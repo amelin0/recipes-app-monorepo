@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
-import { formatDayHeaderAccusative } from '@/shared/helpers';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { PRODUCT_CATALOG } from '../shopping.constants';
@@ -22,7 +21,6 @@ export const useAddProductScreen = () => {
     }, [query, t]);
 
     return {
-        subtitle: t('shopping:add.subtitle', { date: formatDayHeaderAccusative() }),
         query,
         setQuery,
         products,

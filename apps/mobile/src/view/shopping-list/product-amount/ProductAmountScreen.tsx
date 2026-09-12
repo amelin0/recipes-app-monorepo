@@ -64,8 +64,9 @@ export const ProductAmountScreen = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
+    // Без flex: 1 — з sheetAllowedDetents: 'fitToContents' висоту шита задає
+    // саме вміст (на Android flex: 1 розтягнув би корінь на весь екран).
     sheet: {
-        flex: 1,
         backgroundColor: theme.colors.semantic.white,
     },
     headerBar: {

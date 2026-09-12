@@ -44,6 +44,8 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
                             width={18}
                             height={18}
                             color={recipe.isFavorite ? theme.colors.semantic.negative : theme.colors.elements.primary}
+                            // Активне серце залите, не лише обведене.
+                            fill={recipe.isFavorite ? theme.colors.semantic.negative : 'none'}
                         />
                     </Pressable>
                 </View>
@@ -75,12 +77,20 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
     );
 };
 
-const styles = StyleSheet.create(theme => ({
+/** Сітка: дві колонки при 16pt полях екрана і 12pt жолобі між картками. */
+const GRID_COLUMNS = 2;
+const SCREEN_PADDING = 16;
+const GRID_GUTTER = 12;
+
+const styles = StyleSheet.create((theme, rt) => ({
     card: (isList: boolean) => ({
-        flexGrow: isList ? 0 : 1,
-        flexBasis: isList ? 'auto' : '46%',
-        width: isList ? '100%' : undefined,
-        minWidth: isList ? undefined : 140,
+        // Ширина рахується від екрана: відсотковий flexBasis у wrap-рядку
+        // ненадійний, а flexGrow розтягував непарну останню картку на весь ряд.
+        flexGrow: 0,
+        flexShrink: 0,
+        width: isList
+            ? '100%'
+            : (rt.screen.width - SCREEN_PADDING * 2 - GRID_GUTTER * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
         borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: theme.colors.forms.lightBorder,

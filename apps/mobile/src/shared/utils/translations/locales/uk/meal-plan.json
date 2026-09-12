@@ -1,7 +1,6 @@
 {
     "screen": {
         "title": "План харчування",
-        "week-subtitle": "на тиждень, {{range}}",
         "planned-for-day": "Заплановано на день",
         "change-goal": "Змінити ціль",
         "kcal-chip": "ккал",

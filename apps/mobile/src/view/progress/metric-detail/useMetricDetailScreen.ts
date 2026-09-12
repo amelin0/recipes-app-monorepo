@@ -209,6 +209,7 @@ export const useMetricDetailScreen = () => {
                             label: t('progress:legend.under'),
                             value: String(MOCK_CALORIES_DETAIL.daysUnder),
                             unit: ofDays,
+                            valueColor: theme.colors.semantic.orange,
                         },
                         {
                             key: 'within',
@@ -221,6 +222,7 @@ export const useMetricDetailScreen = () => {
                             label: t('progress:detail.outside-norm'),
                             value: String(MOCK_CALORIES_DETAIL.daysOver),
                             unit: ofDays,
+                            valueColor: theme.colors.semantic.negative,
                         },
                     ],
                 ];
@@ -229,7 +231,7 @@ export const useMetricDetailScreen = () => {
                 // Waist and height carry no period summary in the design.
                 return [];
         }
-    }, [format, metric, t, units]);
+    }, [format, metric, t, theme, units]);
 
     const linePoints: LinePoint[] = useMemo(() => {
         if (metric === 'weight') return MOCK_WEIGHT_DETAIL.points;

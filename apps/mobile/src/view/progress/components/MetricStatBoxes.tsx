@@ -10,6 +10,12 @@ export interface MetricStatBox {
     label: string;
     value: string;
     unit: string;
+    /**
+     * Фарбує число. Лічильники днів КБЖВ мають колір результату — «Недобір»
+     * Semantic/orange (673:32971), «Поза нормою» Semantic/negative (673:33799);
+     * решта лишає Branding/primary.
+     */
+    valueColor?: string;
 }
 
 export interface MetricStatBoxesProps {
@@ -31,7 +37,10 @@ export const MetricStatBoxes = ({ rows }: MetricStatBoxesProps) => (
                         <AppText variant="bodySmallReg" style={styles.centered}>
                             {box.label}
                         </AppText>
-                        <AppText variant="titleSmall" style={styles.centered}>
+                        <AppText
+                            variant="titleSmall"
+                            style={[styles.centered, box.valueColor ? { color: box.valueColor } : null]}
+                        >
                             {box.value}
                         </AppText>
                         <AppText variant="bodySmallReg" style={[styles.centered, styles.muted]}>

@@ -6,7 +6,7 @@
         "scheme": "rationfit",
         "orientation": "portrait",
         "newArchEnabled": true,
-        "userInterfaceStyle": "automatic",
+        "userInterfaceStyle": "light",
         "icon": "./assets/images/app/icon.png",
         "ios": {
             "supportsTablet": false,

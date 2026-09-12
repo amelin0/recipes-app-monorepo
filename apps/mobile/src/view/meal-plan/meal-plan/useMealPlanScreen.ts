@@ -6,7 +6,7 @@ import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 
-import { MOCK_PLAN_WEEK_RANGE, type PlanMealKey } from '../meal-plan.constants';
+import { type PlanMealKey } from '../meal-plan.constants';
 
 export const useMealPlanScreen = () => {
     const { t } = useAppTranslation(['meal-plan', 'common']);
@@ -22,6 +22,17 @@ export const useMealPlanScreen = () => {
     const day = useMemo(() => week.find(item => item.key === selectedDayKey) ?? week[0], [selectedDayKey, week]);
 
     const hasDishes = (day?.meals ?? []).some(meal => meal.dishes.length > 0);
+
+    // Страви цього дня, яких ще немає в списку покупок. Порожній масив вимикає
+    // нижню кнопку: додавати нема чого, доки не зʼявиться нова страва.
+    const pendingDishIds = useMemo(
+        () =>
+            (day?.meals ?? [])
+                .flatMap(meal => meal.dishes)
+                .map(dish => dish.id)
+                .filter(dishId => !inBasket[`${selectedDayKey}:${dishId}`]),
+        [day, inBasket, selectedDayKey],
+    );
 
     const handleDeleteDish = useCallback(
         (mealKey: PlanMealKey, dishId: string) => {
@@ -42,21 +53,24 @@ export const useMealPlanScreen = () => {
 
     const handleAddAllToList = useCallback(() => {
         // TODO: POST /shopping-list/items for the whole day once the API ships.
+        if (pendingDishIds.length === 0) return;
         setInBasket(prev => {
             const next = { ...prev };
-            day?.meals.forEach(meal => meal.dishes.forEach(dish => (next[`${selectedDayKey}:${dish.id}`] = true)));
+            // Додаємо лише те, чого ще немає в списку.
+            pendingDishIds.forEach(dishId => (next[`${selectedDayKey}:${dishId}`] = true));
             return next;
         });
         ToastService.success(t('meal-plan:screen.added-to-list'));
-    }, [day, selectedDayKey, t]);
+    }, [pendingDishIds, selectedDayKey, t]);
 
     return {
         week,
-        weekRange: MOCK_PLAN_WEEK_RANGE,
         day,
         selectedDayKey,
         setSelectedDayKey,
         hasDishes,
+        /** Чи лишилось що додавати до списку покупок цього дня. */
+        hasPendingForList: pendingDishIds.length > 0,
         resolveDishAction: (dishId: string) =>
             inBasket[`${selectedDayKey}:${dishId}`] ? ('basket-added' as const) : ('basket' as const),
         /** «Перекус» has no time and no details entry in the design (961:59371). */

@@ -50,7 +50,9 @@ const styles = StyleSheet.create(theme => ({
         padding: theme.spacing[4],
         borderRadius: theme.radius.xl,
         backgroundColor: theme.colors.semantic.white,
-        overflow: 'hidden',
+        // Без overflow: 'hidden' — на iOS кліп вбиває drop shadow, а саме тінь
+        // відділяє білу картку від білої сторінки. Обрізати тут нічого:
+        // весь вміст сидить усередині 16pt падінгу.
         ...theme.shadow.block,
     },
     header: {

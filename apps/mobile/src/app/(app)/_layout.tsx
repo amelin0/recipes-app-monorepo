@@ -60,8 +60,10 @@ export default function AppLayout() {
                 <Stack.Screen
                     name="metric-add"
                     options={{
+                        // Як і product-amount: у шиті є поле вводу, тож висота
+                        // рахується по вмісту — інакше над клавіатурою діра.
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.42],
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}
@@ -106,9 +108,11 @@ export default function AppLayout() {
                 <Stack.Screen
                     name="product-amount"
                     options={{
-                        // Шит вибору кількості (Порція | Штука | Грам).
+                        // Шит вибору кількості (Порція | Штука | Грам). Висота
+                        // по вмісту: з фіксованим детентом зайва висота їде
+                        // вгору разом із шитом і лишає діру над клавіатурою.
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.5],
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}

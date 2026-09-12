@@ -15,7 +15,9 @@ export interface CatalogProduct {
 // «Додати продукти» Figma mock (435:16021).
 export const PRODUCT_CATALOG: CatalogProduct[] = [
     { key: 'chicken-fillet', emoji: '🍗', categoryKey: 'meat', kcalPer100: 110, pieceGrams: 89 },
-    { key: 'egg', emoji: '🥚', categoryKey: 'other', kcalPer100: 155 },
+    // Яйця йдуть у «Молочні» — так само, як їх сідить бекенд
+    // (packages/database/src/seeds/recipes.seed.ts), де групи «Яйця» немає.
+    { key: 'egg', emoji: '🥚', categoryKey: 'dairy', kcalPer100: 155 },
     { key: 'tomato', emoji: '🍅', categoryKey: 'vegetables', kcalPer100: 18 },
     { key: 'rice', emoji: '🍚', categoryKey: 'cereals', kcalPer100: 130 },
     { key: 'buckwheat', emoji: '🌾', categoryKey: 'cereals', kcalPer100: 343 },

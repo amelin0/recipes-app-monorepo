@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppText } from '@/shared/ui/components';
+import { AppText, MacroBadge, macroPalette, type MacroKey } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 export interface PortionMacrosRowProps {
@@ -13,57 +13,35 @@ export interface PortionMacrosRowProps {
     carbs: number;
 }
 
-/** КБЖВ of the selected portion: «ккал 842 Б 42г Ж 124г В 12г». */
+const ORDER: MacroKey[] = ['protein', 'fats', 'carbs'];
+
+/**
+ * КБЖВ of the selected portion: «ккал 842 Б 42г Ж 124г В 12г» (811:58874).
+ * Чотири світло-сірі чипи; літера макроса — у спільному круглому бейджі 20×20,
+ * калорійність — у пілюлі на Active/tertiary.
+ */
 export const PortionMacrosRow = ({ kcal, protein, fats, carbs }: PortionMacrosRowProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['recipes', 'tracking']);
-
-    const macros = [
-        {
-            key: 'protein',
-            label: t('tracking:home.macros.protein'),
-            value: protein,
-            color: theme.colors.semantic.negative,
-            bg: theme.colors.semantic.lightNegative,
-        },
-        {
-            key: 'fats',
-            label: t('tracking:home.macros.fats'),
-            value: fats,
-            color: theme.colors.semantic.positive,
-            bg: theme.colors.semantic.lightPositive,
-        },
-        {
-            key: 'carbs',
-            label: t('tracking:home.macros.carbs'),
-            value: carbs,
-            color: theme.colors.semantic.ocean,
-            bg: theme.colors.semantic.lightOcean,
-        },
-    ];
+    const palette = macroPalette(theme.colors);
+    const grams: Record<MacroKey, number> = { protein, fats, carbs };
 
     return (
         <View style={styles.row}>
-            <View style={styles.macro}>
+            <View style={styles.chip}>
                 <View style={styles.kcalBadge}>
-                    <AppText variant="bodySmallBold" style={styles.kcalLabel}>
-                        {t('recipes:details.kcal-label')}
-                    </AppText>
+                    <AppText variant="bodySmallReg">{t('recipes:details.kcal-label')}</AppText>
                 </View>
-                <AppText variant="bodySmallReg" color="tertiary">
-                    {kcal.toLocaleString('en-US')}
-                </AppText>
+                <AppText variant="bodySmallReg">{kcal.toLocaleString('en-US')}</AppText>
             </View>
-            {macros.map(macro => (
-                <View key={macro.key} style={styles.macro}>
-                    <View style={[styles.badge, { backgroundColor: macro.bg }]}>
-                        <AppText variant="bodySmallBold" style={{ color: macro.color }}>
-                            {macro.label}
-                        </AppText>
-                    </View>
-                    <AppText variant="bodySmallReg" color="tertiary">
-                        {t('recipes:portions.grams-value', { value: macro.value })}
-                    </AppText>
+            {ORDER.map(key => (
+                <View key={key} style={styles.chip}>
+                    <MacroBadge
+                        letter={t(`tracking:home.macros.${key}`)}
+                        color={palette[key].color}
+                        backgroundColor={palette[key].backgroundColor}
+                    />
+                    <AppText variant="bodySmallReg">{t('recipes:portions.grams-value', { value: grams[key] })}</AppText>
                 </View>
             ))}
         </View>
@@ -74,28 +52,28 @@ const styles = StyleSheet.create(theme => ({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        // Чотири чипи вміщаються в 343; wrap лишається запобіжником для
+        // чотиризначних калорій на великому розмірі шрифту.
         flexWrap: 'wrap',
-        gap: theme.spacing[3],
+        gap: theme.spacing[2],
     },
-    macro: {
+    // Той самий 14pt чип, що й у зведенні страви (NutritionSummaryRow), але
+    // щільніший — 4pt падінг, і кожен чип хугає свій вміст (811:58875).
+    chip: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.spacing[1],
+        padding: theme.spacing[1],
+        borderRadius: 14,
+        backgroundColor: theme.colors.semantic.lightGrey,
     },
     kcalBadge: {
+        height: 20,
         paddingHorizontal: theme.spacing[1],
-        paddingVertical: 2,
-        borderRadius: 4,
-        backgroundColor: theme.colors.semantic.white,
-    },
-    kcalLabel: {
-        color: theme.colors.semantic.darkGrey,
-    },
-    badge: {
-        paddingHorizontal: theme.spacing[1],
-        paddingVertical: 2,
-        borderRadius: 4,
         alignItems: 'center',
         justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.active.tertiary,
     },
 }));

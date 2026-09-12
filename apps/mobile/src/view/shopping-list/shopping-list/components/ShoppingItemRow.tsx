@@ -12,7 +12,7 @@ export interface ShoppingItemRowProps {
     onToggle: () => void;
 }
 
-/** Shopping list row: round checkbox, name + kcal, amount; checked = muted. */
+/** Shopping list row: round checkbox, name, amount; checked = muted (435:16318). */
 export const ShoppingItemRow = ({ item, onToggle }: ShoppingItemRowProps) => {
     const { t } = useAppTranslation(['shopping']);
     const name = t(`shopping:products.${item.productKey}`);
@@ -34,9 +34,6 @@ export const ShoppingItemRow = ({ item, onToggle }: ShoppingItemRowProps) => {
                 <AppText variant="bodySmallBold" style={styles.muted(item.checked)}>
                     {name}
                 </AppText>
-                <AppText variant="bodySmallReg" color="tertiary" style={styles.muted(item.checked)}>
-                    {t('shopping:list.kcal', { count: item.kcal })}
-                </AppText>
             </View>
             <AppText variant="bodySmallReg" color="tertiary" style={styles.muted(item.checked)}>
                 {amountLabel}
@@ -51,15 +48,16 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         gap: theme.spacing[3],
         paddingHorizontal: theme.spacing[3],
+        // Однорядковий рядок (435:16318): висоту тримає minHeight, тож довга
+        // назва в два рядки переростає її, а коротка не стискає рядок.
         paddingVertical: theme.spacing[2],
+        minHeight: 44,
         borderRadius: theme.radius.lg,
         backgroundColor: pressed ? theme.colors.active.tertiary : theme.colors.semantic.lightGrey,
         width: '100%',
     }),
     texts: {
         flex: 1,
-        gap: theme.spacing[1],
-        paddingVertical: theme.spacing[2],
     },
     muted: (checked: boolean) => ({
         color: checked ? theme.colors.semantic.disabled : undefined,

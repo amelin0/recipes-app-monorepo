@@ -9,9 +9,6 @@ export {
     type PlanTip,
 } from '@/state/domains/meal-plan';
 
-/** «18 - 24 Травня» in the header subtitle (961:59383). */
-export const MOCK_PLAN_WEEK_RANGE = '18 - 24 Травня';
-
 export interface CopyPlanDay {
     key: string;
     /** «Вівторок» */

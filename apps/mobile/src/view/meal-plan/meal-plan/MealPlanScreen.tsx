@@ -18,11 +18,11 @@ export const MealPlanScreen = () => {
     const { t } = useAppTranslation(['meal-plan']);
     const {
         week,
-        weekRange,
         day,
         selectedDayKey,
         setSelectedDayKey,
         hasDishes,
+        hasPendingForList,
         resolveDishAction,
         mealHasDetails,
         handleChangeGoal,
@@ -38,9 +38,6 @@ export const MealPlanScreen = () => {
         <AppScreen>
             <View style={styles.header}>
                 <AppText variant="titleMedium">{t('meal-plan:screen.title')}</AppText>
-                <AppText variant="bodyMediumReg" style={styles.subtitle}>
-                    {t('meal-plan:screen.week-subtitle', { range: weekRange })}
-                </AppText>
             </View>
 
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -67,7 +64,9 @@ export const MealPlanScreen = () => {
                     <PlanActionButton
                         icon={BasketAddIcon}
                         label={t('meal-plan:screen.add-to-list')}
-                        disabled={!hasDishes}
+                        // Вимкнена, коли всі страви дня вже в списку; нова
+                        // страва знову вмикає її.
+                        disabled={!hasPendingForList}
                         onPress={handleAddAllToList}
                     />
                     <PlanActionButton
@@ -87,9 +86,6 @@ const styles = StyleSheet.create(theme => ({
         paddingHorizontal: theme.spacing[4],
         paddingBottom: theme.spacing[2],
         gap: theme.spacing[1],
-    },
-    subtitle: {
-        color: theme.colors.semantic.darkGrey,
     },
     scroll: {
         paddingHorizontal: theme.spacing[4],

@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppInput, AppScreen, AppText, CircleBackButton } from '@/shared/ui/components';
+import { AppInput, AppScreen, AppText, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
@@ -15,21 +15,13 @@ import { useAddProductScreen } from './useAddProductScreen';
 export const AddProductScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['shopping']);
-    const { subtitle, query, setQuery, products, handleProductPress } = useAddProductScreen();
+    const { query, setQuery, products, handleProductPress } = useAddProductScreen();
 
     return (
         <AppScreen>
-            {/* У макеті хедер без кнопки назад — додаємо CircleBackButton, бо
-                інакше з екрана немає виходу (свайп-бек ненадійний). */}
-            <View style={styles.headerBar}>
-                <CircleBackButton />
-                <View style={styles.headerTexts}>
-                    <AppText variant="titleMedium">{t('shopping:add.title')}</AppText>
-                    <AppText variant="bodyMediumReg" color="tertiary">
-                        {subtitle}
-                    </AppText>
-                </View>
-            </View>
+            {/* Компактний нав-бар RFDS (686:26467): назад ліворуч, заголовок
+                по центру, без підзаголовка з датою. */}
+            <TopBar title={t('shopping:add.title')} />
 
             <View style={styles.search}>
                 <AppInput
@@ -70,18 +62,6 @@ export const AddProductScreen = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-    headerBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing[3],
-        minHeight: 72,
-        paddingHorizontal: theme.spacing[4],
-        paddingVertical: theme.spacing[2],
-    },
-    headerTexts: {
-        flex: 1,
-        gap: theme.spacing[1],
-    },
     search: {
         paddingHorizontal: theme.spacing[4],
         paddingVertical: theme.spacing[2],

@@ -122,6 +122,8 @@ export const MealDetailsScreen = () => {
                             width={24}
                             height={24}
                             color={isFavorite ? theme.colors.semantic.negative : theme.colors.elements.primary}
+                            // Активне серце залите, не лише обведене.
+                            fill={isFavorite ? theme.colors.semantic.negative : 'none'}
                         />
                     </CircleIconButton>
                     <CircleIconButton accessibilityLabel={t('recipes:details.edit-a11y')} onPress={handleEdit}>
