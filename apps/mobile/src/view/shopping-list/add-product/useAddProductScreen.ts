@@ -2,29 +2,33 @@ import { useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
-import { useAppTranslation } from '@/shared/utils/translations';
-
-import { PRODUCT_CATALOG } from '../shopping.constants';
+import { useDebouncedValue } from '@/shared/hooks';
+import { useGetProducts } from '@/state/domains/catalog';
 
 export const useAddProductScreen = () => {
-    const { t } = useAppTranslation(['shopping']);
     const [query, setQuery] = useState('');
+    // Пошук на сервері: каталог більший за сторінку, тож фільтрувати вже
+    // завантажене означало б шукати лише серед перших двадцяти.
+    const search = useDebouncedValue(query.trim(), 300);
 
-    const products = useMemo(() => {
-        const normalized = query.trim().toLowerCase();
-        const withNames = PRODUCT_CATALOG.map(product => ({
-            ...product,
-            name: t(`shopping:products.${product.key}`),
-        }));
-        if (!normalized) return withNames;
-        return withNames.filter(product => product.name.toLowerCase().includes(normalized));
-    }, [query, t]);
+    const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGetProducts(
+        search ? { q: search } : {},
+    );
+
+    const products = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
 
     return {
         query,
         setQuery,
         products,
-        handleProductPress: (key: string) =>
-            router.push({ pathname: '/(app)/product-amount', params: { productKey: key } }),
+        isLoading,
+        isError,
+        isEmpty: !isLoading && !isError && products.length === 0,
+        handleRetry: refetch,
+        handleEndReached: () => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+        },
+        handleProductPress: (productId: string) =>
+            router.push({ pathname: '/(app)/product-amount', params: { productId } }),
     };
 };

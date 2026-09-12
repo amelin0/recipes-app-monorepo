@@ -3,39 +3,38 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
+import type { ShoppingItem } from '@/data';
 import { AppCheckbox, AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
-import type { ShoppingListItem } from '@/state/domains/shopping-list';
 
 export interface ShoppingItemRowProps {
-    item: ShoppingListItem;
+    item: ShoppingItem;
     onToggle: () => void;
 }
 
 /** Shopping list row: round checkbox, name, amount; checked = muted (435:16318). */
 export const ShoppingItemRow = ({ item, onToggle }: ShoppingItemRowProps) => {
     const { t } = useAppTranslation(['shopping']);
-    const name = t(`shopping:products.${item.productKey}`);
-    const amountLabel =
-        item.unit === 'ml'
-            ? t('shopping:list.ml', { value: item.amount.toLocaleString('en-US') })
-            : t('shopping:list.grams', { value: item.amount.toLocaleString('en-US') });
+    const name = item.name;
+    // Грами — єдина одиниця, яку несе відповідь: обʼєм чекає, поки продукти
+    // почнуть його вказувати (weekly-list FR-002).
+    const amountLabel = t('shopping:list.grams', { value: Math.round(item.amountG).toLocaleString('en-US') });
 
     return (
         <Pressable
             accessibilityRole="checkbox"
-            accessibilityState={{ checked: item.checked }}
+            accessibilityState={{ checked: item.purchased }}
             accessibilityLabel={name}
             onPress={onToggle}
             style={({ pressed }) => styles.row(pressed)}
         >
-            <AppCheckbox checked={item.checked} />
+            <AppCheckbox checked={item.purchased} />
             <View style={styles.texts}>
-                <AppText variant="bodySmallBold" style={styles.muted(item.checked)}>
+                <AppText variant="bodySmallBold" style={styles.muted(item.purchased)}>
                     {name}
                 </AppText>
             </View>
-            <AppText variant="bodySmallReg" color="tertiary" style={styles.muted(item.checked)}>
+            <AppText variant="bodySmallReg" color="tertiary" style={styles.muted(item.purchased)}>
                 {amountLabel}
             </AppText>
         </Pressable>

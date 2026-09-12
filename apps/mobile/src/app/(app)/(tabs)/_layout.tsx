@@ -3,11 +3,16 @@ import { Tabs } from 'expo-router';
 import { AppTabBar } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
-import { selectVisibleShoppingItems } from '@/state/domains/shopping-list';
+import { useGetShoppingList } from '@/state/domains/shopping-list';
 
 export default function TabsLayout() {
     const { t } = useAppTranslation();
-    const shoppingCount = useStore(state => selectVisibleShoppingItems(state).length);
+
+    // Лічильник рахує сервер — свій підрахунок тут розійшовся б зі списком,
+    // який ховає куплене й підсумовує план на кожному читанні.
+    const from = useStore(state => state.shoppingFrom);
+    const to = useStore(state => state.shoppingTo);
+    const shoppingCount = useGetShoppingList(from, to).data?.visibleCount ?? 0;
 
     return (
         <Tabs screenOptions={{ headerShown: false }} tabBar={props => <AppTabBar {...props} />}>

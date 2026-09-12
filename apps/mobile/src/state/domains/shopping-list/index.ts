@@ -1,9 +1,2 @@
 export * from './hooks';
-export {
-    createShoppingListSlice,
-    selectVisibleShoppingItems,
-    type NewShoppingItem,
-    type ShoppingAmountUnit,
-    type ShoppingListItem,
-    type ShoppingListSlice,
-} from './shopping-list.slice';
+export { createShoppingListSlice, SHOPPING_WINDOW_DAYS, type ShoppingListSlice } from './shopping-list.slice';

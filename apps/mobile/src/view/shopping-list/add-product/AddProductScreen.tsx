@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppInput, AppScreen, AppText, TopBar } from '@/shared/ui/components';
+import { AppInput, AppScreen, AppText, QueryState, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
@@ -15,7 +15,17 @@ import { useAddProductScreen } from './useAddProductScreen';
 export const AddProductScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['shopping']);
-    const { query, setQuery, products, handleProductPress } = useAddProductScreen();
+    const {
+        query,
+        setQuery,
+        products,
+        isLoading,
+        isError,
+        isEmpty,
+        handleRetry,
+        handleEndReached,
+        handleProductPress,
+    } = useAddProductScreen();
 
     return (
         <AppScreen>
@@ -38,23 +48,29 @@ export const AddProductScreen = () => {
                 contentContainerStyle={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                onScrollEndDrag={handleEndReached}
+                onMomentumScrollEnd={handleEndReached}
             >
-                {products.length > 0 ? (
-                    products.map(product => (
-                        <ProductRow
-                            key={product.key}
-                            emoji={product.emoji}
-                            name={product.name}
-                            onPress={() => handleProductPress(product.key)}
-                        />
-                    ))
-                ) : (
+                {isEmpty ? (
                     <View style={styles.empty}>
                         <ShrugMascot width={200} height={200} />
                         <AppText variant="bodyMediumReg" color="tertiary" style={styles.emptyText}>
                             {t('shopping:add.empty')}
                         </AppText>
                     </View>
+                ) : (
+                    <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry} style={styles.stateBox}>
+                        {products.map(product => (
+                            <ProductRow
+                                key={product.id}
+                                // Продукт несе емодзі своєї полиці, власного —
+                                // ні; без групи лишається нейтральна плитка.
+                                emoji={product.group?.emoji ?? '🥄'}
+                                name={product.name}
+                                onPress={() => handleProductPress(product.id)}
+                            />
+                        ))}
+                    </QueryState>
                 )}
             </ScrollView>
         </AppScreen>
@@ -71,6 +87,10 @@ const styles = StyleSheet.create(theme => ({
         paddingTop: theme.spacing[2],
         paddingBottom: theme.spacing[10],
         gap: theme.spacing[2],
+    },
+    stateBox: {
+        flex: 0,
+        paddingVertical: theme.spacing[8],
     },
     empty: {
         alignItems: 'center',
