@@ -10,7 +10,7 @@ import { useEmailVerifyScreen } from './useEmailVerifyScreen';
 
 export const EmailVerifyScreen = () => {
     const { t } = useAppTranslation(['auth']);
-    const { maskedEmail, code, setCode, handleComplete, resendSeconds, canResend, handleResend } =
+    const { maskedEmail, code, setCode, error, isSubmitting, handleComplete, resendSeconds, canResend, handleResend } =
         useEmailVerifyScreen();
 
     return (
@@ -23,7 +23,20 @@ export const EmailVerifyScreen = () => {
                     subtitle={t('auth:email-verify.subtitle', { email: maskedEmail })}
                 />
 
-                <OtpInput value={code} onChangeText={setCode} onComplete={handleComplete} autoFocus />
+                <OtpInput
+                    value={code}
+                    onChangeText={setCode}
+                    onComplete={handleComplete}
+                    state={error ? 'error' : 'default'}
+                    disabled={isSubmitting}
+                    autoFocus
+                />
+
+                {error ? (
+                    <AppText variant="bodySmallReg" style={styles.error}>
+                        {error}
+                    </AppText>
+                ) : null}
 
                 <View style={styles.resendRow}>
                     <AppText variant="bodyMediumReg">{t('auth:email-verify.resend-question')}</AppText>
@@ -56,5 +69,8 @@ const styles = StyleSheet.create(theme => ({
     },
     resendDisabled: {
         color: theme.colors.semantic.darkGrey,
+    },
+    error: {
+        color: theme.colors.semantic.negative,
     },
 }));

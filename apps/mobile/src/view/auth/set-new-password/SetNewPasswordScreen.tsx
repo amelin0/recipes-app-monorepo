@@ -12,7 +12,16 @@ import { useSetNewPasswordScreen } from './useSetNewPasswordScreen';
 export const SetNewPasswordScreen = () => {
     const { t } = useAppTranslation(['auth']);
     const isKeyboardVisible = useKeyboardVisible();
-    const { password, setPassword, confirmPassword, setConfirmPassword, handleSubmit } = useSetNewPasswordScreen();
+    const {
+        password,
+        setPassword,
+        confirmPassword,
+        setConfirmPassword,
+        passwordError,
+        confirmError,
+        isSubmitting,
+        handleSubmit,
+    } = useSetNewPasswordScreen();
 
     return (
         <AppScreen>
@@ -28,18 +37,25 @@ export const SetNewPasswordScreen = () => {
                             value={password}
                             onChangeText={setPassword}
                             autoComplete="new-password"
+                            errorText={passwordError}
                         />
                         <PasswordInput
                             placeholder={t('auth:set-new-password.confirm-password-placeholder')}
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             autoComplete="new-password"
+                            errorText={confirmError}
                         />
                     </View>
                 </View>
 
                 <ScreenActions style={isKeyboardVisible ? styles.actionsAboveKeyboard : undefined}>
-                    <AppButton label={t('auth:set-new-password.submit')} onPress={handleSubmit} fullWidth />
+                    <AppButton
+                        label={t('auth:set-new-password.submit')}
+                        onPress={handleSubmit}
+                        isLoading={isSubmitting}
+                        fullWidth
+                    />
                 </ScreenActions>
             </KeyboardAvoidingView>
         </AppScreen>

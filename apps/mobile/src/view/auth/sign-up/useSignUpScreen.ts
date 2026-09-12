@@ -1,40 +1,68 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
 import { ToastService } from '@/shared/services';
+import { validatePassword } from '@/shared/constants';
+import { apiErrorCode, apiFieldErrors } from '@/shared/utils';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { useSignUp } from '@/state/domains/auth';
 
 export const useSignUpScreen = () => {
-    const { t } = useAppTranslation();
+    const { t } = useAppTranslation(['auth', 'common']);
+    const signUp = useSignUp();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    // Правила пароля показуємо після першої спроби, а не під час набору:
+    // «замало символів» на другому символі — це докір, а не підказка.
+    const [submitted, setSubmitted] = useState(false);
+    const [serverError, setServerError] = useState<{ email?: string; password?: string }>({});
+
+    const passwordRule = useMemo(() => validatePassword(password), [password]);
+
+    const handleChangeEmail = useCallback((value: string) => {
+        setServerError(prev => ({ ...prev, email: undefined }));
+        setEmail(value);
+    }, []);
+
+    const handleChangePassword = useCallback((value: string) => {
+        setServerError(prev => ({ ...prev, password: undefined }));
+        setPassword(value);
+    }, []);
 
     const handleSignUp = useCallback(() => {
-        // TODO: POST /auth/register once the API ships — mock flow goes
-        // straight to the email verification step.
-        router.push({ pathname: '/(app)/(auth)/email-verify', params: { email } });
-    }, [email]);
+        setSubmitted(true);
+        if (signUp.isPending || !email.trim() || passwordRule) return;
 
-    const handleTermsOfService = useCallback(() => {
-        // TODO: open the terms-of-service page once it exists.
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
+        const trimmedEmail = email.trim();
 
-    const handlePrivacyPolicy = useCallback(() => {
-        // TODO: open the privacy-policy page once it exists.
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
+        signUp.mutate(
+            { email: trimmedEmail, password },
+            {
+                onSuccess: () => {
+                    // 201 несе порожнє тіло — сесія починається лише після коду.
+                    router.push({ pathname: '/(app)/(auth)/email-verify', params: { email: trimmedEmail } });
+                },
+                onError: error => {
+                    if (apiErrorCode(error) === 'auth.email-taken') {
+                        setServerError({ email: t('auth:sign-up.email-taken') });
+                        return;
+                    }
 
-    const handleAppleSignUp = useCallback(() => {
-        // TODO: Apple OAuth once the API ships. Same provider call as sign-in —
-        // the backend decides whether the identity creates or reuses an account.
-        ToastService.info(t('common:states.coming-soon'));
-    }, [t]);
+                    const fields = apiFieldErrors(error);
+                    if (fields.email || fields.password) {
+                        setServerError({ email: fields.email, password: fields.password });
+                        return;
+                    }
 
-    const handleGoogleSignUp = useCallback(() => {
-        // TODO: Google OAuth once the API ships.
+                    ToastService.error(t('common:states.error'));
+                },
+            },
+        );
+    }, [email, password, passwordRule, signUp, t]);
+
+    const handleComingSoon = useCallback(() => {
         ToastService.info(t('common:states.coming-soon'));
     }, [t]);
 
@@ -50,14 +78,20 @@ export const useSignUpScreen = () => {
 
     return {
         email,
-        setEmail,
+        setEmail: handleChangeEmail,
         password,
-        setPassword,
+        setPassword: handleChangePassword,
+        emailError: serverError.email,
+        passwordError:
+            serverError.password ?? (submitted && passwordRule ? t(`auth:password-rules.${passwordRule}`) : undefined),
+        isSubmitting: signUp.isPending,
         handleSignUp,
-        handleTermsOfService,
-        handlePrivacyPolicy,
-        handleAppleSignUp,
-        handleGoogleSignUp,
+        // TODO: сторінки умов і політики ще не існує.
+        handleTermsOfService: handleComingSoon,
+        handlePrivacyPolicy: handleComingSoon,
+        // TODO: POST /auth/oauth — потрібні нативні SDK Apple/Google.
+        handleAppleSignUp: handleComingSoon,
+        handleGoogleSignUp: handleComingSoon,
         handleSignIn,
     };
 };

@@ -1,4 +1,4 @@
-import '@/shared/utils/translations';
+import { useAppTranslation } from '@/shared/utils/translations';
 
 import React, { useEffect, useState } from 'react';
 
@@ -22,7 +22,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { HttpService, queryClient, ToastService, toastConfig } from '@/shared/services';
 import { AppSplash } from '@/shared/ui/widgets';
 import { useRestoreSession } from '@/state/domains/auth';
-import { useAppTranslation } from '@/shared/utils/translations';
 
 SplashScreen.preventAutoHideAsync();
 

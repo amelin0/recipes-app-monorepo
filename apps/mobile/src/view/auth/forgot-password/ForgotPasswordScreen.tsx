@@ -12,7 +12,7 @@ import { useForgotPasswordScreen } from './useForgotPasswordScreen';
 export const ForgotPasswordScreen = () => {
     const { t } = useAppTranslation(['auth']);
     const isKeyboardVisible = useKeyboardVisible();
-    const { email, setEmail, handleSubmit } = useForgotPasswordScreen();
+    const { email, setEmail, error, isSubmitting, canSubmit, handleSubmit } = useForgotPasswordScreen();
 
     return (
         <AppScreen>
@@ -33,11 +33,18 @@ export const ForgotPasswordScreen = () => {
                         autoCapitalize="none"
                         autoComplete="email"
                         autoCorrect={false}
+                        errorText={error}
                     />
                 </View>
 
                 <ScreenActions style={isKeyboardVisible ? styles.actionsAboveKeyboard : undefined}>
-                    <AppButton label={t('auth:forgot-password.submit')} onPress={handleSubmit} fullWidth />
+                    <AppButton
+                        label={t('auth:forgot-password.submit')}
+                        onPress={handleSubmit}
+                        disabled={!canSubmit}
+                        isLoading={isSubmitting}
+                        fullWidth
+                    />
                 </ScreenActions>
             </KeyboardAvoidingView>
         </AppScreen>
