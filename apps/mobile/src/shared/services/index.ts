@@ -6,6 +6,7 @@ export {
     Queries,
     userKeys,
     nutritionKeys,
+    progressKeys,
     faqKeys,
     subscriptionKeys,
     recipeKeys,

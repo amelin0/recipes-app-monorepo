@@ -44,13 +44,15 @@
     "water": {
         "title": "Споживання води",
         "subtitle": "Рекомендована добова норма — {{value}} мл/день",
-        "ml": "{{value}} мл"
+        "ml": "{{value}} мл",
+        "axis-litres": "{{value}}л"
     },
     "steps": {
         "title": "Кроки",
         "subtitle": "Відстежуйте щоденну активність.",
         "count": "{{value}} кр.",
-        "add-a11y": "Додати кроки"
+        "add-a11y": "Додати кроки",
+        "axis-thousands": "{{value}}К"
     },
     "waist": {
         "title": "Обʼєм талії",

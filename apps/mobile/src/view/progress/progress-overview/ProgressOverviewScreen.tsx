@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppScreen, AppText, PageDots, SegmentedControl } from '@/shared/ui/components';
+import { AppScreen, AppText, PageDots, QueryState, SegmentedControl } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { ChartLegend, MetricActions, MetricBarChart, MetricCard, MetricLineChart, MetricStats } from '../components';
@@ -15,6 +15,9 @@ export const ProgressOverviewScreen = () => {
     const { t } = useAppTranslation(['progress']);
     const { theme } = useUnistyles();
     const {
+        isLoading,
+        isError,
+        handleRetry,
         weight,
         calories,
         water,
@@ -45,206 +48,230 @@ export const ProgressOverviewScreen = () => {
                 </AppText>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <MetricCard
-                    title={t('progress:weight.title')}
-                    subtitle={t('progress:weight.subtitle')}
-                    onPress={() => handleMetricPress('weight')}
-                >
-                    <MetricStats
-                        stats={[
-                            {
-                                key: 'start',
-                                value: t('progress:weight.kg', { value: weight.startKg.toFixed(1) }),
-                                label: t('progress:labels.start'),
-                                color: theme.colors.semantic.orange,
-                            },
-                            {
-                                key: 'current',
-                                value: t('progress:weight.kg', { value: weight.currentKg.toFixed(1) }),
-                                label: t('progress:labels.current-f'),
-                            },
-                            {
-                                key: 'goal',
-                                value: t('progress:weight.kg', { value: weight.goalKg.toFixed(1) }),
-                                label: t('progress:labels.goal'),
-                                color: theme.colors.semantic.ocean,
-                            },
-                        ]}
-                    />
-                    <MetricLineChart points={weight.points} axis={weight.axis} />
-                    <MetricActions
-                        actions={[
-                            editGoal('weight'),
-                            { key: 'reminders', label: t('progress:actions.reminders'), onPress: handleReminders },
-                        ]}
-                        onAdd={() => handleAdd('weight')}
-                        addLabel={t('progress:weight.add-a11y')}
-                    />
-                </MetricCard>
+            <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry}>
+                <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+                    <MetricCard
+                        title={t('progress:weight.title')}
+                        subtitle={t('progress:weight.subtitle')}
+                        onPress={() => handleMetricPress('weight')}
+                    >
+                        <MetricStats
+                            stats={[
+                                {
+                                    key: 'start',
+                                    value: t('progress:weight.kg', { value: weight.start.toFixed(1) }),
+                                    label: t('progress:labels.start'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'current',
+                                    value: t('progress:weight.kg', { value: weight.current.toFixed(1) }),
+                                    label: t('progress:labels.current-f'),
+                                },
+                                {
+                                    key: 'goal',
+                                    // Цільова ваги може не бути — «навчитись
+                                    // готувати» не вагова мета, і анкета її не
+                                    // питає. Прочерк чесніший за «0,0 кг».
+                                    value:
+                                        weight.goal === null
+                                            ? '—'
+                                            : t('progress:weight.kg', { value: weight.goal.toFixed(1) }),
+                                    label: t('progress:labels.goal'),
+                                    color: theme.colors.semantic.ocean,
+                                },
+                            ]}
+                        />
+                        <MetricLineChart points={weight.points} axis={weight.axis} />
+                        <MetricActions
+                            actions={[
+                                editGoal('weight'),
+                                { key: 'reminders', label: t('progress:actions.reminders'), onPress: handleReminders },
+                            ]}
+                            onAdd={() => handleAdd('weight')}
+                            addLabel={t('progress:weight.add-a11y')}
+                        />
+                    </MetricCard>
 
-                <MetricCard
-                    title={t('progress:nutrients.title')}
-                    subtitle={t('progress:nutrients.subtitle')}
-                    onPress={() => handleMetricPress('calories')}
-                >
-                    <SegmentedControl
-                        items={[
-                            { key: 'calories', label: t('progress:nutrients.tabs.calories') },
-                            { key: 'protein', label: t('progress:nutrients.tabs.protein') },
-                            { key: 'fats', label: t('progress:nutrients.tabs.fats') },
-                            { key: 'carbs', label: t('progress:nutrients.tabs.carbs') },
-                        ]}
-                        activeKey={nutrientTab}
-                        onChange={setNutrientTab}
-                    />
-                    <MetricStats
-                        stats={[
-                            {
-                                key: 'average',
-                                value: t('progress:nutrients.kcal', { value: format(calories.averagePerDay) }),
-                                label: t('progress:labels.daily-average'),
-                                color: theme.colors.semantic.orange,
-                            },
-                            {
-                                key: 'goal',
-                                value: t('progress:nutrients.kcal', { value: format(calories.goalPerDay) }),
-                                label: t('progress:labels.daily-goal'),
-                                color: theme.colors.semantic.ocean,
-                            },
-                        ]}
-                    />
-                    <MetricBarChart groups={calories.groups} axis={calories.axis} max={calories.max} />
-                    <PageDots count={2} activeIndex={1} size="lg" />
-                    <ChartLegend
-                        items={[
-                            {
-                                key: 'planned',
-                                label: t('progress:legend.planned'),
-                                color: theme.colors.semantic.ocean,
-                            },
-                            { key: 'eaten', label: t('progress:legend.eaten'), color: theme.colors.branding.accent },
-                            { key: 'under', label: t('progress:legend.under'), color: theme.colors.semantic.orange },
-                            { key: 'over', label: t('progress:legend.over'), color: theme.colors.semantic.negative },
-                        ]}
-                    />
-                    <MetricActions actions={[editGoal('calories')]} />
-                </MetricCard>
+                    <MetricCard
+                        title={t('progress:nutrients.title')}
+                        subtitle={t('progress:nutrients.subtitle')}
+                        onPress={() => handleMetricPress('calories')}
+                    >
+                        <SegmentedControl
+                            items={[
+                                { key: 'calories', label: t('progress:nutrients.tabs.calories') },
+                                { key: 'protein', label: t('progress:nutrients.tabs.protein') },
+                                { key: 'fats', label: t('progress:nutrients.tabs.fats') },
+                                { key: 'carbs', label: t('progress:nutrients.tabs.carbs') },
+                            ]}
+                            activeKey={nutrientTab}
+                            onChange={setNutrientTab}
+                        />
+                        <MetricStats
+                            stats={[
+                                {
+                                    key: 'average',
+                                    value: t('progress:nutrients.kcal', { value: format(calories.averagePerDay) }),
+                                    label: t('progress:labels.daily-average'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'goal',
+                                    value: t('progress:nutrients.kcal', { value: format(calories.goalPerDay) }),
+                                    label: t('progress:labels.daily-goal'),
+                                    color: theme.colors.semantic.ocean,
+                                },
+                            ]}
+                        />
+                        <MetricBarChart groups={calories.groups} axis={calories.axis} max={calories.max} />
+                        <PageDots count={2} activeIndex={1} size="lg" />
+                        <ChartLegend
+                            items={[
+                                {
+                                    key: 'planned',
+                                    label: t('progress:legend.planned'),
+                                    color: theme.colors.semantic.ocean,
+                                },
+                                {
+                                    key: 'eaten',
+                                    label: t('progress:legend.eaten'),
+                                    color: theme.colors.branding.accent,
+                                },
+                                {
+                                    key: 'under',
+                                    label: t('progress:legend.under'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'over',
+                                    label: t('progress:legend.over'),
+                                    color: theme.colors.semantic.negative,
+                                },
+                            ]}
+                        />
+                        <MetricActions actions={[editGoal('calories')]} />
+                    </MetricCard>
 
-                <MetricCard
-                    title={t('progress:water.title')}
-                    subtitle={t('progress:water.subtitle', { value: format(water.goalMl) })}
-                    onPress={() => handleMetricPress('water')}
-                >
-                    <MetricStats
-                        stats={[
-                            {
-                                key: 'average',
-                                value: t('progress:water.ml', { value: format(water.averageMl) }),
-                                label: t('progress:labels.daily-average'),
-                                color: theme.colors.semantic.orange,
-                            },
-                            {
-                                key: 'goal',
-                                value: t('progress:water.ml', { value: format(water.goalMl) }),
-                                label: t('progress:labels.daily-goal'),
-                                color: theme.colors.semantic.ocean,
-                            },
-                        ]}
-                    />
-                    <MetricBarChart groups={water.groups} axis={water.axis} max={water.max} />
-                    <PageDots count={2} activeIndex={1} size="lg" />
-                    <MetricActions actions={[editGoal('water')]} />
-                </MetricCard>
+                    <MetricCard
+                        title={t('progress:water.title')}
+                        subtitle={t('progress:water.subtitle', { value: format(water.goalMl) })}
+                        onPress={() => handleMetricPress('water')}
+                    >
+                        <MetricStats
+                            stats={[
+                                {
+                                    key: 'average',
+                                    value: t('progress:water.ml', { value: format(water.averageMl) }),
+                                    label: t('progress:labels.daily-average'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'goal',
+                                    value: t('progress:water.ml', { value: format(water.goalMl) }),
+                                    label: t('progress:labels.daily-goal'),
+                                    color: theme.colors.semantic.ocean,
+                                },
+                            ]}
+                        />
+                        <MetricBarChart groups={water.groups} axis={water.axis} max={water.max} />
+                        <PageDots count={2} activeIndex={1} size="lg" />
+                        <MetricActions actions={[editGoal('water')]} />
+                    </MetricCard>
 
-                <MetricCard
-                    title={t('progress:steps.title')}
-                    subtitle={t('progress:steps.subtitle')}
-                    onPress={() => handleMetricPress('steps')}
-                >
-                    <MetricStats
-                        stats={[
-                            {
-                                key: 'average',
-                                value: t('progress:steps.count', { value: format(steps.averagePerDay) }),
-                                label: t('progress:labels.daily-average'),
-                                color: theme.colors.semantic.orange,
-                            },
-                            {
-                                key: 'goal',
-                                value: t('progress:steps.count', { value: format(steps.goalPerDay) }),
-                                label: t('progress:labels.daily-goal'),
-                                color: theme.colors.semantic.ocean,
-                            },
-                        ]}
-                    />
-                    <MetricBarChart groups={steps.groups} axis={steps.axis} max={steps.max} />
-                    <PageDots count={2} activeIndex={1} size="lg" />
-                    <MetricActions
-                        actions={[editGoal('steps')]}
-                        onAdd={handleAddSteps}
-                        addLabel={t('progress:steps.add-a11y')}
-                    />
-                </MetricCard>
+                    <MetricCard
+                        title={t('progress:steps.title')}
+                        subtitle={t('progress:steps.subtitle')}
+                        onPress={() => handleMetricPress('steps')}
+                    >
+                        <MetricStats
+                            stats={[
+                                {
+                                    key: 'average',
+                                    value: t('progress:steps.count', { value: format(steps.averagePerDay) }),
+                                    label: t('progress:labels.daily-average'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'goal',
+                                    value: t('progress:steps.count', { value: format(steps.goalPerDay) }),
+                                    label: t('progress:labels.daily-goal'),
+                                    color: theme.colors.semantic.ocean,
+                                },
+                            ]}
+                        />
+                        <MetricBarChart groups={steps.groups} axis={steps.axis} max={steps.max} />
+                        <PageDots count={2} activeIndex={1} size="lg" />
+                        <MetricActions
+                            actions={[editGoal('steps')]}
+                            onAdd={handleAddSteps}
+                            addLabel={t('progress:steps.add-a11y')}
+                        />
+                    </MetricCard>
 
-                <MetricCard
-                    title={t('progress:waist.title')}
-                    subtitle={t('progress:waist.subtitle')}
-                    onPress={() => handleMetricPress('waist')}
-                >
-                    <MetricStats
-                        stats={[
-                            {
-                                key: 'start',
-                                value: t('progress:waist.cm', { value: waist.startCm }),
-                                label: t('progress:labels.start'),
-                                color: theme.colors.semantic.orange,
-                            },
-                            {
-                                key: 'current',
-                                value: t('progress:waist.cm', { value: waist.currentCm }),
-                                label: t('progress:labels.current-f'),
-                            },
-                        ]}
-                    />
-                    <MetricLineChart points={waist.points} axis={waist.axis} />
-                    <MetricActions
-                        outlined
-                        actions={[
-                            { key: 'add-waist', label: t('progress:waist.add'), onPress: () => handleAdd('waist') },
-                        ]}
-                    />
-                </MetricCard>
+                    <MetricCard
+                        title={t('progress:waist.title')}
+                        subtitle={t('progress:waist.subtitle')}
+                        onPress={() => handleMetricPress('waist')}
+                    >
+                        <MetricStats
+                            stats={[
+                                {
+                                    key: 'start',
+                                    value: t('progress:waist.cm', { value: waist.start }),
+                                    label: t('progress:labels.start'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'current',
+                                    value: t('progress:waist.cm', { value: waist.current }),
+                                    label: t('progress:labels.current-f'),
+                                },
+                            ]}
+                        />
+                        <MetricLineChart points={waist.points} axis={waist.axis} />
+                        <MetricActions
+                            outlined
+                            actions={[
+                                { key: 'add-waist', label: t('progress:waist.add'), onPress: () => handleAdd('waist') },
+                            ]}
+                        />
+                    </MetricCard>
 
-                <MetricCard
-                    title={t('progress:height.title')}
-                    subtitle={t('progress:height.subtitle')}
-                    onPress={() => handleMetricPress('height')}
-                >
-                    <MetricStats
-                        stats={[
-                            {
-                                key: 'start',
-                                value: t('progress:height.cm', { value: height.startCm }),
-                                label: t('progress:labels.start'),
-                                color: theme.colors.semantic.orange,
-                            },
-                            {
-                                key: 'current',
-                                value: t('progress:height.cm', { value: height.currentCm }),
-                                label: t('progress:labels.current-m'),
-                            },
-                        ]}
-                    />
-                    <MetricLineChart points={height.points} axis={height.axis} />
-                    <MetricActions
-                        outlined
-                        actions={[
-                            { key: 'add-height', label: t('progress:height.add'), onPress: () => handleAdd('height') },
-                        ]}
-                    />
-                </MetricCard>
-            </ScrollView>
+                    <MetricCard
+                        title={t('progress:height.title')}
+                        subtitle={t('progress:height.subtitle')}
+                        onPress={() => handleMetricPress('height')}
+                    >
+                        <MetricStats
+                            stats={[
+                                {
+                                    key: 'start',
+                                    value: t('progress:height.cm', { value: height.start }),
+                                    label: t('progress:labels.start'),
+                                    color: theme.colors.semantic.orange,
+                                },
+                                {
+                                    key: 'current',
+                                    value: t('progress:height.cm', { value: height.current }),
+                                    label: t('progress:labels.current-m'),
+                                },
+                            ]}
+                        />
+                        <MetricLineChart points={height.points} axis={height.axis} />
+                        <MetricActions
+                            outlined
+                            actions={[
+                                {
+                                    key: 'add-height',
+                                    label: t('progress:height.add'),
+                                    onPress: () => handleAdd('height'),
+                                },
+                            ]}
+                        />
+                    </MetricCard>
+                </ScrollView>
+            </QueryState>
         </AppScreen>
     );
 };

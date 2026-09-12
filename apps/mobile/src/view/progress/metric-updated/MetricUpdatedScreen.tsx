@@ -44,8 +44,17 @@ const UNIT_KEY = {
 export const MetricUpdatedScreen = () => {
     const { t } = useAppTranslation(['progress']);
     const { theme } = useUnistyles();
-    const { metric, isGoal, value, date, recommendedGoal, showsWaistNote, handleDone, handleConfirmGoal } =
-        useMetricUpdatedScreen();
+    const {
+        metric,
+        isGoal,
+        value,
+        date,
+        recommendedGoal,
+        showsWaistNote,
+        isConfirming,
+        handleDone,
+        handleConfirmGoal,
+    } = useMetricUpdatedScreen();
 
     // Macro goals close their sheet without a receipt, so they never reach here.
     const Mascot = {
@@ -56,8 +65,10 @@ export const MetricUpdatedScreen = () => {
         water: MascotWater,
     }[metric as Exclude<typeof metric, MacroGoalMetricKey>];
     const unit = t(UNIT_KEY[isGoal ? 'goal' : 'reading'][metric as Exclude<typeof metric, MacroGoalMetricKey>]);
-    // Only a new weight reading opens the calorie-goal question (673:43135).
-    const offersGoalChange = !isGoal && metric === 'weight';
+    // Only a new weight reading opens the calorie-goal question (673:43135) —
+    // and only when there is a recommendation to offer: without one the card
+    // would propose «null ккал» and the button would change nothing.
+    const offersGoalChange = !isGoal && metric === 'weight' && recommendedGoal !== null;
 
     return (
         <AppScreen>
@@ -115,7 +126,12 @@ export const MetricUpdatedScreen = () => {
             <ScreenActions style={styles.actions}>
                 {offersGoalChange ? (
                     <>
-                        <AppButton fullWidth label={t('progress:updated.weight.confirm')} onPress={handleConfirmGoal} />
+                        <AppButton
+                            fullWidth
+                            isLoading={isConfirming}
+                            label={t('progress:updated.weight.confirm')}
+                            onPress={handleConfirmGoal}
+                        />
                         <AppButton
                             fullWidth
                             variant="secondary"

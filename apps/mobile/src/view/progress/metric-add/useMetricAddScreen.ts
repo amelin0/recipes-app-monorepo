@@ -2,22 +2,30 @@ import { useCallback, useState } from 'react';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
+import type { MeasurableMetric, PatchGoalPayload } from '@/data';
 import { formatThousands } from '@/shared/helpers';
+import { ToastService } from '@/shared/services';
+import { useAppTranslation } from '@/shared/utils/translations';
+import { useGetNutritionGoal, usePatchNutritionGoal } from '@/state/domains/nutrition';
+import { useGetProgressMetrics, useRecordMeasurement } from '@/state/domains/progress';
+import { useGetOnboarding, useGetProfile, useUpdateProfile } from '@/state/domains/user';
 
 import {
     GOAL_METRIC_CONFIG,
-    MOCK_HEIGHT_DETAIL,
-    MOCK_STEPS_DETAIL,
-    MOCK_WAIST_DETAIL,
-    MOCK_WATER_DETAIL,
-    MOCK_WEIGHT_DETAIL,
     READING_METRIC_CONFIG,
-    MACRO_GOAL_DEFAULTS,
     MACRO_GOAL_METRICS,
     type GoalMetricKey,
-    type MacroGoalMetricKey,
     type ReadingMetricKey,
 } from '../progress.constants';
+
+/** Which line of the nutrition goal each goal metric writes. */
+const GOAL_FIELD: Record<Exclude<GoalMetricKey, 'weight'>, keyof PatchGoalPayload> = {
+    steps: 'dailyStepsTarget',
+    water: 'dailyWaterMl',
+    protein: 'dailyProteinG',
+    fats: 'dailyFatsG',
+    carbs: 'dailyCarbsG',
+};
 
 /** Editing a reading you took, or the goal you are aiming at. */
 export type MetricEntryMode = 'reading' | 'goal';
@@ -32,6 +40,7 @@ const toDisplay = (value: number, precision: number) =>
 const toNumber = (text: string) => Number(text.replace(/,(?=\d{3}\b)/g, '').replace(',', '.'));
 
 export const useMetricAddScreen = () => {
+    const { t } = useAppTranslation(['common']);
     const { metric = 'weight', mode = 'reading' } = useLocalSearchParams<{
         metric?: ReadingMetricKey | GoalMetricKey;
         mode?: MetricEntryMode;
@@ -43,18 +52,37 @@ export const useMetricAddScreen = () => {
         ? GOAL_METRIC_CONFIG[metric as GoalMetricKey]
         : READING_METRIC_CONFIG[metric as ReadingMetricKey];
 
+    const { data: cards } = useGetProgressMetrics();
+    const { data: goal } = useGetNutritionGoal();
+    const { data: profile } = useGetProfile();
+    const { data: onboarding } = useGetOnboarding();
+
+    const recordMeasurement = useRecordMeasurement();
+    const patchGoal = usePatchNutritionGoal();
+    const updateProfile = useUpdateProfile();
+
+    /**
+     * What the field opens on: the goal being edited, or the latest reading.
+     *
+     * With no reading yet, the questionnaire's answer stands in — it is the
+     * same measurement, taken during setup. The middle of the allowed range is
+     * the last resort; opening on «0 кг» would ask the user to scroll up from
+     * nothing.
+     */
+    const middle = Math.round((config.min + config.max) / 2);
+    const lastReading = cards?.find(card => card.metric === metric)?.current ?? null;
+    const fromQuestionnaire =
+        metric === 'weight'
+            ? (onboarding?.weightKg ?? null)
+            : metric === 'height'
+              ? (onboarding?.heightCm ?? null)
+              : null;
+
     const current = isGoal
-        ? {
-              weight: MOCK_WEIGHT_DETAIL.goalKg,
-              steps: MOCK_STEPS_DETAIL.goalSteps,
-              water: MOCK_WATER_DETAIL.goalMl,
-              ...MACRO_GOAL_DEFAULTS,
-          }[metric as GoalMetricKey]
-        : {
-              weight: MOCK_WEIGHT_DETAIL.currentKg,
-              waist: MOCK_WAIST_DETAIL.currentCm,
-              height: MOCK_HEIGHT_DETAIL.currentCm,
-          }[metric as ReadingMetricKey];
+        ? metric === 'weight'
+            ? (profile?.targetWeightKg ?? middle)
+            : (goal?.[GOAL_FIELD[metric as Exclude<GoalMetricKey, 'weight'>]] ?? middle)
+        : (lastReading ?? fromQuestionnaire ?? middle);
 
     // expo-router reuses this screen when the same route is opened with
     // different params, so the field is keyed to what it is editing rather than
@@ -78,10 +106,9 @@ export const useMetricAddScreen = () => {
     const parsed = toNumber(value);
     const isValid = !Number.isNaN(parsed) && parsed >= config.min && parsed <= config.max;
 
-    const handleSave = useCallback(() => {
-        if (!isValid) return;
-        // TODO: POST the reading (or PATCH the goal); the confirmation should
-        // read the saved entry back rather than carry it through the route.
+    const isSaving = recordMeasurement.isPending || patchGoal.isPending || updateProfile.isPending;
+
+    const finish = useCallback(() => {
         if (isMacroGoal) {
             // A macro goal belongs to the goal screen that opened this sheet —
             // it has no receipt of its own (811:40272).
@@ -89,21 +116,47 @@ export const useMetricAddScreen = () => {
             return;
         }
         router.replace({ pathname: '/(app)/metric-updated', params: { metric, value, mode } });
-    }, [isValid, isMacroGoal, metric, mode, value]);
+    }, [isMacroGoal, metric, mode, value]);
+
+    const handleSave = useCallback(() => {
+        if (!isValid || isSaving) return;
+
+        const onError = () => ToastService.error(t('common:states.error'));
+
+        if (!isGoal) {
+            // Дата не передається — сервер ставить сьогодні, і це правильно:
+            // шит фіксує щойно зняте показання.
+            recordMeasurement.mutate(
+                { metric: metric as MeasurableMetric, value: parsed },
+                { onSuccess: finish, onError },
+            );
+            return;
+        }
+
+        if (metric === 'weight') {
+            // Цільова вага живе в профілі, а не в денній нормі.
+            updateProfile.mutate({ targetWeightKg: parsed }, { onSuccess: finish, onError });
+            return;
+        }
+
+        // Одну лінію норми за раз: надсилати всю ціль заради однієї цифри
+        // означало б перетерти решту тим, що екран востаннє прочитав.
+        patchGoal.mutate(
+            { [GOAL_FIELD[metric as Exclude<GoalMetricKey, 'weight'>]]: Math.round(parsed) },
+            { onSuccess: finish, onError },
+        );
+    }, [finish, isGoal, isSaving, isValid, metric, parsed, patchGoal, recordMeasurement, t, updateProfile]);
 
     return {
         metric,
         mode,
         isGoal,
-        /** The water and macro goals quote the recommendation in their copy. */
-        subtitleParams: {
-            value: isMacroGoal
-                ? formatThousands(MACRO_GOAL_DEFAULTS[metric as MacroGoalMetricKey])
-                : formatThousands(MOCK_WATER_DETAIL.goalMl),
-        },
+        /** The water and macro goals quote the current target in their copy. */
+        subtitleParams: { value: formatThousands(Math.round(current)) },
         value,
         setValue,
         isValid,
+        isSaving,
         canDecrease: !Number.isNaN(parsed) && parsed > config.min,
         handleDecrease: () => nudge(-1),
         handleIncrease: () => nudge(1),

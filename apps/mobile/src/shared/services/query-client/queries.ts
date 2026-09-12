@@ -24,6 +24,8 @@ export enum Queries {
     RecipeFilters = 'recipe-filters',
     NutritionDay = 'nutrition-day',
     NutritionGoal = 'nutrition-goal',
+    ProgressMetrics = 'progress-metrics',
+    ProgressMetric = 'progress-metric',
     MealPlan = 'meal-plan',
     ShoppingList = 'shopping-list',
 }
@@ -81,6 +83,15 @@ export const recipeKeys = {
 
     /** Everything the filter sheet offers — `GET /recipes/filters`. */
     filters: () => [Queries.RecipeFilters] as const,
+};
+
+/** Progress-domain query-key factory. */
+export const progressKeys = {
+    /** Every card for a period — `GET /progress/metrics?days=`. */
+    metrics: (days: number) => [Queries.ProgressMetrics, days] as const,
+
+    /** One metric's detail — `GET /progress/metrics/:metric?days=`. */
+    metric: (metric: string, days: number) => [Queries.ProgressMetric, metric, days] as const,
 };
 
 /** Nutrition-domain query-key factory. */

@@ -62,8 +62,10 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
     return (
         <View style={styles.root}>
             <View style={styles.grid}>
-                {axis.map(value => (
-                    <View key={value} style={styles.gridRow}>
+                {axis.map((value, index) => (
+                    // Індекс, а не значення: на плоскому ряду поділки
+                    // збігаються, і значення перестало б бути унікальним.
+                    <View key={index} style={styles.gridRow}>
                         <AppText variant="overline" style={styles.axisLabel}>
                             {value}
                         </AppText>
@@ -85,7 +87,7 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
                         />
                         {points.map((point, index) => (
                             <Circle
-                                key={point.label}
+                                key={`${point.label}-${index}`}
                                 cx={xFor(index)}
                                 cy={yFor(point.value)}
                                 // react-native-svg центрує обводку, тож радіус
@@ -105,8 +107,8 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
             </View>
 
             <View style={styles.labels}>
-                {points.map(point => (
-                    <AppText key={point.label} variant="overline" style={styles.pointLabel}>
+                {points.map((point, index) => (
+                    <AppText key={`${point.label}-${index}`} variant="overline" style={styles.pointLabel}>
                         {point.label}
                     </AppText>
                 ))}

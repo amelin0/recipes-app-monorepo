@@ -3,16 +3,17 @@ import { useCallback } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { formatFullDate, formatThousands } from '@/shared/helpers';
+import { ToastService } from '@/shared/services';
+import { useAppTranslation } from '@/shared/utils/translations';
+import { usePatchNutritionGoal } from '@/state/domains/nutrition';
+import { useGetProgressMetrics } from '@/state/domains/progress';
+import { useGetRecommendations } from '@/state/domains/user';
 
-import {
-    MOCK_WAIST_DETAIL,
-    RECOMMENDED_CALORIE_GOAL,
-    type GoalMetricKey,
-    type ReadingMetricKey,
-} from '../progress.constants';
+import type { GoalMetricKey, ReadingMetricKey } from '../progress.constants';
 import type { MetricEntryMode } from '../metric-add/useMetricAddScreen';
 
 export const useMetricUpdatedScreen = () => {
+    const { t } = useAppTranslation(['common']);
     const {
         metric = 'weight',
         value = '',
@@ -26,22 +27,47 @@ export const useMetricUpdatedScreen = () => {
     const numeric = Number(value.replace(/,(?=\d{3}\b)/g, '').replace(',', '.'));
     const isGoal = mode === 'goal';
 
+    // Норма рахується з ваги, тож після нового зважування рекомендація вже
+    // інша — саме її пропонує цей екран.
+    const { data: recommendations } = useGetRecommendations();
+    const { data: cards } = useGetProgressMetrics();
+    const patchGoal = usePatchNutritionGoal();
+
+    const recommendedCalories = recommendations?.calories ?? null;
+    const waistBound = cards?.find(card => card.metric === 'waist')?.recommendedMax ?? null;
+
     const handleDone = useCallback(() => {
         router.dismissTo('/(app)/(tabs)/progress');
     }, []);
+
+    const handleConfirmGoal = useCallback(() => {
+        if (recommendedCalories === null || patchGoal.isPending) {
+            handleDone();
+            return;
+        }
+
+        patchGoal.mutate(
+            { dailyCalories: Math.round(recommendedCalories) },
+            {
+                onSuccess: handleDone,
+                onError: () => ToastService.error(t('common:states.error')),
+            },
+        );
+    }, [handleDone, patchGoal, recommendedCalories, t]);
 
     return {
         metric,
         isGoal,
         value,
-        // TODO: the entry's own timestamp once the API returns it.
+        // Шит фіксує щойно зняте показання — сервер ставить сьогоднішню дату.
         date: formatFullDate(new Date()),
-        recommendedGoal: formatThousands(RECOMMENDED_CALORIE_GOAL),
+        /** Absent while the questionnaire has not enough answers to compute one. */
+        recommendedGoal: recommendedCalories === null ? null : formatThousands(Math.round(recommendedCalories)),
         /** The note only appears while the reading sits inside the healthy range. */
         showsWaistNote:
-            !isGoal && metric === 'waist' && !Number.isNaN(numeric) && numeric <= MOCK_WAIST_DETAIL.recommendedMaxCm,
+            !isGoal && metric === 'waist' && waistBound !== null && !Number.isNaN(numeric) && numeric <= waistBound,
+        isConfirming: patchGoal.isPending,
         handleDone,
-        // TODO: PATCH the calorie goal to the recommendation.
-        handleConfirmGoal: handleDone,
+        handleConfirmGoal,
     };
 };
