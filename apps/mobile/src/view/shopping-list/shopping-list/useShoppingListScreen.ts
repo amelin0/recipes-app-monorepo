@@ -24,9 +24,18 @@ export const useShoppingListScreen = () => {
     const togglePlanImport = useTogglePlanImport();
     const removeItem = useRemoveShoppingItem();
 
+    /**
+     * Галочка не має замка навмисно.
+     *
+     * Раніше тут стояв гард по `togglePurchased.isPending` — спільний на весь
+     * список, тож поки летів запит одного продукту, тап по будь-якому іншому
+     * не робив нічого. Замок на рядок був би не кращим: `PUT`/`DELETE` тут
+     * ідемпотентні, дублювати нема чого, а запит, який завис і не завершився,
+     * лишив би рядок мертвим. Стан і так малюється одразу, а розбіжність із
+     * сервером прибирає перечитування після кожної мутації.
+     */
     const handleToggleItem = useCallback(
         (item: ShoppingItem) => {
-            if (togglePurchased.isPending) return;
             togglePurchased.mutate(
                 { origin: item.origin, productId: item.productId, purchased: item.purchased },
                 { onError: () => ToastService.error(t('common:states.error')) },

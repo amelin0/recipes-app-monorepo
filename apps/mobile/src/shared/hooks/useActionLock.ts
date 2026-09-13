@@ -1,7 +1,18 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Key used when a screen has a single guarded action and nothing to tell apart. */
 const SINGLE = 'action';
+
+/**
+ * How long a lock may be held before it frees itself.
+ *
+ * Deliberately longer than the HTTP client's own 30s timeout, so this never
+ * opens a second window during a merely slow request — it only fires when a
+ * request leaked and neither resolved nor rejected. That happens: a socket the
+ * simulator has quietly dropped can leave a mutation pending forever, and
+ * without this the control it guards stays dead until the screen remounts.
+ */
+const LEAK_MS = 45_000;
 
 /**
  * Synchronous guard for a control that fires a mutation, plus the busy flag
@@ -32,20 +43,42 @@ const SINGLE = 'action';
  */
 export const useActionLock = () => {
     const inFlight = useRef(new Set<string>());
+    const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
     const [busyKeys, setBusyKeys] = useState<string[]>([]);
 
-    /** Takes the lock. `false` means someone already holds it — do nothing. */
-    const acquire = useCallback((key: string = SINGLE) => {
-        if (inFlight.current.has(key)) return false;
-        inFlight.current.add(key);
-        setBusyKeys(current => (current.includes(key) ? current : [...current, key]));
-        return true;
-    }, []);
-
     const release = useCallback((key: string = SINGLE) => {
+        const timer = timers.current.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            timers.current.delete(key);
+        }
         inFlight.current.delete(key);
         setBusyKeys(current => current.filter(item => item !== key));
     }, []);
+
+    /** Takes the lock. `false` means someone already holds it — do nothing. */
+    const acquire = useCallback(
+        (key: string = SINGLE) => {
+            if (inFlight.current.has(key)) return false;
+            inFlight.current.add(key);
+            setBusyKeys(current => (current.includes(key) ? current : [...current, key]));
+            timers.current.set(
+                key,
+                setTimeout(() => release(key), LEAK_MS),
+            );
+            return true;
+        },
+        [release],
+    );
+
+    // Екран іде — таймери разом з ним.
+    useEffect(
+        () => () => {
+            timers.current.forEach(clearTimeout);
+            timers.current.clear();
+        },
+        [],
+    );
 
     const isBusy = useCallback((key: string = SINGLE) => busyKeys.includes(key), [busyKeys]);
 
