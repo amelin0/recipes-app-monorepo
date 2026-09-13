@@ -5,7 +5,7 @@ domain: recipe
 status: Implemented
 owner: '@amelin0'
 created: 2026-07-18
-updated: 2026-09-07
+updated: 2026-09-13
 plan: ./plan.md
 related-adrs: [ADR-0004, ADR-0006]
 supersedes: null
@@ -129,7 +129,10 @@ supersedes: null
 - **FR-003**: Рядок інгредієнта MUST містити назву, типову порцію з
   вагою і калорійністю та значення Б/Ж/В.
 - **FR-004**: Рядок страви MUST містити піктограму, назву,
-  калорійність і Б/Ж/В; тап відкриває деталі страви.
+  калорійність і Б/Ж/В; тап відкриває деталі страви. Замкнений для
+  користувача рецепт MUST показувати темну плитку із замком замість
+  піктограми (spec free-tier, FR-005); що робить тап — free-tier,
+  Q-2.
 - **FR-005**: Стартовий стан MUST містити поле пошуку в фокусі з
   плейсхолдером «Пошук інгредієнтів, страв», кнопку очищення при
   непорожньому запиті та сітку 11 популярних категорій страв.
@@ -147,7 +150,9 @@ supersedes: null
   показувати ті самі секції, але рядки результатів мають «+»:
   страва одним тапом додається до прийому (повторний тап знімає),
   а тап по рядку відкриває деталі з CTA «Додати до раціону»;
-  додавання інгредієнта чекає на контракт порції.
+  додавання інгредієнта чекає на контракт порції. «+» на замкненому
+  рецепті без підписки MUST відкривати шторку «Додати до раціону»
+  (spec free-tier, FR-013).
 
 ### Key Entities
 
@@ -205,5 +210,6 @@ supersedes: null
 - Код (UI, мок): `apps/mobile/src/view/recipe/recipe-search/`
 - Специфікації: [recipes-list](../recipes-list/spec.md),
   [recipe-filters](../recipe-filters/spec.md),
-  [meal-details](../meal-details/spec.md)
+  [meal-details](../meal-details/spec.md),
+  [subscription/free-tier](../../subscription/free-tier/spec.md)
 - Знання V1: `.claude/knowledge/recipe/`, `.claude/knowledge/product/`

@@ -5,7 +5,7 @@ domain: recipe
 status: Implemented
 owner: '@amelin0'
 created: 2026-07-18
-updated: 2026-09-11
+updated: 2026-09-13
 plan: ./plan.md
 related-adrs: [ADR-0004, ADR-0006]
 supersedes: null
@@ -148,6 +148,10 @@ supersedes: null
 - Кнопка вибору порцій (столові прибори) в нижній панелі — окремий
   сценарій, поки заглушка [NEEDS CLARIFICATION: вибір порцій для
   додавання до раціону без готування].
+- Замкнений для користувача рецепт: чи відкриваються деталі взагалі,
+  дизайну немає [NEEDS CLARIFICATION: free-tier, Q-2]; якщо
+  відкриваються — «Відмітити прийом їжі» і «Додати до раціону» ведуть
+  на шторку «Потрібна підписка».
 
 ## Requirements *(mandatory)*
 
@@ -241,6 +245,9 @@ supersedes: null
 - [ ] Чи доступне «редагувати» лише для власних рецептів.
 - [ ] Сценарій кнопки порцій (прибори) окремо від готування.
 - [ ] Вміст і механіка режиму приготування.
+- [ ] Деталі замкненого рецепта без підписки — тизер чи одразу пейвол
+      (free-tier, Q-2); і чи замкнене «Відмітити прийом їжі» для нього
+      (Q-8).
 
 ## Related
 
@@ -250,6 +257,7 @@ supersedes: null
 - Код (UI, мок): `apps/mobile/src/view/recipe/meal-details/`,
   `apps/mobile/src/view/recipe/meal-portions/`
 - Специфікації: [recipes-list](../recipes-list/spec.md),
-  [recipe-search](../recipe-search/spec.md)
+  [recipe-search](../recipe-search/spec.md),
+  [subscription/free-tier](../../subscription/free-tier/spec.md)
 - Знання V1: `.claude/knowledge/recipe/`,
   `.claude/knowledge/meal-plan/`, `.claude/knowledge/shopping-list/`

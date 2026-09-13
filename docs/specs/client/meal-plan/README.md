@@ -9,7 +9,7 @@ Each feature lives in its own folder containing `spec.md` + `plan.md`
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Meal plan (Вкладка «План»)](./plan/spec.md) | Approved | @amelin0 | 2026-09-07 |
+| [Meal plan (Вкладка «План»)](./plan/spec.md) | Approved | @amelin0 | 2026-09-13 |
 
 ## Related
 

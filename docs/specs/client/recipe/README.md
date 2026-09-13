@@ -13,17 +13,19 @@
 
 UI всіх екранів уже реалізовано в мобільному застосунку на мокових
 даних (дизайн: Figma RF-mobile-app) — специфікації фіксують
-продуктовий контракт для бекенда.
+продуктовий контракт для бекенда. Що з каталогу замкнено без
+підписки (замкнені картки, ліміт трьох власних страв) — у
+[`subscription/free-tier`](../subscription/free-tier/spec.md).
 
 ## Specs
 
 | Feature | Status | Owner | Updated |
 |---|---|---|---|
-| [Recipes list (Вкладка «Рецепти»)](./recipes-list/spec.md) | Implemented | @amelin0 | 2026-09-07 |
+| [Recipes list (Вкладка «Рецепти»)](./recipes-list/spec.md) | Implemented | @amelin0 | 2026-09-13 |
 | [Recipe filters (Фільтри)](./recipe-filters/spec.md) | Implemented | @amelin0 | 2026-09-07 |
-| [Recipe search (Пошук)](./recipe-search/spec.md) | Implemented | @amelin0 | 2026-09-07 |
-| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Implemented | @amelin0 | 2026-09-11 |
-| [Create dish (Додати страву)](./create-dish/spec.md) | Implemented | @amelin0 | 2026-09-07 |
+| [Recipe search (Пошук)](./recipe-search/spec.md) | Implemented | @amelin0 | 2026-09-13 |
+| [Meal details (Деталі страви + порції)](./meal-details/spec.md) | Implemented | @amelin0 | 2026-09-13 |
+| [Create dish (Додати страву)](./create-dish/spec.md) | Implemented | @amelin0 | 2026-09-13 |
 
 ## Related
 

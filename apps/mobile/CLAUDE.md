@@ -81,7 +81,17 @@ src/
   in `shared/services/query-client/queries.ts` — never inline arrays.
 - Tokens live in SecureStore via `AuthStorage` (never in zustand persist);
   app preferences go through `writeLocalData`/`readLocalData` (MMKV).
-- Env: `EXPO_PUBLIC_API_URL` (see `.env.example`, copy to `.env`).
+- Subscription gating: the ONLY source of "is this user entitled" is
+  `useGetSubscription()` → `GET /subscription` (`entitlement.features.*`,
+  `entitlement.ownRecipes`). Never gate on `customerInfo.entitlements` from
+  `react-native-purchases` — referral months are local rows the SDK knows
+  nothing about (ADR-0009). The SDK lives behind
+  `shared/services/purchases.service.ts` and is used only to buy, restore and
+  trigger `POST /subscription/sync`; configure it once with our user id after
+  the session is restored, never call `logOut()`.
+- Env: `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (public `appl_`
+  key; must be in the shell when Xcode builds the TestFlight bundle) — see
+  `.env.example`, copy to `.env`.
 
 ## Screen delivery workflow
 
