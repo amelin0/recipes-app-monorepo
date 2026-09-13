@@ -20,3 +20,4 @@ Use [`../templates/runbook.md`](../templates/runbook.md) (or run
 
 - [`execute-overdue-account-deletions`](./execute-overdue-account-deletions.md) — виконати прострочені запити на видалення акаунту, поки завдання-прибиральник не написане (**high**)
 - [`register-actions-runner`](./register-actions-runner.md) — підключити self-hosted GitHub Actions runner на dev-сервері для автодеплою (**medium**)
+- [`configure-revenuecat`](./configure-revenuecat.md) — налаштувати App Store Connect, RevenueCat і вебхук підписок перед першою покупкою (**medium**, ще не проходили)

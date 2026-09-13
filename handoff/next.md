@@ -303,11 +303,37 @@ access не зберігається» знята.
 
 Наступні кандидати:
 
-- **Перевірка чека проти Apple і Google** — єдине, що відділяє підписку від
-  `Implemented`. Потрібні ключі.
-- **Що саме дає підписка.** Зараз нічого: жоден ендпоінт її не перевіряє,
-  бо специфікація не каже, що перестає працювати без неї. Це продуктове
-  рішення, не інженерне.
+- **Оплата підписки — через RevenueCat** (рішення власника від 2026-09-13),
+  а не власна перевірка чеків: вебхук замість `POST /subscription/receipt`,
+  сервер дзеркалить стан і віддає його застосунку. Флоу — ADR-0009
+  (`Proposed`), контракт — `TODO_BE.md` §10, дашборди —
+  `docs/runbooks/configure-revenuecat.md`. Блокери на боці власника:
+  Paid Apps Agreement, product id, In-App Purchase Key.
+  Мобільна частина — `TODO_FE_RC.md` (після ключів; правила —
+  `apps/mobile/CLAUDE.md`); коротко:
+  `react-native-purchases` за `shared/services/purchases.service.ts`,
+  `configure` один раз з `users.id` — id зберігати в SecureStore при вході
+  (`useRestoreSession` бере токен на віру і `GET /auth/me` не кличе);
+  пакет ↔ план по `product.identifier === plan.appleProductId`; ціна —
+  `product.priceString`; trial-перемикач за `checkTrialOrIntroductory
+  PriceEligibility` (ELIGIBLE → увімкнений і замкнений, інакше схований);
+  після `purchasePackage` → `POST /subscription/sync { reason }` →
+  `setQueryData` знімком → success; `synced:false` → стан «активуємо» +
+  повтор на foreground; помилки: `PURCHASE_CANCELLED` мовчки,
+  `NETWORK_ERROR`/`STORE_PROBLEM`/`PAYMENT_PENDING` → «обробляється»,
+  `PRODUCT_ALREADY_PURCHASED` → `sync`; замок дії після успішної покупки
+  повторює `sync`, не покупку; `from` (`onboarding`|`lock`|`profile`) з
+  пейволу до success — куди повертати «Готово», і лише `onboarding`
+  кличе `paywall/seen`; слухач `CustomerInfo` порівнює з серверним
+  знімком, не з собою; останній знімок `GET /subscription` — у MMKV для
+  холодного старту без мережі; «Відновити» — успіх лише при магазинному
+  рядку; «Відновити покупки» + посилання на умови/приватність на екрані.
+- **Що саме дає підписка — тепер визначено.** Макети власника від
+  2026-09-13 → `docs/specs/client/subscription/free-tier/spec.md` і контракт
+  у `TODO_BE.md` §9: `isLocked` на рецепті, ліміт трьох власних страв, три
+  відмови 403 (`subscription.required`, `catalog.recipe-locked`,
+  `catalog.own-recipes-limit`). Блокери — відповіді власника на Q-1…Q-4
+  (які рецепти замкнені і хто це вирішує; що рахує «3/3»).
 - **Дві клієнтські специфікації без серверної частини:**
   `system/error-screen` (її взагалі немає — форма звернення вже існує) і
   `onboarding/intro-slides` (18 FR, усі клієнтські).

@@ -17,7 +17,7 @@ Users with the **USER** role.
 | [`shopping-list/`](./shopping-list) | Shopping list, ingredient aggregation |
 | [`meal-plan/`](./meal-plan) | Weekly meal planning |
 | [`progress/`](./progress) | Body metrics, charts, weigh-in reminders |
-| [`subscription/`](./subscription) | Paywall, plans, referral codes |
+| [`subscription/`](./subscription) | Paywall, plans, referral codes, free-tier limits |
 | [`notifications/`](./notifications) | In-app notification inbox |
 | [`system/`](./system) | App-level states that belong to no domain |
 
