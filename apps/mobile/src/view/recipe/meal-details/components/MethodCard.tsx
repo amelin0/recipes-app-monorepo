@@ -49,6 +49,12 @@ export const MethodCard = ({ ingredients, time, steps }: MethodCardProps) => {
                 </View>
             ) : null}
 
+            {steps.length === 0 ? (
+                <AppText variant="bodyMediumReg" style={styles.emptySteps}>
+                    {t('recipes:details.no-steps')}
+                </AppText>
+            ) : null}
+
             {steps.map((step, index) => (
                 <View key={step.id} style={styles.step}>
                     <AppText variant="bodyLargeBold" style={styles.stepTitle}>
@@ -95,6 +101,10 @@ const styles = StyleSheet.create(theme => ({
         width: '100%',
     },
     stepBody: {
+        width: '100%',
+        color: theme.colors.semantic.darkGrey,
+    },
+    emptySteps: {
         width: '100%',
         color: theme.colors.semantic.darkGrey,
     },

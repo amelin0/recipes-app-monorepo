@@ -28,6 +28,12 @@ interface MealPlanCard {
     eatenEntryIds: Record<string, string>;
 }
 
+/**
+ * Prefix for a dish that exists only in the journal — eaten, but never
+ * planned. Keeps its id from colliding with a plan item's.
+ */
+const LOGGED_PREFIX = 'logged:';
+
 const toMinutes = (time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
     return (hours ?? 0) * 60 + (minutes ?? 0);
@@ -89,25 +95,33 @@ export const useHomeScreen = () => {
         () =>
             MEAL_SLOTS.map(slot => {
                 const items = planDay?.slots.find(entry => entry.slot === slot)?.items ?? [];
+                const entries = day?.meals.filter(meal => meal.slot === slot) ?? [];
+
                 // Заплановану страву вважаємо зʼїденою, якщо в журналі дня є
                 // запис із тим самим рецептом і слотом — саме так сервер
-                // звʼязує позначку з кільцем калорій.
+                // звʼязує позначку з кільцем калорій. Кожен запис закриває
+                // рівно одну позицію плану: дві однакові страви в слоті — це
+                // дві позначки, а не одна на двох.
                 const eatenEntryIds: Record<string, string> = {};
+                const matched = new Set<string>();
                 items.forEach(item => {
-                    const entry = day?.meals.find(meal => meal.slot === slot && meal.recipeId === item.recipe.id);
-                    if (entry) eatenEntryIds[item.id] = entry.id;
+                    const entry = entries.find(meal => meal.recipeId === item.recipe.id && !matched.has(meal.id));
+                    if (!entry) return;
+                    matched.add(entry.id);
+                    eatenEntryIds[item.id] = entry.id;
                 });
 
-                const allEaten = items.length > 0 && items.every(item => eatenEntryIds[item.id]);
+                // Записи, яким не знайшлось позиції плану, — зʼїдене поза
+                // планом: страва з рецепта, довільна порція. Без них кільце
+                // рахує калорії, яких на екрані ніде немає, і прибрати
+                // помилковий запис нічим.
+                const unplanned = entries.filter(entry => !matched.has(entry.id));
+                unplanned.forEach(entry => {
+                    eatenEntryIds[`${LOGGED_PREFIX}${entry.id}`] = entry.id;
+                });
 
-                return {
-                    key: slot,
-                    time: slotTimes[slot],
-                    hasDetails: items.length > 0,
-                    dishAction: items.length === 0 ? 'none' : allEaten ? 'eaten' : 'eat',
-                    current: slot === currentSlot,
-                    eatenEntryIds,
-                    dishes: items.map<MealDish>(item => ({
+                const dishes: MealDish[] = [
+                    ...items.map<MealDish>(item => ({
                         id: item.id,
                         emoji: SLOT_EMOJI[slot],
                         photoUrl: item.recipe.photoUrl,
@@ -119,6 +133,28 @@ export const useHomeScreen = () => {
                             { key: 'carbs', value: Math.round(item.recipe.perServing.carbsG) },
                         ],
                     })),
+                    ...unplanned.map<MealDish>(entry => ({
+                        id: `${LOGGED_PREFIX}${entry.id}`,
+                        emoji: SLOT_EMOJI[slot],
+                        photoUrl: null,
+                        name: entry.dishName,
+                        calories: Math.round(entry.calories),
+                        macros: [
+                            { key: 'protein', value: Math.round(entry.proteinG) },
+                            { key: 'fats', value: Math.round(entry.fatsG) },
+                            { key: 'carbs', value: Math.round(entry.carbsG) },
+                        ],
+                    })),
+                ];
+
+                return {
+                    key: slot,
+                    time: slotTimes[slot],
+                    hasDetails: items.length > 0,
+                    dishAction: dishes.length === 0 ? 'none' : 'eat',
+                    current: slot === currentSlot,
+                    eatenEntryIds,
+                    dishes,
                 };
             }),
         [currentSlot, day, planDay, slotTimes],
@@ -170,6 +206,8 @@ export const useHomeScreen = () => {
             }
 
             const item = planDay?.slots.find(entry => entry.slot === slot)?.items.find(entry => entry.id === dishId);
+            // Незапланований запис завжди зʼїдений — «відмітити» його нема як,
+            // тож сюди він не доходить.
             if (!item) return;
 
             logMeal.mutate(
@@ -209,6 +247,10 @@ export const useHomeScreen = () => {
         },
         macros,
         meals,
+        /** Кожна страва несе свій стан: запланована й ще не зʼїдена — «eat»,
+            зʼїдена (запланована чи ні) — «eaten». */
+        resolveDishAction: (slot: MealKey, dishId: string): DishAction =>
+            meals.find(meal => meal.key === slot)?.eatenEntryIds[dishId] ? 'eaten' : 'eat',
         water: { current: day?.consumed.waterMl ?? 0, target: day?.goal?.dailyWaterMl ?? 0 },
         steps: { current: day?.steps ?? 0, target: day?.stepsTarget ?? 0 },
         handleAvatarPress: () => router.push('/(app)/profile'),

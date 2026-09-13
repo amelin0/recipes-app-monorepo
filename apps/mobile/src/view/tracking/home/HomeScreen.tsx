@@ -30,6 +30,7 @@ export const HomeScreen = () => {
         handleMealPress,
         handleAddMeal,
         handleDishAction,
+        resolveDishAction,
         handleWaterPress,
         handleAddWater,
         handleStepsPress,
@@ -64,6 +65,7 @@ export const HomeScreen = () => {
                             time={meal.time}
                             dishes={meal.dishes}
                             dishAction={meal.dishAction}
+                            resolveDishAction={dish => resolveDishAction(meal.key, dish.id)}
                             highlighted={meal.current}
                             onPress={meal.hasDetails ? () => handleMealPress(meal.key) : undefined}
                             onAdd={() => handleAddMeal(meal.key)}

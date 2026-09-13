@@ -129,8 +129,10 @@ export default function AppLayout() {
                     options={{
                         // Bottom sheet виглядом, але повноцінний екран.
                         presentation: 'formSheet',
-                        // The dial sheet is nearly full height (811:58844).
-                        sheetAllowedDetents: [0.86],
+                        // Висота по вмісту, як у решті шитів: з фіксованим
+                        // детентом ScrollView усередині малював вміст поза
+                        // власними межами й наїжджав на шапку (811:58844).
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}
