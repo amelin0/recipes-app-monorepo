@@ -50,8 +50,20 @@ export interface RecipeFiltersSlice {
 }
 
 /** Number of active filter selections (kcal range not counted). */
-export const countRecipeFilters = (filters: RecipeFiltersState): number =>
-    RECIPE_FILTER_GROUPS.reduce((total, group) => total + filters[group].length, 0);
+/**
+ * Скільки фільтрів зараз стоїть.
+ *
+ * Звужений діапазон калорій рахується нарівні зі списками: він так само
+ * ховає рецепти, і «Скинути всі фільтри (0)» при активному діапазоні —
+ * неправда, тим більше що скидання його таки скидає.
+ */
+export const countRecipeFilters = (filters: RecipeFiltersState): number => {
+    const [min, max] = filters.kcalRange;
+    const [defaultMin, defaultMax] = RECIPE_KCAL_RANGE;
+    const narrowed = min > defaultMin || max < defaultMax ? 1 : 0;
+
+    return RECIPE_FILTER_GROUPS.reduce((total, group) => total + filters[group].length, narrowed);
+};
 
 export const createRecipeFiltersSlice: StateCreator<RecipeFiltersSlice, [], [], RecipeFiltersSlice> = set => ({
     recipeFilters: INITIAL_FILTERS,
