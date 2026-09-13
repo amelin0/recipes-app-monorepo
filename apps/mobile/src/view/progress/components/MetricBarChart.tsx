@@ -38,7 +38,10 @@ export const MetricBarChart = ({ groups, axis, max }: MetricBarChartProps) => {
         <View style={styles.root}>
             <View style={styles.axis}>
                 {axis.map((label, index) => (
-                    <AppText key={label} variant="overline" style={[styles.axisLabel, { top: index * step }]}>
+                    // Позиція, а не текст: на малих діапазонах дві поділки
+                    // округлюються до однакового підпису, і ключ-текст дав би
+                    // дублікат.
+                    <AppText key={index} variant="overline" style={[styles.axisLabel, { top: index * step }]}>
                         {label}
                     </AppText>
                 ))}

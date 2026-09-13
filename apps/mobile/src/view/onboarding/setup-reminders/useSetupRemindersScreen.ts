@@ -2,10 +2,14 @@ import { useCallback } from 'react';
 
 import { router } from 'expo-router';
 
+import { formatFullDate } from '@/shared/helpers';
 import { useReminderSchedule } from '@/shared/hooks';
+import { useGetReminders, useUpdateReminders } from '@/state/domains/user';
 
 export const useSetupRemindersScreen = () => {
-    const schedule = useReminderSchedule();
+    const { data } = useGetReminders();
+    const updateReminders = useUpdateReminders();
+    const schedule = useReminderSchedule(data);
 
     // Reminders are the last question; the paywall closes the funnel either way.
     const handleClose = useCallback(() => {
@@ -13,9 +17,24 @@ export const useSetupRemindersScreen = () => {
     }, []);
 
     const handleSave = useCallback(() => {
-        // TODO: persist the schedule and register the local notifications.
-        router.replace('/(app)/paywall');
-    }, []);
+        if (updateReminders.isPending) return;
 
-    return { ...schedule, handleClose, handleSave };
+        // Онбординг не має куди показати помилку — тут нема тостів і кроку
+        // назад. Тож пейвол відкриваємо в будь-якому разі: розклад лишається
+        // на дефолтах, і його можна поправити в профілі.
+        updateReminders.mutate(
+            { reminders: schedule.toPayload() },
+            {
+                onSettled: () => router.replace('/(app)/paywall'),
+            },
+        );
+    }, [schedule, updateReminders]);
+
+    return {
+        ...schedule,
+        weighInDate: schedule.weighIn.nextFireAt ? formatFullDate(new Date(schedule.weighIn.nextFireAt)) : '',
+        isSaving: updateReminders.isPending,
+        handleClose,
+        handleSave,
+    };
 };

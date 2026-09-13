@@ -38,6 +38,7 @@ export const MetricAddScreen = () => {
         value,
         setValue,
         isValid,
+        isSaving,
         canDecrease,
         handleDecrease,
         handleIncrease,
@@ -83,6 +84,7 @@ export const MetricAddScreen = () => {
                     fullWidth
                     size="md"
                     label={t(isGoal ? 'progress:entry.save-goal' : 'progress:entry.save')}
+                    isLoading={isSaving}
                     disabled={!isValid}
                     onPress={handleSave}
                 />
@@ -92,8 +94,9 @@ export const MetricAddScreen = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
+    // Без flex: 1 — висоту шита задає вміст (sheetAllowedDetents:
+    // 'fitToContents'); на Android flex: 1 розтягнув би корінь на весь екран.
     sheet: {
-        flex: 1,
         backgroundColor: theme.colors.semantic.white,
     },
     header: {

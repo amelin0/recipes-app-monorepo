@@ -1,3 +1,4 @@
+export * from './useActionLock';
 export * from './useDebouncedValue';
 export * from './useDelayedRefresh';
 export * from './useHapticOnScroll';

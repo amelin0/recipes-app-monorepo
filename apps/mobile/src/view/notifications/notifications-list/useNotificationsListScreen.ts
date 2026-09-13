@@ -2,49 +2,73 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { router } from 'expo-router';
 
+import type { AppNotification } from '@/data';
+import { formatFullDate, toIsoDay } from '@/shared/helpers';
 import { useAppTranslation } from '@/shared/utils/translations';
+import {
+    useGetNotifications,
+    useMarkAllNotificationsRead,
+    useMarkNotificationRead,
+    useUnreadCount,
+} from '@/state/domains/notification';
 
-import { MOCK_NOTIFICATIONS, type NotificationGroup } from '../notifications.constants';
+import type { NotificationGroup } from '../notifications.constants';
 
 type TabKey = 'all' | 'unread';
 
 export const useNotificationsListScreen = () => {
     const { t } = useAppTranslation(['notifications']);
 
-    // TODO: replace with the notifications endpoint; read state lives here only
-    // until it does.
-    const [groups, setGroups] = useState<NotificationGroup[]>(MOCK_NOTIFICATIONS);
     const [activeTab, setActiveTab] = useState<TabKey>('all');
 
-    const hasUnread = useMemo(() => groups.some(group => group.items.some(item => !item.read)), [groups]);
+    const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGetNotifications(
+        activeTab === 'unread',
+    );
+    const { data: unread } = useUnreadCount();
+    const markRead = useMarkNotificationRead();
+    const markAllRead = useMarkAllNotificationsRead();
 
-    const visible = useMemo(() => {
-        if (activeTab === 'all') return groups;
+    const notifications = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
 
-        return groups
-            .map(group => ({ ...group, items: group.items.filter(item => !item.read) }))
-            .filter(group => group.items.length > 0);
-    }, [groups, activeTab]);
+    /**
+     * Grouped by the device's own calendar day.
+     *
+     * The server sends instants and says so explicitly: only the client knows
+     * which day «22:30 UTC» was for the person reading it.
+     */
+    const groups = useMemo<NotificationGroup[]>(() => {
+        const today = toIsoDay();
+        const yesterday = toIsoDay(new Date(Date.now() - 86_400_000));
 
-    const markRead = useCallback((id: string) => {
-        setGroups(prev =>
-            prev.map(group => ({
-                ...group,
-                items: group.items.map(item => (item.id === id ? { ...item, read: true } : item)),
-            })),
-        );
-    }, []);
+        const byDay = new Map<string, AppNotification[]>();
+        notifications.forEach(notification => {
+            const day = toIsoDay(new Date(notification.createdAt));
+            const list = byDay.get(day) ?? [];
+            list.push(notification);
+            byDay.set(day, list);
+        });
 
-    const handleReadAll = useCallback(() => {
-        setGroups(prev => prev.map(group => ({ ...group, items: group.items.map(item => ({ ...item, read: true })) })));
-    }, []);
+        return [...byDay.entries()].map(([day, items]) => ({
+            key: day,
+            label:
+                day === today
+                    ? t('notifications:groups.today')
+                    : day === yesterday
+                      ? t('notifications:groups.yesterday')
+                      : formatFullDate(new Date(`${day}T00:00:00`)),
+            items,
+        }));
+    }, [notifications, t]);
 
     const handleOpen = useCallback(
         (id: string) => {
-            markRead(id);
+            const notification = notifications.find(item => item.id === id);
+            // Уже прочитане не позначаємо повторно — це зайвий запит і зайве
+            // скидання кешу списку прямо перед переходом.
+            if (notification && !notification.isRead) markRead.mutate(id);
             router.push({ pathname: '/(app)/notification-detail', params: { id } });
         },
-        [markRead],
+        [markRead, notifications],
     );
 
     return {
@@ -54,9 +78,16 @@ export const useNotificationsListScreen = () => {
         ],
         activeTab,
         setActiveTab: (key: string) => setActiveTab(key === 'unread' ? 'unread' : 'all'),
-        groups: visible,
-        hasUnread,
-        handleReadAll,
+        groups,
+        isLoading,
+        isError,
+        isEmpty: !isLoading && !isError && groups.length === 0,
+        handleRetry: refetch,
+        handleEndReached: () => {
+            if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+        },
+        hasUnread: (unread?.count ?? 0) > 0,
+        handleReadAll: () => markAllRead.mutate(),
         handleOpen,
     };
 };

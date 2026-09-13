@@ -4,6 +4,8 @@ import { ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } f
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { Haptics } from '@/shared/utils/haptics';
+
 import { AppText } from '../texts';
 
 /** Row height and the 1pt gutter between rows — RFDS `date and time wheels` (54784:4649). */
@@ -41,14 +43,53 @@ export interface WheelPickerProps {
 
 const Column = ({ column }: { column: WheelPickerColumn }) => {
     const scrollRef = useRef<ScrollView>(null);
+    /**
+     * Row the wheel last ticked on. Seeded with the mounted selection so the
+     * `contentOffset` layout pass lands on it and stays silent.
+     */
+    const tickedIndexRef = useRef(column.selectedIndex);
+    /**
+     * True from finger-down until the wheel settles. Android applies
+     * `contentOffset` as a scroll after layout, so it can transiently read 0 —
+     * the seed alone would tick on mount for any non-zero selection. This also
+     * keeps a future programmatic `scrollTo` silent. It deliberately stays true
+     * through the momentum fling: the iOS wheel ticks while it decelerates, not
+     * only when it stops.
+     */
+    const isUserScrollingRef = useRef(false);
+
+    const indexAt = useCallback(
+        (offsetY: number) => {
+            const index = Math.round(offsetY / ROW_STRIDE);
+            return Math.min(Math.max(index, 0), column.items.length - 1);
+        },
+        [column.items.length],
+    );
+
+    const handleBeginDrag = useCallback(() => {
+        isUserScrollingRef.current = true;
+    }, []);
+
+    /** One selection tick per row that passes under the highlight pill. */
+    const handleScroll = useCallback(
+        (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+            if (!isUserScrollingRef.current) return;
+            const index = indexAt(event.nativeEvent.contentOffset.y);
+            if (index === tickedIndexRef.current) return;
+            tickedIndexRef.current = index;
+            void Haptics.selection();
+        },
+        [indexAt],
+    );
 
     const handleMomentumEnd = useCallback(
         (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const index = Math.round(event.nativeEvent.contentOffset.y / ROW_STRIDE);
-            const clamped = Math.min(Math.max(index, 0), column.items.length - 1);
+            isUserScrollingRef.current = false;
+            const clamped = indexAt(event.nativeEvent.contentOffset.y);
+            tickedIndexRef.current = clamped;
             if (clamped !== column.selectedIndex) column.onChange(clamped);
         },
-        [column],
+        [column, indexAt],
     );
 
     return (
@@ -63,6 +104,9 @@ const Column = ({ column }: { column: WheelPickerColumn }) => {
                 snapToInterval={ROW_STRIDE}
                 decelerationRate="fast"
                 contentOffset={{ x: 0, y: column.selectedIndex * ROW_STRIDE }}
+                scrollEventThrottle={16}
+                onScrollBeginDrag={handleBeginDrag}
+                onScroll={handleScroll}
                 onMomentumScrollEnd={handleMomentumEnd}
                 accessibilityLabel={column.key}
             >

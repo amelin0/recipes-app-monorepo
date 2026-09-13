@@ -1,1 +1,2 @@
-export { MEAL_REMINDERS, MOCK_WEIGH_IN_DATE, REMINDER_MINUTE_STEP } from './reminders';
+export * from './auth-policy';
+export { MEAL_REMINDERS, REMINDER_MINUTE_STEP } from './reminders';

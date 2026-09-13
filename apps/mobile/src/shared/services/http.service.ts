@@ -17,6 +17,23 @@ interface AuthTokensOutboundDto {
 
 const REFRESH_PATH = '/auth/refresh';
 
+/**
+ * Публічні маршрути автентифікації. Їхній 401 — це «невірний пароль», а не
+ * «сесія протухла»: рефреш тут не допоможе, а вихід із застосунку через
+ * `handleUnauthenticated` вибив би вже залогіненого користувача через одну
+ * помилку введення.
+ */
+const PUBLIC_AUTH_PATHS = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/verify-email',
+    '/auth/resend-code',
+    '/auth/oauth',
+    '/auth/password-reset',
+];
+
+const isPublicAuthPath = (url?: string) => Boolean(url && PUBLIC_AUTH_PATHS.some(path => url.startsWith(path)));
+
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
     /** Set after a 401 retry so we don't loop forever if the refreshed token also fails. */
     _retried?: boolean;
@@ -33,6 +50,13 @@ const axiosInstance: AxiosInstance = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+/**
+ * Told when a session ends for good, so the UI can say so. Injected rather
+ * than imported: this module loads before the toast host mounts, and pulling
+ * the toast service in here would make the HTTP layer depend on the view.
+ */
+let onSessionExpired: (() => void) | undefined;
 
 /** Clear auth state and force the app back to the unauthenticated stack. */
 async function handleUnauthenticated(): Promise<void> {
@@ -70,7 +94,15 @@ async function refreshTokens(): Promise<string | null> {
             refreshToken: tokens.refreshToken,
         });
         return tokens.accessToken;
-    } catch {
+    } catch (error) {
+        // Найважливіший шлях автентифікації не має лишатись німим: коли рефреш
+        // падає, користувача викидає на екран входу, і без цього рядка
+        // причина ніде не видима — ні в логах Metro, ні на пристрої.
+        const failure = (error as AxiosError<{ code?: string; message?: string }>).response;
+        console.log(
+            `[HTTP ✕] POST ${REFRESH_PATH} → ${failure?.status ?? 'network'}`,
+            failure?.data ?? (error as Error).message,
+        );
         return null;
     }
 }
@@ -84,10 +116,19 @@ function getOrStartRefresh(): Promise<string | null> {
     return pendingRefresh;
 }
 
-function formatRoute(config?: { method?: string; url?: string; baseURL?: string }): string {
+function formatRoute(config?: { method?: string; url?: string; baseURL?: string; params?: unknown }): string {
     const method = config?.method?.toUpperCase() ?? 'REQ';
     const url = config?.url ?? '';
-    return `${method} ${url}`;
+    // Пошук і фільтри живуть у query — без них у журналі два різні запити
+    // виглядають однаково, і не видно, з чим саме сервер не погодився.
+    const params = config?.params;
+    const query =
+        params instanceof URLSearchParams
+            ? params.toString()
+            : params && typeof params === 'object'
+              ? new URLSearchParams(params as Record<string, string>).toString()
+              : '';
+    return query ? `${method} ${url}?${query}` : `${method} ${url}`;
 }
 
 /**
@@ -96,7 +137,11 @@ function formatRoute(config?: { method?: string; url?: string; baseURL?: string 
  */
 function unwrapEnvelope<T>(body: unknown): T {
     if (body && typeof body === 'object' && 'data' in body) {
-        return (body as { data: T }).data;
+        const envelope = body as { data: T; meta?: unknown };
+        // Сторінковані відповіді несуть `meta` (total/page/limit/totalPages) —
+        // їх віддаємо цілими, інакше лічильник «Показати N результатів» і
+        // useInfiniteQuery лишаються без даних. Решта розгортається до `data`.
+        return envelope.meta === undefined ? envelope.data : (envelope as unknown as T);
     }
     return body as T;
 }
@@ -131,7 +176,7 @@ axiosInstance.interceptors.response.use(
         const status = error.response?.status;
         const original = error.config as RetryableRequestConfig | undefined;
 
-        if (status === 401 && original) {
+        if (status === 401 && original && !isPublicAuthPath(original.url)) {
             const isRefreshCall = original.url?.endsWith(REFRESH_PATH);
             const alreadyRetried = original._retried === true;
 
@@ -145,6 +190,9 @@ axiosInstance.interceptors.response.use(
             }
 
             await handleUnauthenticated();
+            // Без цього користувач просто опиняється на екрані входу посеред
+            // дії, яку щойно почав, і читає це як падіння застосунку.
+            onSessionExpired?.();
         }
 
         const route = formatRoute(error.config);
@@ -182,4 +230,9 @@ export const HttpService = {
     },
 
     getAccessToken: () => AuthStorage.getAccessToken(),
+
+    /** Registered once, by the root layout. */
+    setSessionExpiredHandler: (handler: () => void) => {
+        onSessionExpired = handler;
+    },
 };

@@ -1,38 +1,3 @@
-/** Fixed render order of shopping list groups — labels in `shopping:categories.*`. */
-export const SHOPPING_CATEGORY_ORDER = ['meat', 'flour', 'dairy', 'cereals', 'vegetables', 'fruits', 'other'];
-
-export interface CatalogProduct {
-    /** Key into `shopping:products.*`. */
-    key: string;
-    emoji: string;
-    categoryKey: string;
-    kcalPer100: number;
-    /** Grams in one piece — drives the «≈ Nг» hint (665:11895). */
-    pieceGrams?: number;
-}
-
-// TODO: replace with GET /products once the API ships. Order mirrors the
-// «Додати продукти» Figma mock (435:16021).
-export const PRODUCT_CATALOG: CatalogProduct[] = [
-    { key: 'chicken-fillet', emoji: '🍗', categoryKey: 'meat', kcalPer100: 110, pieceGrams: 89 },
-    { key: 'egg', emoji: '🥚', categoryKey: 'other', kcalPer100: 155 },
-    { key: 'tomato', emoji: '🍅', categoryKey: 'vegetables', kcalPer100: 18 },
-    { key: 'rice', emoji: '🍚', categoryKey: 'cereals', kcalPer100: 130 },
-    { key: 'buckwheat', emoji: '🌾', categoryKey: 'cereals', kcalPer100: 343 },
-    { key: 'carrot', emoji: '🥕', categoryKey: 'vegetables', kcalPer100: 41 },
-    { key: 'apple', emoji: '🍎', categoryKey: 'fruits', kcalPer100: 52 },
-    { key: 'broccoli', emoji: '🥦', categoryKey: 'vegetables', kcalPer100: 34 },
-    { key: 'sweet-potato', emoji: '🍠', categoryKey: 'vegetables', kcalPer100: 86 },
-    { key: 'avocado', emoji: '🥑', categoryKey: 'fruits', kcalPer100: 160 },
-    { key: 'cheese', emoji: '🧀', categoryKey: 'dairy', kcalPer100: 350 },
-    { key: 'mushrooms', emoji: '🍄', categoryKey: 'vegetables', kcalPer100: 22 },
-    { key: 'corn', emoji: '🌽', categoryKey: 'vegetables', kcalPer100: 86 },
-    { key: 'potato', emoji: '🥔', categoryKey: 'vegetables', kcalPer100: 77 },
-    { key: 'watermelon', emoji: '🍉', categoryKey: 'fruits', kcalPer100: 30 },
-    { key: 'spinach', emoji: '🥬', categoryKey: 'vegetables', kcalPer100: 23 },
-    { key: 'garlic', emoji: '🧄', categoryKey: 'vegetables', kcalPer100: 149 },
-];
-
 export type AmountUnitKey = 'portion' | 'piece' | 'gram';
 
 export interface AmountUnitConfig {
@@ -41,7 +6,11 @@ export interface AmountUnitConfig {
     min: number;
     max: number;
     initial: number;
-    /** Grams in one unit — конвертація в грами для списку. */
+    /**
+     * Grams in one unit, used only for the «≈ 89г» hint beside the value.
+     * The real conversion happens server-side — it knows what a serving of
+     * this particular product weighs, and must do it the same for everyone.
+     */
     grams: number;
 }
 

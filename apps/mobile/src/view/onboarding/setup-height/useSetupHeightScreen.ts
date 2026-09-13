@@ -10,11 +10,14 @@ import { useStore } from '@/state';
 import { DEFAULT_HEIGHT_CM, HEIGHT_CM_MAX, HEIGHT_CM_MIN } from '../onboarding.constants';
 import { cmToInch, inchToCm, nearestIndex } from '../onboarding.helpers';
 
+import { useOnboardingStep } from '../useOnboardingStep';
+
 export const useSetupHeightScreen = () => {
     const { t } = useAppTranslation(['onboarding']);
     const unitSystem = useStore(state => state.profileSetup.unitSystem);
     const heightCm = useStore(state => state.profileSetup.heightCm) ?? DEFAULT_HEIGHT_CM;
     const setAnswer = useStore(state => state.setProfileSetupAnswerAction);
+    const saveStep = useOnboardingStep(7);
 
     const isMetric = unitSystem !== 'imperial';
 
@@ -44,8 +47,9 @@ export const useSetupHeightScreen = () => {
 
     const handleNext = useCallback(() => {
         setAnswer('heightCm', heightCm);
+        saveStep({ heightCm: Math.round(heightCm * 10) / 10 });
         router.push('/(app)/setup-benefit-macros');
-    }, [heightCm, setAnswer]);
+    }, [heightCm, saveStep, setAnswer]);
 
     return { columns, handleNext };
 };

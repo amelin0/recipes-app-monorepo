@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet as RNStyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
+import Animated, {
+    cancelAnimation,
+    Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useUnistyles } from 'react-native-unistyles';
 
@@ -9,7 +17,28 @@ export interface GradientOutlineProps {
     radius: number;
     /** Stroke width. @default 1 */
     width?: number;
+    /**
+     * Spin the gradient so the highlight travels around the frame.
+     *
+     * For the one card that says «this is where you are now» — a still outline
+     * is easy to read as decoration, a moving one is not.
+     */
+    animated?: boolean;
 }
+
+/** One turn of the highlight. */
+const SPIN_MS = 4000;
+
+/**
+ * Side of the square that carries the spinning gradient, from the card it has
+ * to cover.
+ *
+ * The square is centred and rotated, so what must cover the card at every
+ * angle is its inscribed circle — hence the diagonal. Bigger than that and the
+ * card samples only a thin slice of the gradient, which reads as one flat
+ * colour instead of a travelling highlight.
+ */
+const spinSize = (width: number, height: number) => Math.ceil(Math.hypot(width, height));
 
 /**
  * End point of a gradient that runs corner to corner *as Figma draws it*.
@@ -39,14 +68,78 @@ const diagonal = (width: number, height: number) => {
  * padding box — Figma centres this stroke on the frame, so the content must
  * keep its full width.
  */
-export const GradientOutline = ({ radius, width = 1 }: GradientOutlineProps) => {
+export const GradientOutline = ({ radius, width = 1, animated = false }: GradientOutlineProps) => {
     const { theme } = useUnistyles();
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+
+    const angle = useSharedValue(0);
+
+    useEffect(() => {
+        if (!animated) return;
+
+        // Крутиться сама градієнтна площина, а не обведення: підсвітка обходить
+        // рамку по колу, а не блимає на місці.
+        angle.value = 0;
+        angle.value = withRepeat(withTiming(360, { duration: SPIN_MS, easing: Easing.linear }), -1, false);
+
+        return () => cancelAnimation(angle);
+    }, [animated, angle]);
+
+    const spin = useAnimatedStyle(() => ({ transform: [{ rotate: `${angle.value}deg` }] }));
 
     const handleLayout = (event: LayoutChangeEvent) => {
         const { width: w, height: h } = event.nativeEvent.layout;
         if (size?.width !== w || size?.height !== h) setSize({ width: w, height: h });
     };
+
+    if (animated) {
+        const side = size ? spinSize(size.width, size.height) : 0;
+
+        return (
+            // Обрізання круглим кутом і є рамкою: квадрат градієнта видно лише
+            // там, де його не накриває суцільна серединка.
+            <View
+                pointerEvents="none"
+                onLayout={handleLayout}
+                style={[RNStyleSheet.absoluteFill, { borderRadius: radius, overflow: 'hidden' }]}
+            >
+                <View style={[RNStyleSheet.absoluteFill, styles.center]}>
+                    {side > 0 ? (
+                        <Animated.View style={[{ width: side, height: side }, spin]}>
+                            <Svg width={side} height={side}>
+                                <Defs>
+                                    {/* Перший і останній стопи однакові — інакше
+                                        на стику оберту видно шов. */}
+                                    <LinearGradient id="cardOutlineSpin" x1="0.5" y1="0" x2="0.5" y2="1">
+                                        <Stop offset="0" stopColor={theme.colors.gradient.outlineFrom} />
+                                        <Stop offset="0.25" stopColor={theme.colors.semantic.white} />
+                                        <Stop offset="0.5" stopColor={theme.colors.gradient.outlineTo} />
+                                        <Stop offset="0.75" stopColor={theme.colors.semantic.white} />
+                                        <Stop offset="1" stopColor={theme.colors.gradient.outlineFrom} />
+                                    </LinearGradient>
+                                </Defs>
+                                <Rect width={side} height={side} fill="url(#cardOutlineSpin)" />
+                            </Svg>
+                        </Animated.View>
+                    ) : null}
+                </View>
+
+                {/* Накриває все, крім рамки завширшки `width`. Колір — той самий,
+                    що й у картки, тож серединка лишається її власним тлом. */}
+                <View
+                    style={{
+                        position: 'absolute',
+                        top: width,
+                        left: width,
+                        right: width,
+                        bottom: width,
+                        borderRadius: Math.max(radius - width, 0),
+                        backgroundColor: theme.colors.background.screen,
+                    }}
+                />
+            </View>
+        );
+    }
 
     return (
         <View pointerEvents="none" style={RNStyleSheet.absoluteFill} onLayout={handleLayout}>
@@ -83,3 +176,10 @@ export const GradientOutline = ({ radius, width = 1 }: GradientOutlineProps) => 
         </View>
     );
 };
+
+const styles = RNStyleSheet.create({
+    center: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});

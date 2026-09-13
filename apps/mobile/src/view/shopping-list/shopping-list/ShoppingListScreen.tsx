@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppScreen, AppText, CircleIconButton } from '@/shared/ui/components';
+import { AppButton, AppScreen, AppText, CircleIconButton, QueryState } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import AddIcon from '../../../../assets/icons/add.svg';
@@ -16,8 +16,18 @@ import { useShoppingListScreen } from './useShoppingListScreen';
 export const ShoppingListScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['shopping']);
-    const { groups, isEmpty, addFromPlan, switchAddFromPlan, toggleShoppingItem, handleAddProduct } =
-        useShoppingListScreen();
+    const {
+        groups,
+        isEmpty,
+        isLoading,
+        isError,
+        handleRetry,
+        addFromPlan,
+        switchAddFromPlan,
+        toggleShoppingItem,
+        removeShoppingItem,
+        handleAddProduct,
+    } = useShoppingListScreen();
 
     return (
         <AppScreen>
@@ -33,35 +43,42 @@ export const ShoppingListScreen = () => {
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
                 <AddFromPlanCard value={addFromPlan} onValueChange={switchAddFromPlan} />
 
-                {isEmpty ? (
-                    <View style={styles.empty}>
-                        <DreamingMascot width={200} height={200} />
-                        <AppText variant="bodySmallReg" color="tertiary" style={styles.emptyText}>
-                            {t('shopping:list.empty')}
-                        </AppText>
-                        <AppButton
-                            variant="secondary"
-                            size="md"
-                            fullWidth
-                            label={t('shopping:list.add-product')}
-                            leftSlot={<AddSquareIcon width={24} height={24} color={theme.colors.elements.primary} />}
-                            onPress={handleAddProduct}
-                        />
-                    </View>
-                ) : (
-                    groups.map(group => (
-                        <View key={group.categoryKey} style={styles.groupCard}>
-                            <AppText variant="bodyMediumBold">{t(`shopping:categories.${group.categoryKey}`)}</AppText>
-                            {group.items.map(item => (
-                                <ShoppingItemRow
-                                    key={item.id}
-                                    item={item}
-                                    onToggle={() => toggleShoppingItem(item.id)}
-                                />
-                            ))}
+                <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry} style={styles.stateBox}>
+                    {isEmpty ? (
+                        <View style={styles.empty}>
+                            <DreamingMascot width={200} height={200} />
+                            <AppText variant="bodySmallReg" color="tertiary" style={styles.emptyText}>
+                                {t('shopping:list.empty')}
+                            </AppText>
+                            <AppButton
+                                variant="secondary"
+                                size="md"
+                                fullWidth
+                                label={t('shopping:list.add-product')}
+                                leftSlot={
+                                    <AddSquareIcon width={24} height={24} color={theme.colors.elements.primary} />
+                                }
+                                onPress={handleAddProduct}
+                            />
                         </View>
-                    ))
-                )}
+                    ) : (
+                        groups.map(group => (
+                            <View key={group.group.id} style={styles.groupCard}>
+                                <AppText variant="bodyMediumBold">
+                                    {group.group.emoji ? `${group.group.emoji} ${group.group.name}` : group.group.name}
+                                </AppText>
+                                {group.items.map(item => (
+                                    <ShoppingItemRow
+                                        key={`${item.origin}:${item.productId}`}
+                                        item={item}
+                                        onToggle={() => toggleShoppingItem(item)}
+                                        onRemove={item.origin === 'manual' ? () => removeShoppingItem(item) : undefined}
+                                    />
+                                ))}
+                            </View>
+                        ))
+                    )}
+                </QueryState>
             </ScrollView>
         </AppScreen>
     );
@@ -83,6 +100,12 @@ const styles = StyleSheet.create(theme => ({
         paddingHorizontal: theme.spacing[4],
         paddingBottom: 120,
         gap: theme.spacing[4],
+    },
+    // Стани живуть у скролі під картою «Додати з плану» — на всю висоту вони
+    // виштовхнули б її з екрана.
+    stateBox: {
+        flex: 0,
+        paddingVertical: theme.spacing[8],
     },
     empty: {
         alignItems: 'center',

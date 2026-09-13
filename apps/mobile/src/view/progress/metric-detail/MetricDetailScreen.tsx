@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppScreen, AppText, CircleBackButton, SegmentedControl } from '@/shared/ui/components';
+import { AppScreen, AppText, CircleBackButton, QueryState, SegmentedControl } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import AddIcon from '../../../../assets/icons/add.svg';
@@ -15,6 +15,7 @@ import StepsIcon from '../../../../assets/icons/steps.svg';
 import WaterDropIcon from '../../../../assets/icons/water-drop.svg';
 import {
     ChartLegend,
+    EmptyMetricNote,
     MetricActions,
     MetricBarChart,
     MetricHeadline,
@@ -42,6 +43,7 @@ export const MetricDetailScreen = () => {
     const {
         metric,
         isReading,
+        hasReadings,
         canAdd,
         chartTitle,
         headline,
@@ -51,6 +53,10 @@ export const MetricDetailScreen = () => {
         lineAxis,
         bars,
         records,
+        progressDirection,
+        isLoading,
+        isError,
+        handleRetry,
         goalValue,
         unit,
         nutrientTab,
@@ -105,6 +111,19 @@ export const MetricDetailScreen = () => {
                     { key: 'under', label: t('progress:legend.under'), color: theme.colors.semantic.orange },
                 ];
 
+    /**
+     * Colours a reading's change by whether it moved towards the goal, not by
+     * its sign: for somebody losing weight a drop is progress, and painting it
+     * red would tell them the opposite of what happened.
+     */
+    const deltaColor = (delta?: number) => {
+        if (delta === undefined || delta === 0 || progressDirection === null) {
+            return theme.colors.semantic.darkGrey;
+        }
+        const towardsGoal = progressDirection === 'down' ? delta < 0 : delta > 0;
+        return towardsGoal ? theme.colors.semantic.positive : theme.colors.semantic.negative;
+    };
+
     return (
         <AppScreen>
             <View style={styles.topBar}>
@@ -142,87 +161,93 @@ export const MetricDetailScreen = () => {
                 </View>
             ) : null}
 
-            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <MetricHeadline cards={headline} direction={headlineDirection} />
+            <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry}>
+                <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+                    <MetricHeadline cards={headline} direction={headlineDirection} />
 
-                {actions.length > 0 ? <MetricActions actions={actions} /> : null}
+                    {actions.length > 0 ? <MetricActions actions={actions} /> : null}
 
-                {statRows.length > 0 ? <MetricStatBoxes rows={statRows} /> : null}
+                    {statRows.length > 0 ? <MetricStatBoxes rows={statRows} /> : null}
 
-                <View style={styles.card}>
-                    <AppText variant="bodyLargeBold" style={styles.cardTitle}>
-                        {chartTitle}
-                    </AppText>
+                    <View style={styles.card}>
+                        <AppText variant="bodyLargeBold" style={styles.cardTitle}>
+                            {chartTitle}
+                        </AppText>
 
-                    {isReading ? (
-                        <>
-                            <MetricLineChart points={linePoints} axis={lineAxis} />
-                            {metric === 'waist' ? <ChartLegend items={legend} /> : null}
-                        </>
-                    ) : (
-                        <>
-                            <MetricBarChart groups={bars.groups} axis={bars.axis} max={bars.max} />
-                            <ChartLegend items={legend} />
-                        </>
-                    )}
-                </View>
+                        {isReading && !hasReadings ? (
+                            <EmptyMetricNote label={t('progress:labels.no-readings')} />
+                        ) : isReading ? (
+                            <>
+                                <MetricLineChart points={linePoints} axis={lineAxis} />
+                                {metric === 'waist' ? <ChartLegend items={legend} /> : null}
+                            </>
+                        ) : (
+                            <>
+                                <MetricBarChart groups={bars.groups} axis={bars.axis} max={bars.max} />
+                                <ChartLegend items={legend} />
+                            </>
+                        )}
+                    </View>
 
-                <View style={styles.card}>
-                    <AppText variant="bodyLargeBold" style={styles.cardTitle}>
-                        {t('progress:detail.records')}
-                    </AppText>
+                    <View style={styles.card}>
+                        <AppText variant="bodyLargeBold" style={styles.cardTitle}>
+                            {t('progress:detail.records')}
+                        </AppText>
 
-                    <View style={styles.list}>
-                        {records.map((record, index) => (
-                            <MetricRecordRow
-                                key={record.id}
-                                icon={icon}
-                                iconBackground={iconBackground}
-                                title={
-                                    isReading
-                                        ? t('progress:detail.reading', { value: record.value.toFixed(1), unit })
-                                        : record.title
-                                }
-                                subtitle={isReading ? record.title : undefined}
-                                value={
-                                    isReading
-                                        ? // The first ever reading has nothing to compare against, and
-                                          // the design leaves its right side empty (673:32938).
-                                          record.delta === undefined
-                                            ? ''
-                                            : t('progress:detail.delta', {
-                                                  value: record.delta > 0 ? `+${record.delta}` : record.delta,
+                        {records.length === 0 ? (
+                            <AppText variant="bodyMediumReg" style={styles.emptyRecords}>
+                                {t('progress:labels.no-readings')}
+                            </AppText>
+                        ) : null}
+
+                        <View style={styles.list}>
+                            {records.map((record, index) => (
+                                <MetricRecordRow
+                                    key={record.id}
+                                    icon={icon}
+                                    iconBackground={iconBackground}
+                                    title={
+                                        isReading
+                                            ? t('progress:detail.reading', { value: record.value.toFixed(1), unit })
+                                            : record.title
+                                    }
+                                    subtitle={isReading ? record.title : undefined}
+                                    value={
+                                        isReading
+                                            ? // The first ever reading has nothing to compare against, and
+                                              // the design leaves its right side empty (673:32938).
+                                              record.delta === undefined
+                                                ? ''
+                                                : t('progress:detail.delta', {
+                                                      value: record.delta > 0 ? `+${record.delta}` : record.delta,
+                                                      unit,
+                                                  })
+                                            : t('progress:detail.of-goal', {
+                                                  value: format(record.value),
+                                                  goal: format(goalValue),
                                                   unit,
                                               })
-                                        : t('progress:detail.of-goal', {
-                                              value: format(record.value),
-                                              goal: format(goalValue),
-                                              unit,
-                                          })
-                                }
-                                valueColor={
-                                    isReading
-                                        ? (record.delta ?? 0) > 0
-                                            ? theme.colors.semantic.positive
-                                            : (record.delta ?? 0) < 0
-                                              ? theme.colors.semantic.negative
-                                              : theme.colors.semantic.darkGrey
-                                        : record.value >= goalValue
-                                          ? theme.colors.branding.accent
-                                          : theme.colors.semantic.orange
-                                }
-                                progress={isReading ? undefined : goalValue > 0 ? record.value / goalValue : 0}
-                                progressColor={
-                                    record.value >= goalValue
-                                        ? theme.colors.branding.accent
-                                        : theme.colors.semantic.orange
-                                }
-                                divided={index < records.length - 1}
-                            />
-                        ))}
+                                    }
+                                    valueColor={
+                                        isReading
+                                            ? deltaColor(record.delta)
+                                            : record.value >= goalValue
+                                              ? theme.colors.branding.accent
+                                              : theme.colors.semantic.orange
+                                    }
+                                    progress={isReading ? undefined : goalValue > 0 ? record.value / goalValue : 0}
+                                    progressColor={
+                                        record.value >= goalValue
+                                            ? theme.colors.branding.accent
+                                            : theme.colors.semantic.orange
+                                    }
+                                    divided={index < records.length - 1}
+                                />
+                            ))}
+                        </View>
                     </View>
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </QueryState>
         </AppScreen>
     );
 };
@@ -274,5 +299,10 @@ const styles = StyleSheet.create(theme => ({
     },
     list: {
         width: '100%',
+    },
+    emptyRecords: {
+        width: '100%',
+        textAlign: 'center',
+        color: theme.colors.semantic.darkGrey,
     },
 }));

@@ -30,6 +30,11 @@ const PLOT_HEIGHT = 100;
 /** Width of a point's column — the first and last sit half a column in. */
 const COLUMN = 38;
 const DOT = 10;
+/**
+ * Обводка навколо кожної точки, щоб лінія не втикалася в кружечок. RFDS малює
+ * її 2pt поза 10pt точкою (673:40201) — разом точка виходить 14pt.
+ */
+const RING = 2;
 
 /** Weight, waist and height over time (670:26730). */
 export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
@@ -38,8 +43,10 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
 
     const handleLayout = (event: LayoutChangeEvent) => setPlotWidth(event.nativeEvent.layout.width);
 
-    const top = ROW / 2;
-    const bottom = (axis.length - 1) * (ROW + ROW_GAP) + ROW / 2;
+    // RING запасу згори, щоб точка на верхній лінійці не обрізалася боксом
+    // SVG — сам бокс піднято на стільки ж нижче.
+    const top = ROW / 2 + RING;
+    const bottom = (axis.length - 1) * (ROW + ROW_GAP) + ROW / 2 + RING;
     const max = axis[0] ?? 0;
     const min = axis[axis.length - 1] ?? 0;
 
@@ -55,8 +62,10 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
     return (
         <View style={styles.root}>
             <View style={styles.grid}>
-                {axis.map(value => (
-                    <View key={value} style={styles.gridRow}>
+                {axis.map((value, index) => (
+                    // Індекс, а не значення: на плоскому ряду поділки
+                    // збігаються, і значення перестало б бути унікальним.
+                    <View key={index} style={styles.gridRow}>
                         <AppText variant="overline" style={styles.axisLabel}>
                             {value}
                         </AppText>
@@ -67,7 +76,7 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
 
             <View style={styles.plot} onLayout={handleLayout} pointerEvents="none">
                 {plotWidth > 0 ? (
-                    <Svg width={plotWidth} height={PLOT_HEIGHT}>
+                    <Svg width={plotWidth} height={PLOT_HEIGHT + RING}>
                         <Polyline
                             points={points.map((point, index) => `${xFor(index)},${yFor(point.value)}`).join(' ')}
                             fill="none"
@@ -78,11 +87,16 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
                         />
                         {points.map((point, index) => (
                             <Circle
-                                key={point.label}
+                                key={`${point.label}-${index}`}
                                 cx={xFor(index)}
                                 cy={yFor(point.value)}
-                                r={DOT / 2}
+                                // react-native-svg центрує обводку, тож радіус
+                                // шляху несе її половину: кольорова точка
+                                // лишається 10pt, а кільце сідає зовні.
+                                r={(DOT + RING) / 2}
                                 fill={point.color ?? theme.colors.semantic.positive}
+                                stroke={theme.colors.semantic.lightGrey}
+                                strokeWidth={RING}
                             />
                         ))}
                         {/* Keeps the SVG box honest when a single point would
@@ -93,8 +107,8 @@ export const MetricLineChart = ({ points, axis }: MetricLineChartProps) => {
             </View>
 
             <View style={styles.labels}>
-                {points.map(point => (
-                    <AppText key={point.label} variant="overline" style={styles.pointLabel}>
+                {points.map((point, index) => (
+                    <AppText key={`${point.label}-${index}`} variant="overline" style={styles.pointLabel}>
                         {point.label}
                     </AppText>
                 ))}
@@ -131,10 +145,10 @@ const styles = StyleSheet.create(theme => ({
     },
     plot: {
         position: 'absolute',
-        top: 0,
+        top: -RING,
         left: LABEL_WIDTH + LABEL_GAP,
         right: 0,
-        height: PLOT_HEIGHT,
+        height: PLOT_HEIGHT + RING,
     },
     labels: {
         flexDirection: 'row',

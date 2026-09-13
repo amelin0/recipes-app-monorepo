@@ -6,18 +6,30 @@ import { router, useNavigation } from 'expo-router';
 import type { MacroKey } from '@/shared/ui/components';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { useGetNutritionGoal, useUpsertNutritionGoal } from '@/state/domains/nutrition';
+import { useGetProgressMetrics } from '@/state/domains/progress';
+import { useGetOnboarding, useGetRecommendations } from '@/state/domains/user';
+import { CALORIE_GOAL_TOLERANCE } from '@/view/onboarding/onboarding.constants';
 
 import type { GoalParam, MacroBalanceSegment } from './components';
 
 export type GoalKey = 'loss' | 'maintain' | 'gain';
 export type NutrientKey = MacroKey | 'water' | 'fiber';
 
-/** Where the questionnaire leaves the goal; TODO: read the saved one. */
-const CALORIE_GOAL_DEFAULT = 1850;
+/** Only used until the goal arrives — every real value comes from the server. */
+const CALORIE_GOAL_FALLBACK = 1850;
 const CALORIE_STEP = 50;
 const CALORIE_MIN = 1000;
 const CALORIE_MAX = 5000;
 
+/**
+ * The three presets the design shows.
+ *
+ * Still fixed numbers: the spec (FR-010) says they should follow the computed
+ * norm once the profile can produce one, but the API has no «goal preset»
+ * endpoint, and deriving them here would put a second implementation of the
+ * formulas in the client — exactly what `TODO_BE.md` §1–3 is meant to prevent.
+ */
 const GOALS: { key: GoalKey; emoji: string; calories: number }[] = [
     { key: 'loss', emoji: '🔥', calories: 1400 },
     { key: 'maintain', emoji: '⚖️', calories: 1850 },
@@ -32,18 +44,6 @@ const NUTRIENTS: { key: NutrientKey; emoji: string; unit: 'g' | 'ml' }[] = [
     { key: 'fiber', emoji: '🥦', unit: 'g' },
 ];
 
-/**
- * TODO: replace with the saved goal (nutrition domain). How the macro grams
- * follow a calorie change is an open question — see the spec.
- */
-const NUTRIENT_VALUES: Record<NutrientKey, number> = {
-    protein: 200,
-    fats: 48,
-    carbs: 100,
-    water: 2000,
-    fiber: 25,
-};
-
 const KCAL_PER_GRAM: Record<MacroKey, number> = {
     protein: 4,
     fats: 9,
@@ -51,16 +51,41 @@ const KCAL_PER_GRAM: Record<MacroKey, number> = {
 };
 
 export const useGoalSetupScreen = () => {
-    const { t } = useAppTranslation(['tracking']);
+    const { t } = useAppTranslation(['tracking', 'common']);
 
     const navigation = useNavigation();
 
-    const [savedCalories, setSavedCalories] = useState(CALORIE_GOAL_DEFAULT);
-    const [calories, setCalories] = useState(CALORIE_GOAL_DEFAULT);
-    const values = NUTRIENT_VALUES;
+    const { data: goal } = useGetNutritionGoal();
+    const { data: recommendations } = useGetRecommendations();
+    const { data: onboarding } = useGetOnboarding();
+    const { data: cards } = useGetProgressMetrics();
+    const upsertGoal = useUpsertNutritionGoal();
+
+    const savedCalories = goal?.dailyCalories ?? CALORIE_GOAL_FALLBACK;
+    // Правка живе локально, доки її не збережено; поки цілі нема — поле
+    // порожнє, і як тільки вона доїде, беремо збережене значення.
+    const [draftCalories, setDraftCalories] = useState<number | null>(null);
+    const calories = draftCalories ?? savedCalories;
+
+    const nudgeCalories = useCallback(
+        (step: number) =>
+            setDraftCalories(prev => Math.min(Math.max((prev ?? savedCalories) + step, CALORIE_MIN), CALORIE_MAX)),
+        [savedCalories],
+    );
+
+    const values = useMemo<Record<NutrientKey, number>>(
+        () => ({
+            protein: goal?.dailyProteinG ?? 0,
+            fats: goal?.dailyFatsG ?? 0,
+            carbs: goal?.dailyCarbsG ?? 0,
+            water: goal?.dailyWaterMl ?? 0,
+            fiber: goal?.dailyFiberG ?? 0,
+        }),
+        [goal],
+    );
 
     // Leaving with unsaved changes asks first (811:37310).
-    const isDirty = calories !== savedCalories;
+    const isDirty = draftCalories !== null && draftCalories !== savedCalories;
     const [pendingExit, setPendingExit] = useState<(() => void) | null>(null);
 
     usePreventRemove(isDirty, ({ data }) => {
@@ -76,7 +101,7 @@ export const useGoalSetupScreen = () => {
             router.push('/(app)/activity-edit');
             return;
         }
-        router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'reading' } });
+        router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'reading', from: 'goal-setup' } });
     }, []);
 
     const params = useMemo(() => {
@@ -87,14 +112,34 @@ export const useGoalSetupScreen = () => {
             onPress: () => handleChangeParam(key),
         });
 
+        // Вага й зріст — останні показання; якщо їх ще нема, беремо відповіді
+        // анкети: це те саме вимірювання, зняте на етапі налаштування.
+        const weight = cards?.find(card => card.metric === 'weight')?.current ?? onboarding?.weightKg ?? null;
+        const height = cards?.find(card => card.metric === 'height')?.current ?? onboarding?.heightCm ?? null;
+        const level = onboarding?.activityLevel ?? null;
+
         return {
             pair: [
-                build('weight', t('tracking:goal-setup.params.weight'), '70 кг'),
-                build('height', t('tracking:goal-setup.params.height'), '178 см'),
+                build(
+                    'weight',
+                    t('tracking:goal-setup.params.weight'),
+                    weight === null ? '—' : t('tracking:goal-setup.params.kg', { value: weight.toFixed(1) }),
+                ),
+                build(
+                    'height',
+                    t('tracking:goal-setup.params.height'),
+                    height === null ? '—' : t('tracking:goal-setup.params.cm', { value: Math.round(height) }),
+                ),
             ] as [GoalParam, GoalParam],
-            full: build('activity', t('tracking:goal-setup.params.activity'), 'Середня активність'),
+            full: build(
+                'activity',
+                t('tracking:goal-setup.params.activity'),
+                level === null
+                    ? '—'
+                    : t(`onboarding:setup.activity.levels.${level - 1}`, { defaultValue: '' }) || String(level),
+            ),
         };
-    }, [t, handleChangeParam]);
+    }, [cards, onboarding, t, handleChangeParam]);
 
     const nutrients = useMemo(
         () => NUTRIENTS.map(nutrient => ({ ...nutrient, value: values[nutrient.key] })),
@@ -115,16 +160,12 @@ export const useGoalSetupScreen = () => {
 
     const handleSelectGoal = useCallback((goal: GoalKey) => {
         const preset = GOALS.find(item => item.key === goal);
-        if (preset) setCalories(preset.calories);
+        if (preset) setDraftCalories(preset.calories);
     }, []);
 
-    const handleDecreaseCalories = useCallback(() => {
-        setCalories(prev => Math.max(prev - CALORIE_STEP, CALORIE_MIN));
-    }, []);
+    const handleDecreaseCalories = useCallback(() => nudgeCalories(-CALORIE_STEP), [nudgeCalories]);
 
-    const handleIncreaseCalories = useCallback(() => {
-        setCalories(prev => Math.min(prev + CALORIE_STEP, CALORIE_MAX));
-    }, []);
+    const handleIncreaseCalories = useCallback(() => nudgeCalories(CALORIE_STEP), [nudgeCalories]);
 
     const handleChangeNutrient = useCallback(
         (key: NutrientKey) => {
@@ -133,48 +174,89 @@ export const useGoalSetupScreen = () => {
                 ToastService.info(t('common:states.coming-soon'));
                 return;
             }
-            router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'goal' } });
+            router.push({
+                pathname: '/(app)/metric-add',
+                params: { metric: key, mode: 'goal', from: 'goal-setup' },
+            });
         },
         [t],
     );
 
-    const commit = useCallback(() => {
-        // TODO: PUT /nutrition/goal once the API ships — mock success.
-        setSavedCalories(calories);
-        ToastService.success(t('tracking:goal-setup.saved'));
-    }, [calories, t]);
+    const commit = useCallback(
+        (onDone?: () => void) => {
+            if (upsertGoal.isPending) return;
+
+            // Ціль зберігається цілком — екран має одну дію збереження, і
+            // часткове тіло лишило б її наполовину старою.
+            upsertGoal.mutate(
+                {
+                    dailyCalories: Math.round(calories),
+                    dailyProteinG: Math.round(values.protein),
+                    dailyFatsG: Math.round(values.fats),
+                    dailyCarbsG: Math.round(values.carbs),
+                    dailyWaterMl: Math.round(values.water),
+                    dailyFiberG: Math.round(values.fiber),
+                },
+                {
+                    onSuccess: () => {
+                        setDraftCalories(null);
+                        ToastService.success(t('tracking:goal-setup.saved'));
+                        onDone?.();
+                    },
+                    onError: () => ToastService.error(t('common:states.error')),
+                },
+            );
+        },
+        [calories, t, upsertGoal, values],
+    );
 
     const handleSave = useCallback(() => {
-        commit();
-        if (router.canGoBack()) {
-            router.back();
-        }
+        commit(() => {
+            if (router.canGoBack()) router.back();
+        });
     }, [commit]);
 
     /** «Зберегти зміни» in the sheet: save, then continue leaving. */
     const handleConfirmExit = useCallback(() => {
         const leave = pendingExit;
         setPendingExit(null);
-        commit();
-        leave?.();
+        commit(() => leave?.());
     }, [commit, pendingExit]);
 
     /** «Продовжити без змін»: drop the edits and leave. */
     const handleDiscardExit = useCallback(() => {
         const leave = pendingExit;
         setPendingExit(null);
-        setCalories(savedCalories);
+        setDraftCalories(null);
         leave?.();
-    }, [pendingExit, savedCalories]);
+    }, [pendingExit]);
 
     /** The × and the scrim: stay on the screen. */
     const handleDismissExit = useCallback(() => setPendingExit(null), []);
+
+    /**
+     * Where the chosen target sits against the computed norm: a corridor of
+     * ±600 kcal (owner, 12.09). Outside it the stepper reads as a warning —
+     * `null` while there is no recommendation to compare against.
+     */
+    const recommended = recommendations?.calories ?? null;
+    const calorieDrift: 'low' | 'high' | 'ok' | null =
+        recommended === null
+            ? null
+            : calories < recommended - CALORIE_GOAL_TOLERANCE
+              ? 'low'
+              : calories > recommended + CALORIE_GOAL_TOLERANCE
+                ? 'high'
+                : 'ok';
 
     return {
         params,
         goals: GOALS,
         selectedGoal,
         calories,
+        recommended,
+        calorieDrift,
+        isSaving: upsertGoal.isPending,
         balanceSegments,
         nutrients,
         handleSelectGoal,

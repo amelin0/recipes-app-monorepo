@@ -8,7 +8,7 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import MascotChef from '../../../../assets/images/brand/mascot-chef.svg';
 import { FeatureList, PlanOption, ReferralBanner, SocialProof } from '../components';
-import { STORE_RATING, SUBSCRIPTION_FEATURES, TRIAL_DAYS } from '../subscription.constants';
+import { STORE_RATING } from '../subscription.constants';
 import { formatPrice } from '../subscription.helpers';
 
 import { usePaywallScreen } from './usePaywallScreen';
@@ -25,10 +25,13 @@ export const PaywallScreen = () => {
         name,
         targetWeight,
         calories,
-        plans,
+        features,
+        yearPlan,
+        monthPlan,
         selectedPlanId,
         selectedPlan,
         isFree,
+        isSubscribing,
         trialEnabled,
         appliedCode,
         isCodeFieldOpen,
@@ -44,7 +47,6 @@ export const PaywallScreen = () => {
     } = usePaywallScreen();
 
     const tone = appliedCode ? 'orange' : 'positive';
-    const [yearPlan, monthPlan] = plans;
 
     return (
         <AppScreen>
@@ -64,7 +66,19 @@ export const PaywallScreen = () => {
                 />
             </View>
 
-            <ScrollView style={styles.fill} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.fill}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                // Поле реферального коду стоїть унизу довгого скрола: без цього
+                // клавіатура накриває і його, і кнопку, а догортати нікуди —
+                // весь вміст уже видно. Цей проп на iOS додає нижній
+                // contentInset на висоту клавіатури й докручує сфокусоване
+                // поле над нею; той самий патерн, що у формі відгуку.
+                automaticallyAdjustKeyboardInsets
+                keyboardDismissMode="interactive"
+            >
                 <View style={styles.header}>
                     <AppText variant="titleMedium" accessibilityRole="header" style={styles.centered}>
                         {t('subscription:paywall.title', { name })}
@@ -79,7 +93,9 @@ export const PaywallScreen = () => {
                         {t('subscription:paywall.included.title')}
                     </AppText>
 
-                    <FeatureList items={SUBSCRIPTION_FEATURES.map(feature => t(`subscription:features.${feature}`))} />
+                    {/* Назви переваг редакційні — приходять із довідника, а не
+                        з локалей: контент-команда міняє їх без релізу. */}
+                    <FeatureList items={features.map(feature => feature.name)} />
 
                     <SocialProof
                         rating={STORE_RATING}
@@ -99,11 +115,15 @@ export const PaywallScreen = () => {
                     <View style={styles.plans}>
                         <PlanOption
                             title={t('subscription:plans.year')}
-                            listPrice={yearPlan?.listPrice ? formatPrice(yearPlan.listPrice) : undefined}
-                            price={yearPlan ? formatPrice(yearPlan.price) : undefined}
+                            listPrice={
+                                yearPlan?.fullPriceCents
+                                    ? formatPrice(yearPlan.fullPriceCents, yearPlan.currency)
+                                    : undefined
+                            }
+                            price={yearPlan ? formatPrice(yearPlan.priceCents, yearPlan.currency) : undefined}
                             period={t('subscription:paywall.per-year-suffix')}
                             trailing={t('subscription:period.month-short', {
-                                price: formatPrice(yearPlan?.monthlyPrice ?? 0),
+                                price: formatPrice(yearPlan?.monthlyPriceCents ?? 0, yearPlan?.currency),
                             })}
                             selected={selectedPlanId === 'year'}
                             tone={tone}
@@ -117,7 +137,7 @@ export const PaywallScreen = () => {
                                 appliedCode
                                     ? t('subscription:plans.free')
                                     : t('subscription:period.month-short', {
-                                          price: formatPrice(monthPlan?.monthlyPrice ?? 0),
+                                          price: formatPrice(monthPlan?.monthlyPriceCents ?? 0, monthPlan?.currency),
                                       })
                             }
                             selected={selectedPlanId === 'month'}
@@ -125,10 +145,10 @@ export const PaywallScreen = () => {
                             onPress={() => selectPlan('month')}
                         />
 
-                        {yearPlan?.savingPercent ? (
+                        {yearPlan?.savingsPercent ? (
                             <View style={styles.savingBadge}>
                                 <AppText variant="bodySmallBold" style={styles.savingLabel}>
-                                    {t('subscription:paywall.saving', { percent: yearPlan.savingPercent })}
+                                    {t('subscription:paywall.saving', { percent: yearPlan.savingsPercent })}
                                 </AppText>
                             </View>
                         ) : null}
@@ -148,10 +168,12 @@ export const PaywallScreen = () => {
                                     value={trialEnabled}
                                     onValueChange={toggleTrial}
                                     tone="positive"
-                                    accessibilityLabel={t('subscription:paywall.trial', { days: TRIAL_DAYS })}
+                                    accessibilityLabel={t('subscription:paywall.trial', {
+                                        days: yearPlan?.trialDays ?? 0,
+                                    })}
                                 />
                                 <AppText style={styles.trialLabel}>
-                                    {t('subscription:paywall.trial', { days: TRIAL_DAYS })}
+                                    {t('subscription:paywall.trial', { days: yearPlan?.trialDays ?? 0 })}
                                 </AppText>
                             </View>
 
@@ -191,6 +213,7 @@ export const PaywallScreen = () => {
                         <AppButton
                             fullWidth
                             label={t(isFree ? 'subscription:paywall.cta-free' : 'subscription:paywall.cta')}
+                            isLoading={isSubscribing}
                             onPress={handleSubscribe}
                         />
                         <AppText variant="bodySmallReg" style={[styles.centered, styles.muted]}>
@@ -198,11 +221,11 @@ export const PaywallScreen = () => {
                                 ? t('subscription:paywall.disclaimer-free')
                                 : trialEnabled
                                   ? t('subscription:paywall.disclaimer-trial', {
-                                        days: TRIAL_DAYS,
-                                        price: formatPrice(selectedPlan.price),
+                                        days: yearPlan?.trialDays ?? 0,
+                                        price: formatPrice(selectedPlan?.priceCents ?? 0, selectedPlan?.currency),
                                     })
                                   : t('subscription:paywall.disclaimer', {
-                                        price: formatPrice(selectedPlan.price),
+                                        price: formatPrice(selectedPlan?.priceCents ?? 0, selectedPlan?.currency),
                                     })}
                         </AppText>
                     </View>
@@ -261,7 +284,9 @@ const styles = StyleSheet.create(theme => ({
         padding: theme.spacing[4],
         borderRadius: theme.radius.xl,
         backgroundColor: theme.colors.semantic.white,
-        overflow: 'hidden',
+        // Без overflow: 'hidden' — на iOS кліп вбиває drop shadow, а саме тінь
+        // відділяє білу картку від білої сторінки. Обрізати тут нічого:
+        // весь вміст сидить усередині 16pt падінгу.
         ...theme.shadow.block,
     },
     plansCard: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -26,32 +26,30 @@ export const MealPortionsScreen = () => {
         handleIncrease,
         handleClose,
         handleConfirm,
+        isSubmitting,
     } = useMealPortionsScreen();
 
     return (
         <View style={styles.sheet}>
-            <View style={styles.header}>
-                <View style={styles.headerText}>
-                    <AppText variant="titleMedium">{t('recipes:portions.title')}</AppText>
-                    <AppText variant="bodyMediumReg" style={styles.muted}>
-                        {t('recipes:portions.subtitle')}
-                    </AppText>
+            <View style={styles.list}>
+                <View style={styles.header}>
+                    <View style={styles.headerText}>
+                        <AppText variant="titleMedium">{t('recipes:portions.title')}</AppText>
+                        <AppText variant="bodyMediumReg" style={styles.muted}>
+                            {t('recipes:portions.subtitle')}
+                        </AppText>
+                    </View>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('common:actions.close')}
+                        hitSlop={8}
+                        onPress={handleClose}
+                        style={styles.closeButton}
+                    >
+                        <CloseIcon width={20} height={20} color={theme.colors.elements.primary} />
+                    </Pressable>
                 </View>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('common:actions.close')}
-                    hitSlop={8}
-                    onPress={handleClose}
-                    style={styles.closeButton}
-                >
-                    <CloseIcon width={20} height={20} color={theme.colors.elements.primary} />
-                </Pressable>
-            </View>
 
-            {/* The sheet is nearly full height in the design (811:58844); on a
-                short device the plate plus its readouts still overflow, so the
-                middle scrolls while the header and the action stay put. */}
-            <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
                 <ValueStepper
                     value={t('recipes:portions.count', { value: portions })}
                     canDecrease={canDecrease}
@@ -83,7 +81,7 @@ export const MealPortionsScreen = () => {
                     fats={myMacros.fats}
                     carbs={myMacros.carbs}
                 />
-            </ScrollView>
+            </View>
 
             <View style={styles.footer}>
                 <View style={styles.weightRow}>
@@ -92,23 +90,31 @@ export const MealPortionsScreen = () => {
                         {t('recipes:portions.grams-value', { value: totalGrams })}
                     </AppText>
                 </View>
-                <AppButton fullWidth label={t('recipes:portions.confirm')} onPress={handleConfirm} />
+                <AppButton
+                    fullWidth
+                    isLoading={isSubmitting}
+                    label={t('recipes:portions.confirm')}
+                    onPress={handleConfirm}
+                />
             </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create(theme => ({
+    // Без flex: 1 — висоту шита задає вміст (sheetAllowedDetents:
+    // 'fitToContents'), як у решті шитів застосунку. Скролу тут немає
+    // навмисно: ScrollView усередині formSheet з фіксованим детентом малював
+    // вміст поза власними межами.
     sheet: {
-        flex: 1,
         backgroundColor: theme.colors.semantic.white,
     },
     header: {
+        width: '100%',
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: theme.spacing[3],
-        paddingHorizontal: theme.spacing[4],
-        paddingTop: theme.spacing[6],
+        paddingTop: theme.spacing[2],
     },
     headerText: {
         flex: 1,
@@ -123,11 +129,11 @@ const styles = StyleSheet.create(theme => ({
         backgroundColor: theme.colors.semantic.lightGrey,
     },
     list: {
-        flexGrow: 1,
         alignItems: 'center',
         gap: theme.spacing[4],
         paddingHorizontal: theme.spacing[4],
-        paddingTop: theme.spacing[4],
+        paddingTop: theme.spacing[6],
+        paddingBottom: theme.spacing[4],
     },
     centered: {
         width: '100%',

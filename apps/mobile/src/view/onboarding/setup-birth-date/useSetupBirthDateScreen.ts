@@ -8,6 +8,8 @@ import { useStore } from '@/state';
 
 import { BIRTH_YEAR_MAX, BIRTH_YEAR_MIN, DEFAULT_BIRTH_DATE } from '../onboarding.constants';
 
+import { useOnboardingStep } from '../useOnboardingStep';
+
 const pad = (value: number) => String(value).padStart(2, '0');
 
 /** Days in a month, honouring leap years so 29 Feb stays reachable. */
@@ -17,6 +19,7 @@ export const useSetupBirthDateScreen = () => {
     const { t } = useAppTranslation(['onboarding']);
     const stored = useStore(state => state.profileSetup.birthDate);
     const setAnswer = useStore(state => state.setProfileSetupAnswerAction);
+    const saveStep = useOnboardingStep(4);
 
     const initial = useMemo(() => {
         const [year, month, day] = (stored ?? DEFAULT_BIRTH_DATE).split('-').map(Number);
@@ -79,9 +82,11 @@ export const useSetupBirthDateScreen = () => {
     ];
 
     const handleNext = useCallback(() => {
-        setAnswer('birthDate', `${year}-${pad(monthIndex + 1)}-${pad(day)}`);
+        const birthDate = `${year}-${pad(monthIndex + 1)}-${pad(day)}`;
+        setAnswer('birthDate', birthDate);
+        saveStep({ birthDate });
         router.push('/(app)/setup-units');
-    }, [day, monthIndex, setAnswer, year]);
+    }, [day, monthIndex, saveStep, setAnswer, year]);
 
     return { columns, canProceed: true, handleNext };
 };

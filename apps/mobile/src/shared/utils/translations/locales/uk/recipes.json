@@ -37,7 +37,7 @@
     "filter": {
         "title": "Фільтри",
         "ingredients-title": "Пошук за інгредієнтами",
-        "ingredients-all": "Переглянути всі",
+        "ingredients-all": "Всі",
         "catalog-title": "Всі інгредієнти",
         "catalog-placeholder": "Пошук інгредієнтів",
         "apply": "Застосувати",
@@ -89,7 +89,8 @@
         "results-count": "Результати пошуку: {{count}}",
         "ingredients-section": "Інгредієнти",
         "dishes-section": "Страви",
-        "clear-a11y": "Очистити"
+        "clear-a11y": "Очистити",
+        "searching": "Шукаємо…"
     },
     "details": {
         "tabs": {
@@ -106,7 +107,8 @@
         "portions-a11y": "Обрати порції",
         "cook-a11y": "Почати готувати",
         "step-title": "{{index}}. {{title}}",
-        "log-meal": "Відмітити прийом їжі"
+        "log-meal": "Відмітити прийом їжі",
+        "no-steps": "Кроки приготування ще не додані."
     },
     "portions": {
         "title": "Виберіть порції",
@@ -221,6 +223,15 @@
         "add-step": "Додати крок",
         "step-time-decrease": "Зменшити час",
         "step-time-increase": "Збільшити час",
-        "step-page-a11y": "Крок {{number}}"
+        "step-page-a11y": "Крок {{number}}",
+        "ingredient-picker-title": "Додати інгредієнт",
+        "ingredient-picker-subtitle": "Оберіть продукти зі складу страви",
+        "ingredient-picker-apply_zero": "Оберіть інгредієнти",
+        "ingredient-picker-apply_one": "Додати {{count}} інгредієнт",
+        "ingredient-picker-apply_few": "Додати {{count}} інгредієнти",
+        "ingredient-picker-apply_many": "Додати {{count}} інгредієнтів",
+        "per-100g": "100 г · {{value}} ккал",
+        "cuisine-placeholder": "Оберіть кухню",
+        "ingredients-required": "Додайте хоча б один інгредієнт"
     }
 }

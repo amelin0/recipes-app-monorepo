@@ -14,7 +14,7 @@ import { useActivityEditScreen } from './useActivityEditScreen';
 export const ActivityEditScreen = () => {
     const { t } = useAppTranslation(['onboarding', 'common', 'tracking']);
     const { theme } = useUnistyles();
-    const { level, setLevel, min, max, labels, canSave, handleClose, handleSave } = useActivityEditScreen();
+    const { level, setLevel, min, max, labels, canSave, isSaving, handleClose, handleSave } = useActivityEditScreen();
 
     return (
         <View style={styles.sheet}>
@@ -54,7 +54,7 @@ export const ActivityEditScreen = () => {
                     size="md"
                     label={t('tracking:goal-setup.unsaved.save')}
                     onPress={handleSave}
-                    disabled={!canSave}
+                    disabled={!canSave || isSaving}
                     fullWidth
                 />
             </View>

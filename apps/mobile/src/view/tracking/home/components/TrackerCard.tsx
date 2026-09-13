@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -15,12 +15,14 @@ export interface TrackerCardProps {
     /** Opens the tracker's own screen; the chevron appears with it. */
     onPress?: () => void;
     onAdd: () => void;
+    /** The add request is in flight: «+ Додати» becomes a spinner and stops taking presses. */
+    isAddBusy?: boolean;
     /** The bar itself — segmented for water, continuous for steps. */
     children: React.ReactNode;
 }
 
 /** Shell shared by the water and steps trackers (435:6144, 805:16313). */
-export const TrackerCard = ({ title, value, onPress, onAdd, children }: TrackerCardProps) => {
+export const TrackerCard = ({ title, value, onPress, onAdd, isAddBusy = false, children }: TrackerCardProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['tracking']);
 
@@ -37,10 +39,21 @@ export const TrackerCard = ({ title, value, onPress, onAdd, children }: TrackerC
                     {onPress ? <ArrowRightIcon width={12} height={12} color={theme.colors.elements.primary} /> : null}
                 </Pressable>
 
-                <Pressable accessibilityRole="button" hitSlop={8} onPress={onAdd}>
-                    <AppText variant="bodySmallReg" style={styles.add}>
-                        {t('tracking:home.add')}
-                    </AppText>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ busy: isAddBusy, disabled: isAddBusy }}
+                    accessibilityLabel={t('tracking:home.add')}
+                    hitSlop={8}
+                    disabled={isAddBusy}
+                    onPress={onAdd}
+                >
+                    {isAddBusy ? (
+                        <ActivityIndicator size="small" color={theme.colors.branding.accent} />
+                    ) : (
+                        <AppText variant="bodySmallReg" style={styles.add}>
+                            {t('tracking:home.add')}
+                        </AppText>
+                    )}
                 </Pressable>
             </View>
 

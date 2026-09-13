@@ -34,7 +34,7 @@ export const useStore = create<AppStore>()(
                 get().switchAuthenticatedAction(false);
                 get().resetProfileSetup();
                 get().resetRecipeFilters();
-                get().resetPlanWeek();
+                get().resetPlanDate();
                 get().resetShoppingList();
             },
         }),

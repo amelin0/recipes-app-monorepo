@@ -21,7 +21,12 @@ import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
 import ShrugMascot from '../../../../assets/images/brand/mascot-shrug.svg';
 
+import { RAIL_CATEGORY_IMAGES, RECIPE_PLACEHOLDER_IMAGE } from '../../recipe/recipe.constants';
+
 import { useAddDishScreen } from './useAddDishScreen';
+
+/** Нічого у відповіді не каже, як виглядає страва — одна плитка на всіх. */
+const DISH_FALLBACK_EMOJI = '🍽️';
 
 /** Додавання страв до прийому — the meal plan's dish picker (594:30106). */
 export const AddDishScreen = () => {
@@ -42,6 +47,7 @@ export const AddDishScreen = () => {
         dishes,
         ingredients,
         isAdded,
+        isAddBusy,
         addedCount,
         handleToggleDish,
         handleDishPress,
@@ -132,11 +138,11 @@ export const AddDishScreen = () => {
                         >
                             {railCategories.map(category => (
                                 <CategoryTile
-                                    key={category.key}
-                                    image={category.image}
-                                    label={t(`recipes:rail-categories.${category.key}`)}
-                                    selected={railCategory === category.key}
-                                    onPress={() => handleRailPress(category.key)}
+                                    key={category.id}
+                                    image={RAIL_CATEGORY_IMAGES[category.slug] ?? RECIPE_PLACEHOLDER_IMAGE}
+                                    label={category.name}
+                                    selected={railCategory === category.id}
+                                    onPress={() => handleRailPress(category.id)}
                                 />
                             ))}
                         </ScrollView>
@@ -174,13 +180,14 @@ export const AddDishScreen = () => {
                         <PickRow
                             key={dish.id}
                             title={dish.title}
-                            subtitle={t('recipes:list.kcal', { count: dish.kcal })}
-                            emoji={dish.emoji}
-                            protein={dish.protein}
-                            fats={dish.fats}
-                            carbs={dish.carbs}
+                            subtitle={t('recipes:list.kcal', { count: Math.round(dish.perServing.calories) })}
+                            emoji={DISH_FALLBACK_EMOJI}
+                            protein={Math.round(dish.perServing.proteinG)}
+                            fats={Math.round(dish.perServing.fatsG)}
+                            carbs={Math.round(dish.perServing.carbsG)}
                             added={isAdded(dish.id)}
-                            onAdd={() => handleToggleDish(dish)}
+                            isAddBusy={isAddBusy(dish.id)}
+                            onAdd={() => handleToggleDish(dish.id)}
                             onPress={() => handleDishPress(dish.id)}
                         />
                     ))
@@ -188,11 +195,11 @@ export const AddDishScreen = () => {
                     ingredients.map(item => (
                         <PickRow
                             key={item.id}
-                            title={item.title}
-                            subtitle={item.subtitle}
-                            protein={item.protein}
-                            fats={item.fats}
-                            carbs={item.carbs}
+                            title={item.name}
+                            subtitle={`100 г · ${Math.round(item.caloriesPer100g)} ккал`}
+                            protein={Math.round(item.proteinPer100g)}
+                            fats={Math.round(item.fatsPer100g)}
+                            carbs={Math.round(item.carbsPer100g)}
                             onAdd={handleIngredientPress}
                         />
                     ))

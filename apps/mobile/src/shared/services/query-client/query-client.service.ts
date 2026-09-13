@@ -8,7 +8,11 @@ const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             retry: (failureCount, error: unknown) => {
-                console.log('Query request error:', JSON.stringify(error));
+                // 4xx не повторюємо: логін throttled на 10 спроб / 15 хв, тож
+                // один друкарський огріх коштував би трьох. Повторюємо лише
+                // мережеві збої і 5xx.
+                const status = (error as { statusCode?: number } | undefined)?.statusCode;
+                if (typeof status === 'number' && status < 500) return false;
                 return failureCount < 2;
             },
         },

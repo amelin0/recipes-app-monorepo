@@ -3,18 +3,20 @@ import { useCallback } from 'react';
 import { router } from 'expo-router';
 
 import { useStore } from '@/state';
+import { useGetRecommendations } from '@/state/domains/user';
 
-import { CALORIE_GOAL_DEFAULT, CALORIE_GOAL_STEP, CALORIE_WARNING_RATIO } from '../onboarding.constants';
+import { CALORIE_GOAL_DEFAULT, CALORIE_GOAL_STEP, CALORIE_GOAL_TOLERANCE } from '../onboarding.constants';
 
 export type CalorieDrift = 'ok' | 'low' | 'high';
 
 export const useSetupCalorieGoalScreen = () => {
     const stored = useStore(state => state.profileSetup.calorieGoal);
     const setAnswer = useStore(state => state.setProfileSetupAnswerAction);
+    const { data: recommendations } = useGetRecommendations();
 
-    // TODO: the recommendation comes from the API once it can compute it from
-    // the questionnaire; until then every screen shows the design's figure.
-    const recommended = CALORIE_GOAL_DEFAULT;
+    // Рекомендація рахується з відповідей і може бути `null`, якщо їх ще
+    // бракує — тоді лишається цифра з дизайну, щоб екран не показав нуль.
+    const recommended = recommendations?.calories ?? CALORIE_GOAL_DEFAULT;
     const value = stored ?? recommended;
 
     const setValue = useCallback(
@@ -22,10 +24,12 @@ export const useSetupCalorieGoalScreen = () => {
         [setAnswer],
     );
 
+    // Коридор ±600 ккал від розрахованої норми (власник, 12.09): нижче —
+    // недобір, вище — перебір. Попередження, не заборона.
     const drift: CalorieDrift =
-        value < recommended * (1 - CALORIE_WARNING_RATIO)
+        value < recommended - CALORIE_GOAL_TOLERANCE
             ? 'low'
-            : value > recommended * (1 + CALORIE_WARNING_RATIO)
+            : value > recommended + CALORIE_GOAL_TOLERANCE
               ? 'high'
               : 'ok';
 

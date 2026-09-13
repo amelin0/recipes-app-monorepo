@@ -1,15 +1,22 @@
 import type { StateCreator } from 'zustand';
 
-export type RecipeFilterGroup = 'ingredients' | 'categories' | 'products' | 'cuisines' | 'diets';
+/**
+ * Filter groups, named as the API names them.
+ *
+ * `products` are individual products («шпинат»), `productGroups` whole aisles
+ * («Овочі») — the filter sheet shows both, and calling either «інгредієнти»
+ * made the two indistinguishable at the call site.
+ */
+export type RecipeFilterGroup = 'products' | 'productGroups' | 'categories' | 'cuisines' | 'diets';
 
+/** Server ids, not labels: the labels come with the filter payload. */
 export interface RecipeFiltersState {
-    /** Named ingredients from «Пошук за інгредієнтами» (594:43425). */
-    ingredients: string[];
-    categories: string[];
     products: string[];
+    productGroups: string[];
+    categories: string[];
     cuisines: string[];
     diets: string[];
-    /** Kcal per portion range; max 800 means "800+". */
+    /** Kcal per serving; the top of the range means «and above». */
     kcalRange: [number, number];
 }
 
@@ -17,13 +24,21 @@ export const RECIPE_KCAL_RANGE: [number, number] = [0, 800];
 export const RECIPE_KCAL_STEP = 10;
 
 const INITIAL_FILTERS: RecipeFiltersState = {
-    ingredients: [],
-    categories: [],
     products: [],
+    productGroups: [],
+    categories: [],
     cuisines: [],
     diets: [],
     kcalRange: RECIPE_KCAL_RANGE,
 };
+
+export const RECIPE_FILTER_GROUPS: RecipeFilterGroup[] = [
+    'products',
+    'productGroups',
+    'categories',
+    'cuisines',
+    'diets',
+];
 
 export interface RecipeFiltersSlice {
     recipeFilters: RecipeFiltersState;
@@ -35,12 +50,20 @@ export interface RecipeFiltersSlice {
 }
 
 /** Number of active filter selections (kcal range not counted). */
-export const countRecipeFilters = (filters: RecipeFiltersState): number =>
-    filters.ingredients.length +
-    filters.categories.length +
-    filters.products.length +
-    filters.cuisines.length +
-    filters.diets.length;
+/**
+ * Скільки фільтрів зараз стоїть.
+ *
+ * Звужений діапазон калорій рахується нарівні зі списками: він так само
+ * ховає рецепти, і «Скинути всі фільтри (0)» при активному діапазоні —
+ * неправда, тим більше що скидання його таки скидає.
+ */
+export const countRecipeFilters = (filters: RecipeFiltersState): number => {
+    const [min, max] = filters.kcalRange;
+    const [defaultMin, defaultMax] = RECIPE_KCAL_RANGE;
+    const narrowed = min > defaultMin || max < defaultMax ? 1 : 0;
+
+    return RECIPE_FILTER_GROUPS.reduce((total, group) => total + filters[group].length, narrowed);
+};
 
 export const createRecipeFiltersSlice: StateCreator<RecipeFiltersSlice, [], [], RecipeFiltersSlice> = set => ({
     recipeFilters: INITIAL_FILTERS,

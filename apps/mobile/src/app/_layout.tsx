@@ -1,4 +1,4 @@
-import '@/shared/utils/translations';
+import { useAppTranslation } from '@/shared/utils/translations';
 
 import React, { useEffect, useState } from 'react';
 
@@ -19,8 +19,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RNToast from 'react-native-toast-message';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { queryClient, toastConfig } from '@/shared/services';
+import { HttpService, queryClient, ToastService, toastConfig } from '@/shared/services';
 import { AppSplash } from '@/shared/ui/widgets';
+import { useRestoreSession } from '@/state/domains/auth';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,6 +33,7 @@ SplashScreen.preventAutoHideAsync();
 const SPLASH_MIN_DURATION_MS = 700;
 
 export default function RootLayout() {
+    const { t } = useAppTranslation(['common']);
     const [fontsLoaded, fontError] = useFonts({
         'Inter-Regular': Inter_400Regular,
         'Inter-Medium': Inter_500Medium,
@@ -41,6 +43,16 @@ export default function RootLayout() {
     });
 
     const [minDurationPassed, setMinDurationPassed] = useState(false);
+    // Reads the stored tokens before anything routes off `isAuthenticated`.
+    const isSessionRestored = useRestoreSession();
+
+    // Сесія може обірватись посеред будь-якої дії — без пояснення екран входу
+    // читається як падіння застосунку.
+    useEffect(() => {
+        HttpService.setSessionExpiredHandler(() => {
+            ToastService.error(t('common:states.session-expired'));
+        });
+    }, [t]);
 
     useEffect(() => {
         // Hand over from the native launch screen (a flat accent fill) to the
@@ -54,7 +66,7 @@ export default function RootLayout() {
 
     // Fonts still loading (or failed — system fonts then act as the fallback
     // rather than trapping the user on a blank screen).
-    if ((!fontsLoaded && !fontError) || !minDurationPassed) {
+    if ((!fontsLoaded && !fontError) || !minDurationPassed || !isSessionRestored) {
         return <AppSplash />;
     }
 
@@ -62,7 +74,10 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={styles.flex}>
                 <SafeAreaProvider>
-                    <StatusBar style="auto" />
+                    {/* Застосунок завжди світлий (darkTheme = дзеркало
+                        lightTheme), тож «auto» при системній темній темі робив
+                        іконки статус-бару білими на білому екрані. */}
+                    <StatusBar style="dark" />
                     <Slot />
                     <RNToast config={toastConfig} />
                 </SafeAreaProvider>

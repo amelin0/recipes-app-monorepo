@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
 
-import { FAQ_CATEGORIES } from '../faq.constants';
+import { useGetFaq } from '@/state/domains/faq';
 
 export const useFaqScreen = () => {
+    const { data, isLoading, isError, refetch } = useGetFaq();
+
     // Sections open independently — the design shows several open at once.
     const [expanded, setExpanded] = useState<string[]>([]);
 
@@ -12,5 +14,15 @@ export const useFaqScreen = () => {
 
     const isExpanded = useCallback((key: string) => expanded.includes(key), [expanded]);
 
-    return { categories: FAQ_CATEGORIES, isExpanded, toggle };
+    const topics = data ?? [];
+
+    return {
+        topics,
+        isLoading,
+        isError,
+        isEmpty: !isLoading && !isError && topics.length === 0,
+        handleRetry: refetch,
+        isExpanded,
+        toggle,
+    };
 };

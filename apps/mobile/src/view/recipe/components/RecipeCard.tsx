@@ -3,15 +3,16 @@ import { ImageBackground, Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import type { RecipeCard as RecipeCardData } from '@/data';
 import { AppText, MacroChipsRow } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import HeartIcon from '../../../../assets/icons/heart.svg';
 import TimerIcon from '../../../../assets/icons/timer.svg';
-import type { MockRecipe } from '../recipe.constants';
+import { RECIPE_PLACEHOLDER_IMAGE } from '../recipe.constants';
 
 export interface RecipeCardProps {
-    recipe: MockRecipe;
+    recipe: RecipeCardData;
     /** grid — two-column tile; list — full-width tall card. */
     variant: 'grid' | 'list';
     onPress: () => void;
@@ -24,14 +25,28 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
     const { t } = useAppTranslation(['recipes']);
     const isList = variant === 'list';
 
+    const perServing = recipe.perServing;
+    // Час приготування може бути невідомий — `POST /recipes` його не приймає,
+    // тож у власних страв його немає. Тоді пігулку не малюємо взагалі: «0 хв»
+    // читалось би як факт, а не як відсутність даних.
+    const cookTime = recipe.cookTimeMinutes;
+
     return (
         <Pressable accessibilityRole="button" onPress={onPress} style={styles.card(isList)}>
-            <ImageBackground source={recipe.image} style={styles.image(isList)} resizeMode="cover">
+            <ImageBackground
+                source={recipe.photoUrl ? { uri: recipe.photoUrl } : RECIPE_PLACEHOLDER_IMAGE}
+                style={styles.image(isList)}
+                resizeMode="cover"
+            >
                 <View style={styles.imageOverlayRow}>
-                    <View style={styles.timePill}>
-                        <TimerIcon width={16} height={16} color={theme.colors.elements.primary} />
-                        <AppText variant="bodySmallReg">{t('recipes:list.minutes', { count: recipe.minutes })}</AppText>
-                    </View>
+                    {cookTime ? (
+                        <View style={styles.timePill}>
+                            <TimerIcon width={16} height={16} color={theme.colors.elements.primary} />
+                            <AppText variant="bodySmallReg">{t('recipes:list.minutes', { count: cookTime })}</AppText>
+                        </View>
+                    ) : (
+                        <View />
+                    )}
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t('recipes:list.favorite-a11y')}
@@ -44,6 +59,8 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
                             width={18}
                             height={18}
                             color={recipe.isFavorite ? theme.colors.semantic.negative : theme.colors.elements.primary}
+                            // Активне серце залите, не лише обведене.
+                            fill={recipe.isFavorite ? theme.colors.semantic.negative : 'none'}
                         />
                     </Pressable>
                 </View>
@@ -55,19 +72,23 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
                 </AppText>
                 {isList ? (
                     <MacroChipsRow
-                        protein={recipe.protein}
-                        fats={recipe.fats}
-                        carbs={recipe.carbs}
-                        kcal={recipe.kcal}
+                        protein={Math.round(perServing.proteinG)}
+                        fats={Math.round(perServing.fatsG)}
+                        carbs={Math.round(perServing.carbsG)}
+                        kcal={Math.round(perServing.calories)}
                     />
                 ) : (
                     <>
                         <View style={styles.kcalBadge}>
                             <AppText variant="bodySmallReg" style={styles.kcalText}>
-                                {t('recipes:list.kcal', { count: recipe.kcal })}
+                                {t('recipes:list.kcal', { count: Math.round(perServing.calories) })}
                             </AppText>
                         </View>
-                        <MacroChipsRow protein={recipe.protein} fats={recipe.fats} carbs={recipe.carbs} />
+                        <MacroChipsRow
+                            protein={Math.round(perServing.proteinG)}
+                            fats={Math.round(perServing.fatsG)}
+                            carbs={Math.round(perServing.carbsG)}
+                        />
                     </>
                 )}
             </View>
@@ -75,12 +96,20 @@ export const RecipeCard = ({ recipe, variant, onPress, onToggleFavorite }: Recip
     );
 };
 
-const styles = StyleSheet.create(theme => ({
+/** Сітка: дві колонки при 16pt полях екрана і 12pt жолобі між картками. */
+const GRID_COLUMNS = 2;
+const SCREEN_PADDING = 16;
+const GRID_GUTTER = 12;
+
+const styles = StyleSheet.create((theme, rt) => ({
     card: (isList: boolean) => ({
-        flexGrow: isList ? 0 : 1,
-        flexBasis: isList ? 'auto' : '46%',
-        width: isList ? '100%' : undefined,
-        minWidth: isList ? undefined : 140,
+        // Ширина рахується від екрана: відсотковий flexBasis у wrap-рядку
+        // ненадійний, а flexGrow розтягував непарну останню картку на весь ряд.
+        flexGrow: 0,
+        flexShrink: 0,
+        width: isList
+            ? '100%'
+            : (rt.screen.width - SCREEN_PADDING * 2 - GRID_GUTTER * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
         borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: theme.colors.forms.lightBorder,

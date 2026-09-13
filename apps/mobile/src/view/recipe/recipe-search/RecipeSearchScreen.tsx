@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import type { Product } from '@/data';
 import {
     AppInput,
     AppScreen,
@@ -19,12 +20,21 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
-import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
+import { RAIL_CATEGORY_IMAGES, RECIPE_PLACEHOLDER_IMAGE } from '../recipe.constants';
 
 import { useRecipeSearchScreen } from './useRecipeSearchScreen';
 
 /** Тумб страви заливається дизайновим градієнтом (594:42913). */
 const GRADIENT = { x1: '-0.056', y1: '0.055', x2: '1.056', y2: '0.945' };
+
+/** Nothing in the payload says what a dish looks like, so one tile for all. */
+const DISH_FALLBACK_EMOJI = '🍽️';
+
+/**
+ * «100 г · 43 ккал» — the per-100g figure every product carries, since the
+ * serving one is optional and absent for anything only ever weighed.
+ */
+const productSubtitle = (product: Product) => `100 г · ${Math.round(product.caloriesPer100g)} ккал`;
 
 /** Пошук — categories grid, live results, and category mode (594:43242/43181/43293). */
 export const RecipeSearchScreen = () => {
@@ -32,7 +42,8 @@ export const RecipeSearchScreen = () => {
     const { t } = useAppTranslation(['recipes']);
     const {
         categoryKey,
-        categoryLabelKey,
+        categoryLabel,
+        categories,
         query,
         debouncedQuery,
         setQuery,
@@ -40,7 +51,9 @@ export const RecipeSearchScreen = () => {
         dishResults,
         isPicker,
         isAdded,
+        isAddBusy,
         handleToggleSearchDish,
+        isSearching,
         handleClear,
         handleCategoryPress,
         handleFilterPress,
@@ -52,11 +65,16 @@ export const RecipeSearchScreen = () => {
     const showCategories = !categoryKey && debouncedQuery.length === 0;
     const showQueryResults = !categoryKey && debouncedQuery.length > 0;
 
+    // Поки запит у дорозі, «Результати пошуку: 0» — неправда: нічого ще не
+    // шукали. Показуємо, що шукаємо.
+    const renderCount = (count: number) =>
+        isSearching ? t('recipes:search.searching') : t('recipes:search.results-count', { count });
+
     const renderSectionTitle = (title: string, count: number) => (
         <View style={styles.sectionTitleRow}>
             <SectionHeader title={title} style={styles.sectionTitle} />
             <AppText variant="buttonTab" style={styles.countText}>
-                {t('recipes:search.results-count', { count })}
+                {renderCount(count)}
             </AppText>
         </View>
     );
@@ -69,25 +87,36 @@ export const RecipeSearchScreen = () => {
             style={styles.resultCard}
         >
             <View style={styles.dishThumb}>
-                <Svg style={StyleSheet.absoluteFill}>
-                    <Defs>
-                        <LinearGradient id="searchThumb" {...GRADIENT}>
-                            <Stop offset="0" stopColor={theme.colors.gradient.dishFrom} />
-                            <Stop offset="1" stopColor={theme.colors.gradient.dishTo} />
-                        </LinearGradient>
-                    </Defs>
-                    <Rect x="0" y="0" width="100%" height="100%" fill="url(#searchThumb)" />
-                </Svg>
-                <AppText style={styles.dishEmoji}>{dish.emoji}</AppText>
+                {dish.photoUrl ? (
+                    <Image source={{ uri: dish.photoUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                ) : (
+                    <>
+                        <Svg style={StyleSheet.absoluteFill}>
+                            <Defs>
+                                <LinearGradient id="searchThumb" {...GRADIENT}>
+                                    <Stop offset="0" stopColor={theme.colors.gradient.dishFrom} />
+                                    <Stop offset="1" stopColor={theme.colors.gradient.dishTo} />
+                                </LinearGradient>
+                            </Defs>
+                            <Rect x="0" y="0" width="100%" height="100%" fill="url(#searchThumb)" />
+                        </Svg>
+                        <AppText style={styles.dishEmoji}>{DISH_FALLBACK_EMOJI}</AppText>
+                    </>
+                )}
             </View>
             <View style={styles.resultBody}>
                 <AppText variant="bodySmallBold" numberOfLines={1}>
                     {dish.title}
                 </AppText>
                 <AppText variant="bodySmallReg" style={styles.mutedText}>
-                    {t('recipes:list.kcal', { count: dish.kcal })}
+                    {t('recipes:list.kcal', { count: Math.round(dish.perServing.calories) })}
                 </AppText>
-                <MacroChipsRow size="md" protein={dish.protein} fats={dish.fats} carbs={dish.carbs} />
+                <MacroChipsRow
+                    size="md"
+                    protein={Math.round(dish.perServing.proteinG)}
+                    fats={Math.round(dish.perServing.fatsG)}
+                    carbs={Math.round(dish.perServing.carbsG)}
+                />
             </View>
         </Pressable>
     );
@@ -96,7 +125,7 @@ export const RecipeSearchScreen = () => {
         <AppScreen>
             {/* Category mode has no filter entry (594:43293). */}
             <TopBar
-                title={categoryLabelKey ? t(categoryLabelKey) : t('recipes:search.title')}
+                title={categoryLabel ?? t('recipes:search.title')}
                 subtitle={categoryKey ? t('recipes:search.category-subtitle') : undefined}
                 trailing={
                     !categoryKey ? (
@@ -146,17 +175,20 @@ export const RecipeSearchScreen = () => {
                 contentContainerStyle={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                // Результати довші за екран — інсет під клавіатуру, щоб нижні
+                // картки не лишились під нею.
+                automaticallyAdjustKeyboardInsets
             >
                 {showCategories ? (
                     <View style={styles.section}>
                         <SectionHeader title={t('recipes:list.popular-categories')} />
                         <View style={styles.categoriesGrid}>
-                            {RECIPE_RAIL_CATEGORIES.map(category => (
+                            {categories.map(category => (
                                 <CategoryTile
-                                    key={category.key}
-                                    image={category.image}
-                                    label={t(`recipes:rail-categories.${category.key}`)}
-                                    onPress={() => handleCategoryPress(category.key)}
+                                    key={category.id}
+                                    image={RAIL_CATEGORY_IMAGES[category.slug] ?? RECIPE_PLACEHOLDER_IMAGE}
+                                    label={category.name}
+                                    onPress={() => handleCategoryPress(category.id)}
                                     style={styles.categoryTile}
                                 />
                             ))}
@@ -172,11 +204,11 @@ export const RecipeSearchScreen = () => {
                                 ? ingredientResults.map(item => (
                                       <PickRow
                                           key={item.id}
-                                          title={item.title}
-                                          subtitle={item.subtitle}
-                                          protein={item.protein}
-                                          fats={item.fats}
-                                          carbs={item.carbs}
+                                          title={item.name}
+                                          subtitle={productSubtitle(item)}
+                                          protein={Math.round(item.proteinPer100g)}
+                                          fats={Math.round(item.fatsPer100g)}
+                                          carbs={Math.round(item.carbsPer100g)}
                                           onAdd={() => handleResultPress(item.id)}
                                       />
                                   ))
@@ -189,16 +221,16 @@ export const RecipeSearchScreen = () => {
                                       >
                                           <View style={[styles.resultBody, styles.ingredientBody]}>
                                               <AppText variant="bodySmallBold" numberOfLines={1}>
-                                                  {item.title}
+                                                  {item.name}
                                               </AppText>
                                               <AppText variant="bodySmallReg" style={styles.mutedText}>
-                                                  {item.subtitle}
+                                                  {productSubtitle(item)}
                                               </AppText>
                                               <MacroChipsRow
                                                   size="md"
-                                                  protein={item.protein}
-                                                  fats={item.fats}
-                                                  carbs={item.carbs}
+                                                  protein={Math.round(item.proteinPer100g)}
+                                                  fats={Math.round(item.fatsPer100g)}
+                                                  carbs={Math.round(item.carbsPer100g)}
                                               />
                                           </View>
                                       </Pressable>
@@ -212,12 +244,15 @@ export const RecipeSearchScreen = () => {
                                       <PickRow
                                           key={dish.id}
                                           title={dish.title}
-                                          subtitle={t('recipes:list.kcal', { count: dish.kcal })}
-                                          emoji={dish.emoji}
-                                          protein={dish.protein}
-                                          fats={dish.fats}
-                                          carbs={dish.carbs}
+                                          subtitle={t('recipes:list.kcal', {
+                                              count: Math.round(dish.perServing.calories),
+                                          })}
+                                          emoji={DISH_FALLBACK_EMOJI}
+                                          protein={Math.round(dish.perServing.proteinG)}
+                                          fats={Math.round(dish.perServing.fatsG)}
+                                          carbs={Math.round(dish.perServing.carbsG)}
                                           added={isAdded(dish.id)}
+                                          isAddBusy={isAddBusy(dish.id)}
                                           onAdd={() => handleToggleSearchDish(dish)}
                                           onPress={() => handleDishPress(dish.id)}
                                       />
@@ -230,19 +265,22 @@ export const RecipeSearchScreen = () => {
                 {categoryKey ? (
                     <View style={styles.section}>
                         <AppText variant="buttonTab" style={styles.countText}>
-                            {t('recipes:search.results-count', { count: dishResults.length })}
+                            {renderCount(dishResults.length)}
                         </AppText>
                         {isPicker
                             ? dishResults.map(dish => (
                                   <PickRow
                                       key={dish.id}
                                       title={dish.title}
-                                      subtitle={t('recipes:list.kcal', { count: dish.kcal })}
-                                      emoji={dish.emoji}
-                                      protein={dish.protein}
-                                      fats={dish.fats}
-                                      carbs={dish.carbs}
+                                      subtitle={t('recipes:list.kcal', {
+                                          count: Math.round(dish.perServing.calories),
+                                      })}
+                                      emoji={DISH_FALLBACK_EMOJI}
+                                      protein={Math.round(dish.perServing.proteinG)}
+                                      fats={Math.round(dish.perServing.fatsG)}
+                                      carbs={Math.round(dish.perServing.carbsG)}
                                       added={isAdded(dish.id)}
+                                      isAddBusy={isAddBusy(dish.id)}
                                       onAdd={() => handleToggleSearchDish(dish)}
                                       onPress={() => handleDishPress(dish.id)}
                                   />

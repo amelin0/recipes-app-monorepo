@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -22,6 +22,8 @@ export interface PickRowProps {
     carbs: number;
     added?: boolean;
     onAdd: () => void;
+    /** The add/remove request is in flight: spinner instead of the icon, no presses. */
+    isAddBusy?: boolean;
     /** Тап по тілу рядка (не по «+») — наприклад, відкрити деталі страви. */
     onPress?: () => void;
 }
@@ -42,6 +44,7 @@ export const PickRow = ({
     carbs,
     added = false,
     onAdd,
+    isAddBusy = false,
     onPress,
 }: PickRowProps) => {
     const { theme } = useUnistyles();
@@ -76,15 +79,21 @@ export const PickRow = ({
             </View>
             <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ checked: added }}
+                accessibilityState={{ checked: added, busy: isAddBusy, disabled: isAddBusy }}
                 accessibilityLabel={t(added ? 'meal-plan:add-dish.added-a11y' : 'meal-plan:add-dish.add-a11y', {
                     name: title,
                 })}
                 hitSlop={8}
+                disabled={isAddBusy}
                 onPress={onAdd}
                 style={styles.action(added, emoji !== undefined)}
             >
-                {added ? (
+                {isAddBusy ? (
+                    <ActivityIndicator
+                        size="small"
+                        color={added ? theme.colors.semantic.positive : theme.colors.elements.primary}
+                    />
+                ) : added ? (
                     <TickCircleOutlineIcon width={20} height={20} color={theme.colors.semantic.positive} />
                 ) : (
                     <AddIcon width={20} height={20} color={theme.colors.elements.primary} />

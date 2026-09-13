@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -14,7 +14,7 @@ export interface ProductRowProps {
     onPress: () => void;
 }
 
-/** Catalog row on «Додати продукт»: emoji + name + green plus. */
+/** Catalog row on «Додати продукт»: emoji + name + 44pt plus chip (950:54270). */
 export const ProductRow = ({ emoji, name, onPress }: ProductRowProps) => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['shopping']);
@@ -30,7 +30,9 @@ export const ProductRow = ({ emoji, name, onPress }: ProductRowProps) => {
             <AppText variant="bodySmallBold" style={styles.name}>
                 {name}
             </AppText>
-            <AddIcon width={24} height={24} color={theme.colors.branding.accent} />
+            <View style={styles.addChip}>
+                <AddIcon width={20} height={20} color={theme.colors.elements.primary} />
+            </View>
         </Pressable>
     );
 };
@@ -51,5 +53,17 @@ const styles = StyleSheet.create(theme => ({
     },
     name: {
         flex: 1,
+    },
+    // 44×44 кружечок Semantic/light grey з хайрлайном Forms/light border
+    // (950:54270) — на світло-сірому рядку його тримає саме рамка.
+    addChip: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.radius.full,
+        borderWidth: 1,
+        borderColor: theme.colors.forms.lightBorder,
+        backgroundColor: theme.colors.semantic.lightGrey,
     },
 }));

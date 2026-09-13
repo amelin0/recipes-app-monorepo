@@ -3,15 +3,18 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import type { AppNotification } from '@/data';
 import { AppText } from '@/shared/ui/components';
 
 import NotificationBingIcon from '../../../../../assets/icons/notification-bing.svg';
-import type { NotificationItem } from '../../notifications.constants';
 
 export interface NotificationCardProps {
-    item: NotificationItem;
+    item: AppNotification;
     onPress: () => void;
 }
+
+/** «10:45» — the arrival time, in the reader's own timezone. */
+const TIME_FORMAT = new Intl.DateTimeFormat('uk-UA', { hour: '2-digit', minute: '2-digit' });
 
 /** One notification in the list (811:67278). */
 export const NotificationCard = ({ item, onPress }: NotificationCardProps) => {
@@ -24,11 +27,11 @@ export const NotificationCard = ({ item, onPress }: NotificationCardProps) => {
             onPress={onPress}
             style={styles.card}
         >
-            <View style={styles.avatar(item.read)}>
+            <View style={styles.avatar(item.isRead)}>
                 <NotificationBingIcon
                     width={20}
                     height={20}
-                    color={item.read ? theme.colors.semantic.darkGrey : theme.colors.branding.accent}
+                    color={item.isRead ? theme.colors.semantic.darkGrey : theme.colors.branding.accent}
                 />
             </View>
 
@@ -38,7 +41,7 @@ export const NotificationCard = ({ item, onPress }: NotificationCardProps) => {
                         {item.title}
                     </AppText>
                     <AppText variant="overline" style={styles.time}>
-                        {item.time}
+                        {TIME_FORMAT.format(new Date(item.createdAt))}
                     </AppText>
                 </View>
                 <AppText variant="bodySmallReg" numberOfLines={2} style={styles.body}>

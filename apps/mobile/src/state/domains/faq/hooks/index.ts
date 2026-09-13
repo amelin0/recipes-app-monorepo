@@ -1,0 +1,1 @@
+export { useGetFaq } from './useGetFaq';

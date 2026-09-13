@@ -2,23 +2,29 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { router } from 'expo-router';
 
+import { AccountStorage } from '@/data/local/domains/user';
+import { useActionLock } from '@/shared/hooks';
+import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
-import { useStore } from '@/state';
-
-import { ACCOUNT_RECOVERY_DAYS } from '../user.constants';
+import { useGetCurrentUser, useSignOut } from '@/state/domains/auth';
+import { useCancelAccountDeletion } from '@/state/domains/user';
 
 const SECOND = 1000;
 const pad = (value: number) => String(value).padStart(2, '0');
 
 export const useAccountRecoveryScreen = () => {
     const { t } = useAppTranslation(['profile', 'common']);
-    const reset = useStore(state => state.reset);
+    const cancelDeletion = useCancelAccountDeletion();
+    const signOut = useSignOut();
 
-    // TODO: the deadline comes with the deletion request from the API. The mock
-    // adds the design's own remainder so the clock reads like 804:25380.
-    const [deadline] = useState(
-        () => Date.now() + ACCOUNT_RECOVERY_DAYS * 24 * 60 * 60 * SECOND + ((14 * 60 + 32) * 60 + 7) * SECOND,
-    );
+    // Строк тримає сервер — `GET /auth/me` віддає його при кожному вході, тож
+    // відлік однаковий на будь-якому пристрої. Копія на пристрої лишається
+    // запасною: без мережі краще показати вчорашню цифру, ніж жодної.
+    const { data: me } = useGetCurrentUser();
+    const scheduledFor = me?.deletionScheduledFor ?? AccountStorage.getDeletionDeadline();
+    const parsed = scheduledFor ? Date.parse(scheduledFor) : NaN;
+    const deadline = Number.isNaN(parsed) ? null : parsed;
+
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
@@ -26,25 +32,37 @@ export const useAccountRecoveryScreen = () => {
         return () => clearInterval(timer);
     }, []);
 
-    const left = Math.max(deadline - now, 0);
+    const left = deadline === null ? 0 : Math.max(deadline - now, 0);
     const days = Math.floor(left / (24 * 60 * 60 * SECOND));
     const hours = Math.floor(left / (60 * 60 * SECOND)) % 24;
     const minutes = Math.floor(left / (60 * SECOND)) % 60;
     const seconds = Math.floor(left / SECOND) % 60;
 
+    // Обидві гілки лишають екран, тож замок не відпускається зовсім.
+    const lock = useActionLock();
+
     const handleRestore = useCallback(() => {
-        // TODO: POST /me/restore once the API ships — mock success for now; the
-        // failure path is 804:25402.
-        router.replace('/(app)/account-restored');
-    }, []);
+        if (!lock.acquire()) return;
+
+        cancelDeletion.mutate(undefined, {
+            onSuccess: () => router.replace('/(app)/account-restored'),
+            onError: () => {
+                ToastService.error(t('common:states.error'));
+                router.replace('/(app)/account-restore-failed');
+            },
+        });
+    }, [cancelDeletion, lock, t]);
 
     return {
+        /** Без строку відлік не малюємо — вигадана цифра гірша за її відсутність. */
+        hasCountdown: deadline !== null,
         countdown: t('profile:account-recovery.countdown', {
             days,
             clock: `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`,
             count: days,
         }),
+        isRestoring: cancelDeletion.isPending || lock.isBusy(),
         handleRestore,
-        handleLogout: reset,
+        handleLogout: () => void signOut(),
     };
 };

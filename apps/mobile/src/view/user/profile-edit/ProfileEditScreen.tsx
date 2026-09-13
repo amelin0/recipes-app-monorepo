@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { useKeyboardVisible } from '@/shared/hooks';
 import {
     AppButton,
     AppCard,
@@ -23,56 +24,75 @@ import { useProfileEditScreen } from './useProfileEditScreen';
 export const ProfileEditScreen = () => {
     const { theme } = useUnistyles();
     const { t } = useAppTranslation(['profile']);
-    const { initials, name, setName, canSave, handleChangePhoto, handleSave } = useProfileEditScreen();
+    const isKeyboardVisible = useKeyboardVisible();
+    const { initials, photoUrl, name, setName, canSave, handleChangePhoto, handleSave } = useProfileEditScreen();
 
     return (
         <AppScreen>
             <TopBar title={t('profile:edit-screen.title')} />
 
-            <View style={styles.content}>
-                <View style={styles.avatarBlock}>
-                    <Avatar
-                        label={initials}
-                        size={64}
-                        labelVariant="titleSmall"
-                        onPress={handleChangePhoto}
-                        accessibilityLabel={t('profile:edit-screen.change-photo')}
-                        badge={
-                            <View style={styles.badge}>
-                                <EditIcon width={12} height={12} color={theme.colors.semantic.white} />
-                            </View>
-                        }
-                    />
-                    <Pressable accessibilityRole="button" hitSlop={8} onPress={handleChangePhoto}>
-                        <AppText variant="bodySmallReg" style={styles.photoLink}>
-                            {t('profile:edit-screen.change-photo')}
-                        </AppText>
-                    </Pressable>
-                </View>
+            <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.avatarBlock}>
+                        <Avatar
+                            label={initials}
+                            photoUrl={photoUrl}
+                            size={64}
+                            labelVariant="titleSmall"
+                            onPress={handleChangePhoto}
+                            accessibilityLabel={t('profile:edit-screen.change-photo')}
+                            badge={
+                                <View style={styles.badge}>
+                                    <EditIcon width={12} height={12} color={theme.colors.semantic.white} />
+                                </View>
+                            }
+                        />
+                        <Pressable accessibilityRole="button" hitSlop={8} onPress={handleChangePhoto}>
+                            <AppText variant="bodySmallReg" style={styles.photoLink}>
+                                {t('profile:edit-screen.change-photo')}
+                            </AppText>
+                        </Pressable>
+                    </View>
 
-                <AppCard style={styles.card}>
-                    <AppText variant="bodyMediumBold">{t('profile:edit-screen.personal-title')}</AppText>
-                    <AppInput
-                        label={t('profile:edit-screen.name-label')}
-                        value={name}
-                        onChangeText={setName}
-                        autoCapitalize="words"
-                        autoComplete="name"
-                        returnKeyType="done"
-                    />
-                </AppCard>
-            </View>
+                    <AppCard style={styles.card}>
+                        <AppText variant="bodyMediumBold">{t('profile:edit-screen.personal-title')}</AppText>
+                        <AppInput
+                            label={t('profile:edit-screen.name-label')}
+                            value={name}
+                            onChangeText={setName}
+                            autoCapitalize="words"
+                            autoComplete="name"
+                            returnKeyType="done"
+                        />
+                    </AppCard>
+                </ScrollView>
 
-            <ScreenActions>
-                <AppButton label={t('profile:edit-screen.save')} onPress={handleSave} disabled={!canSave} fullWidth />
-            </ScreenActions>
+                <ScreenActions style={isKeyboardVisible ? styles.actionsAboveKeyboard : undefined}>
+                    <AppButton
+                        label={t('profile:edit-screen.save')}
+                        onPress={handleSave}
+                        disabled={!canSave}
+                        fullWidth
+                    />
+                </ScreenActions>
+            </KeyboardAvoidingView>
         </AppScreen>
     );
 };
 
 const styles = StyleSheet.create(theme => ({
-    content: {
+    fill: {
         flex: 1,
+    },
+    content: {
+        // contentContainerStyle — flexGrow, not flex: flex would pin the block
+        // to the viewport height and there would be nothing left to scroll when
+        // the keyboard squeezes the column on a 667pt screen.
+        flexGrow: 1,
         alignItems: 'center',
         gap: theme.spacing[4],
         padding: theme.spacing[4],
@@ -97,5 +117,10 @@ const styles = StyleSheet.create(theme => ({
     card: {
         alignItems: 'flex-start',
         gap: theme.spacing[4],
+    },
+    // With the keyboard up the bar sits right above it — 16/52/16 instead of
+    // 16/52/40, i.e. 84 tall instead of 108 (804:24973, 804:24993).
+    actionsAboveKeyboard: {
+        paddingBottom: theme.spacing[4],
     },
 }));

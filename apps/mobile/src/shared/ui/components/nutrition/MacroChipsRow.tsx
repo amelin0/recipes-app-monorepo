@@ -13,7 +13,7 @@ export interface MacroChipsRowProps {
     protein: number;
     fats: number;
     carbs: number;
-    /** Prepends the grey «ккал N» chip (list card / search rows). */
+    /** Prepends the grey «ккал» badge + its value (list card, 476:11522). */
     kcal?: number;
     /** sm — 16pt badges on recipe cards; md — 20pt on search result rows (594:43195). */
     size?: MacroChipsSize;
@@ -54,11 +54,13 @@ export const MacroChipsRow = ({ protein, fats, carbs, kcal, size = 'sm' }: Macro
     return (
         <View style={styles.row(size)}>
             {kcal !== undefined ? (
-                <View style={styles.kcalChip}>
-                    <AppText variant="bodySmallReg" style={styles.kcalLabel}>
-                        {t('recipes:list.kcal-label')}
-                    </AppText>
-                    <AppText variant="overline">{kcal}</AppText>
+                <View style={styles.chip}>
+                    <View style={styles.kcalBadge}>
+                        <AppText variant="bodySmallReg" style={styles.kcalLabel}>
+                            {t('recipes:list.kcal-label')}
+                        </AppText>
+                    </View>
+                    <AppText variant={valueVariant}>{kcal}</AppText>
                 </View>
             ) : null}
             {chips.map(chip => (
@@ -86,10 +88,11 @@ const styles = StyleSheet.create(theme => ({
         alignItems: 'center',
         gap: theme.spacing[1],
     },
-    kcalChip: {
-        flexDirection: 'row',
+    // 476:11523 — сіра капсула обгортає лише слово «ккал»; число стоїть поруч
+    // у Branding/primary (476:11525), так само як значення Б/Ж/В.
+    kcalBadge: {
         alignItems: 'center',
-        gap: theme.spacing[1],
+        justifyContent: 'center',
         height: 20,
         paddingHorizontal: theme.spacing[1],
         borderRadius: theme.radius.full,

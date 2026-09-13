@@ -8,7 +8,7 @@ import { AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import CloseIcon from '../../../../../assets/icons/close.svg';
-import { MOCK_CREATE_DISH_PHOTO } from '../../recipe.constants';
+import { RECIPE_PLACEHOLDER_IMAGE } from '../../recipe.constants';
 
 export interface TakePhotoModalProps {
     visible: boolean;
@@ -50,7 +50,7 @@ export const TakePhotoModal = ({ visible, onSave, onClose }: TakePhotoModalProps
                     </View>
                 </View>
                 <Image
-                    source={MOCK_CREATE_DISH_PHOTO}
+                    source={RECIPE_PLACEHOLDER_IMAGE}
                     accessibilityLabel={t('recipes:create-dish.photo-a11y')}
                     style={styles.photo}
                     resizeMode="cover"

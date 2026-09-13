@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -8,9 +8,15 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import ArrowDownIcon from '../../../../assets/icons/arrow-down-large.svg';
 import CameraLargeIcon from '../../../../assets/icons/camera-large.svg';
-import { OPTION_EMOJI } from '../recipe.constants';
 
-import { AddImageSheet, CuisineSheet, IngredientEditRow, StepsEditorModal, TakePhotoModal } from './components';
+import {
+    AddImageSheet,
+    CuisineSheet,
+    IngredientEditRow,
+    IngredientPickerSheet,
+    StepsEditorModal,
+    TakePhotoModal,
+} from './components';
 
 import { useCreateDishScreen } from './useCreateDishScreen';
 
@@ -21,7 +27,9 @@ export const CreateDishScreen = () => {
     const {
         name,
         nameError,
-        cuisine,
+        cuisines,
+        cuisineId,
+        cuisineName,
         photo,
         ingredients,
         steps,
@@ -29,6 +37,9 @@ export const CreateDishScreen = () => {
         imageSheetVisible,
         photoModalVisible,
         cuisineSheetVisible,
+        ingredientSheetVisible,
+        handleAddIngredients,
+        handleIngredientSheetClose,
         saveSheetVisible,
         handleNameChange,
         handleGramsChange,
@@ -50,6 +61,7 @@ export const CreateDishScreen = () => {
         handleStepsEditorClose,
         handleStepsSave,
         handleSavePress,
+        isSaving,
         handleConfirmSave,
         handleSaveSheetClose,
     } = useCreateDishScreen();
@@ -64,10 +76,21 @@ export const CreateDishScreen = () => {
                     {t('recipes:create-dish.title')}
                 </AppText>
                 <View style={[styles.headerSide, styles.headerSideEnd]}>
-                    <Pressable accessibilityRole="button" onPress={handleSavePress} style={styles.savePill}>
-                        <AppText variant="bodyMediumBold" numberOfLines={1}>
-                            {t('common:actions.save')}
-                        </AppText>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ busy: isSaving, disabled: isSaving }}
+                        accessibilityLabel={t('common:actions.save')}
+                        disabled={isSaving}
+                        onPress={handleSavePress}
+                        style={styles.savePill}
+                    >
+                        {isSaving ? (
+                            <ActivityIndicator size="small" color={theme.colors.elements.primary} />
+                        ) : (
+                            <AppText variant="bodyMediumBold" numberOfLines={1}>
+                                {t('common:actions.save')}
+                            </AppText>
+                        )}
                     </Pressable>
                 </View>
             </View>
@@ -86,7 +109,7 @@ export const CreateDishScreen = () => {
                     >
                         {photo ? (
                             <Image
-                                source={photo}
+                                source={{ uri: photo }}
                                 accessibilityLabel={t('recipes:create-dish.photo-a11y')}
                                 style={styles.photo}
                                 resizeMode="cover"
@@ -117,7 +140,7 @@ export const CreateDishScreen = () => {
                             style={styles.dropdown}
                         >
                             <AppText variant="bodyMediumReg" style={styles.dropdownValue}>
-                                {`${OPTION_EMOJI[cuisine]} ${t(`recipes:options.${cuisine}`)}`}
+                                {cuisineName || t('recipes:create-dish.cuisine-placeholder')}
                             </AppText>
                             <ArrowDownIcon width={20} height={20} color={theme.colors.elements.primary} />
                         </Pressable>
@@ -166,9 +189,16 @@ export const CreateDishScreen = () => {
             />
             <CuisineSheet
                 visible={cuisineSheetVisible}
-                selected={cuisine}
+                options={cuisines}
+                selected={cuisineId}
                 onApply={handleCuisineApply}
                 onClose={handleCuisineSheetClose}
+            />
+            <IngredientPickerSheet
+                visible={ingredientSheetVisible}
+                selectedIds={ingredients.map(item => item.id)}
+                onApply={handleAddIngredients}
+                onClose={handleIngredientSheetClose}
             />
             <ConfirmSheet
                 visible={saveSheetVisible}

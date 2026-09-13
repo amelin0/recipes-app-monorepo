@@ -8,7 +8,6 @@ import { useAppTranslation } from '@/shared/utils/translations';
 
 import MascotRelax from '../../../../assets/images/brand/mascot-relax.svg';
 import { FeatureList, SubscriptionSummaryCard } from '../components';
-import { SUBSCRIPTION_FEATURES } from '../subscription.constants';
 import { formatPrice } from '../subscription.helpers';
 
 import { useSubscriptionSuccessScreen } from './useSubscriptionSuccessScreen';
@@ -18,14 +17,29 @@ const MASCOT_SIZE = 200;
 /** Receipt for the subscription that was just activated (911:52560 / 911:52513 / 964:60760). */
 export const SubscriptionSuccessScreen = () => {
     const { t } = useAppTranslation(['subscription']);
-    const { name, plan, referralCode, isFree, startDate, endDate, remainingDays, handleDone } =
-        useSubscriptionSuccessScreen();
+    const {
+        name,
+        planName,
+        isYearly,
+        pricePaidCents,
+        currency,
+        fullPriceCents,
+        features,
+        referralCode,
+        isFree,
+        startDate,
+        endDate,
+        remainingDays,
+        handleDone,
+    } = useSubscriptionSuccessScreen();
 
-    const periodKey = plan.id === 'year' ? 'subscription:period.year' : 'subscription:period.month';
-    const price = isFree ? t('subscription:plans.free') : t(periodKey, { price: formatPrice(plan.price) });
+    const periodKey = isYearly ? 'subscription:period.year' : 'subscription:period.month';
+    const price = isFree
+        ? t('subscription:plans.free')
+        : t(periodKey, { price: formatPrice(pricePaidCents, currency) });
     // The undiscounted figure only means something when something was taken off:
     // the yearly plan's list price, or the month a referral code covers.
-    const undiscounted = plan.listPrice ?? (isFree ? plan.price : null);
+    const undiscounted = fullPriceCents;
 
     return (
         <AppScreen>
@@ -44,14 +58,14 @@ export const SubscriptionSuccessScreen = () => {
 
                 <SubscriptionSummaryCard
                     label={t('subscription:success.plan-label')}
-                    planName={t(`subscription:plans.${plan.id}`)}
+                    planName={planName}
                     price={price}
                     tag={referralCode ? t('subscription:success.referral-tag') : undefined}
                     fullPrice={
                         undiscounted
                             ? {
                                   label: t('subscription:success.full-price'),
-                                  value: t(periodKey, { price: formatPrice(undiscounted) }),
+                                  value: t(periodKey, { price: formatPrice(undiscounted, currency) }),
                               }
                             : undefined
                     }
@@ -68,10 +82,7 @@ export const SubscriptionSuccessScreen = () => {
                     <AppText variant="bodyMediumBold" style={styles.cardTitle}>
                         {t('subscription:success.unlocked')}
                     </AppText>
-                    <FeatureList
-                        gap={12}
-                        items={SUBSCRIPTION_FEATURES.map(feature => t(`subscription:features.${feature}`))}
-                    />
+                    <FeatureList gap={12} items={features.map(feature => feature.name)} />
                 </View>
             </ScrollView>
 

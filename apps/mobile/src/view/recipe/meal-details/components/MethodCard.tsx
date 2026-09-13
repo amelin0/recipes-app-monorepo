@@ -11,8 +11,12 @@ import type { MealStep } from '../../recipe.constants';
 export interface MethodCardProps {
     /** Ingredient names shown as chips above the steps. */
     ingredients: string[];
-    /** Cook time, already formatted («15 хв»). */
-    time: string;
+    /**
+     * Cook time, already formatted («15 хв»). Absent when the recipe does not
+     * declare one — the block is then left out rather than reading «0 хв»,
+     * which claims a dish cooks instantly instead of admitting it is unknown.
+     */
+    time?: string;
     steps: MealStep[];
 }
 
@@ -36,12 +40,20 @@ export const MethodCard = ({ ingredients, time, steps }: MethodCardProps) => {
                 </View>
             </View>
 
-            <View style={styles.block}>
-                <AppText variant="bodyMediumReg" style={styles.label}>
-                    {t('recipes:details.cook-time')}
+            {time ? (
+                <View style={styles.block}>
+                    <AppText variant="bodyMediumReg" style={styles.label}>
+                        {t('recipes:details.cook-time')}
+                    </AppText>
+                    <Tag label={time} tone="negative" />
+                </View>
+            ) : null}
+
+            {steps.length === 0 ? (
+                <AppText variant="bodyMediumReg" style={styles.emptySteps}>
+                    {t('recipes:details.no-steps')}
                 </AppText>
-                <Tag label={time} tone="negative" />
-            </View>
+            ) : null}
 
             {steps.map((step, index) => (
                 <View key={step.id} style={styles.step}>
@@ -89,6 +101,10 @@ const styles = StyleSheet.create(theme => ({
         width: '100%',
     },
     stepBody: {
+        width: '100%',
+        color: theme.colors.semantic.darkGrey,
+    },
+    emptySteps: {
         width: '100%',
         color: theme.colors.semantic.darkGrey,
     },

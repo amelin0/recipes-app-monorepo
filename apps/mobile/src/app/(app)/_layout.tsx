@@ -1,9 +1,16 @@
 import { Stack } from 'expo-router';
 
 import { useStore } from '@/state';
+import { useSyncOnboarding, useSyncSettings } from '@/state/domains/user';
 
 export default function AppLayout() {
     const isAuthenticated = useStore(state => state.isAuthenticated);
+    // Mirrors the server's units/theme/language into the store once the
+    // profile lands — the screens read them synchronously in render.
+    useSyncSettings();
+    // Seeds the questionnaire slice from the server, so a fresh install
+    // resumes instead of starting the fourteen steps over.
+    useSyncOnboarding();
 
     return (
         <Stack screenOptions={{ headerShown: false }}>
@@ -60,8 +67,10 @@ export default function AppLayout() {
                 <Stack.Screen
                     name="metric-add"
                     options={{
+                        // Як і product-amount: у шиті є поле вводу, тож висота
+                        // рахується по вмісту — інакше над клавіатурою діра.
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.42],
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}
@@ -71,7 +80,9 @@ export default function AppLayout() {
                     name="weigh-in-reminder"
                     options={{
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.72],
+                        // Висота по вмісту: без колеса часу шторка стала
+                        // вдвічі нижчою, і фіксований детент лишав діру.
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}
@@ -106,9 +117,11 @@ export default function AppLayout() {
                 <Stack.Screen
                     name="product-amount"
                     options={{
-                        // Шит вибору кількості (Порція | Штука | Грам).
+                        // Шит вибору кількості (Порція | Штука | Грам). Висота
+                        // по вмісту: з фіксованим детентом зайва висота їде
+                        // вгору разом із шитом і лишає діру над клавіатурою.
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.5],
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}
@@ -118,8 +131,10 @@ export default function AppLayout() {
                     options={{
                         // Bottom sheet виглядом, але повноцінний екран.
                         presentation: 'formSheet',
-                        // The dial sheet is nearly full height (811:58844).
-                        sheetAllowedDetents: [0.86],
+                        // Висота по вмісту, як у решті шитів: з фіксованим
+                        // детентом ScrollView усередині малював вміст поза
+                        // власними межами й наїжджав на шапку (811:58844).
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}

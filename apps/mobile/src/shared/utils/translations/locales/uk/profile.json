@@ -16,11 +16,13 @@
         "valid-until": "До {{date}}",
         "plans": {
             "month": "Місячна",
-            "year": "Річна"
+            "year": "Річна",
+            "free": "Безкоштовна"
         },
         "rate-us": "Оцініть нас",
         "referral": "Реферальна програма",
-        "change-password": "Змінити пароль"
+        "change-password": "Змінити пароль",
+        "no-subscription": "Оформити підписку"
     },
     "settings": {
         "title": "Налаштування",

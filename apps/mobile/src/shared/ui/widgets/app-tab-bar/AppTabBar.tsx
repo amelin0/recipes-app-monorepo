@@ -76,7 +76,10 @@ const TabCell = ({ name, label, badge, isFocused, onPress, onLongPress }: TabCel
             accessibilityState={{ selected: isFocused }}
             accessibilityLabel={label}
             onPress={() => {
-                Haptics.light();
+                // Вібрує саме переключення: повторний тап по активному табу
+                // нікуди не веде, і відгук на нього був би обіцянкою дії,
+                // якої не сталося.
+                if (!isFocused) void Haptics.light();
                 onPress();
             }}
             onLongPress={onLongPress}

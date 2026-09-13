@@ -3,7 +3,7 @@ import { ScrollView } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppScreen, TopBar } from '@/shared/ui/components';
+import { AppScreen, QueryState, TopBar } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import { FaqCategoryCard } from './components';
@@ -12,22 +12,24 @@ import { useFaqScreen } from './useFaqScreen';
 /** Часті питання — an accordion of answer categories (969:27483, 970:27782). */
 export const FaqScreen = () => {
     const { t } = useAppTranslation(['profile']);
-    const { categories, isExpanded, toggle } = useFaqScreen();
+    const { topics, isLoading, isError, isEmpty, handleRetry, isExpanded, toggle } = useFaqScreen();
 
     return (
         <AppScreen>
             <TopBar title={t('profile:faq-screen.title')} />
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                {categories.map(category => (
-                    <FaqCategoryCard
-                        key={category.key}
-                        category={category}
-                        expanded={isExpanded(category.key)}
-                        onToggle={() => toggle(category.key)}
-                    />
-                ))}
-            </ScrollView>
+            <QueryState isLoading={isLoading} isError={isError} isEmpty={isEmpty} onRetry={handleRetry}>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                    {topics.map(topic => (
+                        <FaqCategoryCard
+                            key={topic.id}
+                            topic={topic}
+                            expanded={isExpanded(topic.id)}
+                            onToggle={() => toggle(topic.id)}
+                        />
+                    ))}
+                </ScrollView>
+            </QueryState>
         </AppScreen>
     );
 };

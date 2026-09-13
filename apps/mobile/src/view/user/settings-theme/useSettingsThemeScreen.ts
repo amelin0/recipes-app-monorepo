@@ -6,6 +6,7 @@ import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
 import type { AppTheme } from '@/state/domains/app';
+import { toThemeSetting, useUpdateSettings } from '@/state/domains/user';
 
 const THEMES: AppTheme[] = ['Light', 'Dark', 'System'];
 
@@ -17,19 +18,30 @@ export const THEME_KEYS: Record<AppTheme, string> = {
 };
 
 export const useSettingsThemeScreen = () => {
-    const { t } = useAppTranslation(['profile']);
+    const { t } = useAppTranslation(['profile', 'common']);
     const appTheme = useStore(state => state.appTheme);
     const setAppTheme = useStore(state => state.setAppTheme);
+    const updateSettings = useUpdateSettings();
 
     const [selected, setSelected] = useState<AppTheme>(appTheme);
 
     const handleSave = useCallback(() => {
-        setAppTheme(selected);
-        ToastService.success(t('profile:settings.saved'));
-        if (router.canGoBack()) {
-            router.back();
-        }
-    }, [setAppTheme, selected, t]);
+        if (updateSettings.isPending) return;
 
-    return { themes: THEMES, selected, select: setSelected, handleSave };
+        updateSettings.mutate(
+            { theme: toThemeSetting(selected) },
+            {
+                onSuccess: () => {
+                    setAppTheme(selected);
+                    ToastService.success(t('profile:settings.saved'));
+                    if (router.canGoBack()) router.back();
+                },
+                onError: () => {
+                    ToastService.error(t('common:states.error'));
+                },
+            },
+        );
+    }, [selected, setAppTheme, t, updateSettings]);
+
+    return { themes: THEMES, selected, select: setSelected, isSaving: updateSettings.isPending, handleSave };
 };

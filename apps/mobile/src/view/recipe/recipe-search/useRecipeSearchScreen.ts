@@ -2,19 +2,18 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { useDebouncedValue } from '@/shared/hooks';
+import type { Product, RecipeCard } from '@/data';
+import { useDebouncedValue, useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
-import { useStore } from '@/state';
-import { buildPlanDish, pickedInMeal, pickedPlanId, resolvePlanTarget } from '@/state/domains/meal-plan';
-
+import { useGetProducts, useGetRecipeFilters, useGetRecipes } from '@/state/domains/catalog';
 import {
-    MOCK_CATEGORY_DISHES,
-    MOCK_SEARCH_DISHES,
-    MOCK_SEARCH_INGREDIENTS,
-    RECIPE_RAIL_CATEGORIES,
-    type SearchDishResult,
-} from '../recipe.constants';
+    resolvePlanDate,
+    resolvePlanMeal,
+    useAddPlanItem,
+    useGetPlan,
+    useRemovePlanItem,
+} from '@/state/domains/meal-plan';
 
 export const useRecipeSearchScreen = () => {
     const { t } = useAppTranslation();
@@ -25,40 +24,69 @@ export const useRecipeSearchScreen = () => {
         meal?: string;
         q?: string;
     }>();
+
+    const { data: filterOptions } = useGetRecipeFilters();
+
     const categoryParam = typeof params.category === 'string' ? params.category : undefined;
-    // A stale deep link with an unknown key falls back to plain search.
-    const category = RECIPE_RAIL_CATEGORIES.some(item => item.key === categoryParam) ? categoryParam : undefined;
+    // A stale deep link with an unknown id falls back to plain search.
+    const category = filterOptions?.categories.find(item => item.id === categoryParam);
+
     // Діплінк може передати початковий запит (rationfit://recipe-search?q=…).
     const [query, setQuery] = useState(() => (typeof params.q === 'string' ? params.q : ''));
 
     // Відкрито з пікера страв — результати додаються прямо до прийому (594:41918).
     const isPicker = params.picker === '1';
-    const planWeek = useStore(state => state.planWeek);
-    const addPlanDishes = useStore(state => state.addPlanDishes);
-    const removePlanDish = useStore(state => state.removePlanDish);
-    const { day, meal } = resolvePlanTarget(planWeek, params.day, params.meal);
-    // Спільний зі стором стан «додано» — бачить і додавання з деталей.
-    const picked = pickedInMeal(planWeek, day, meal);
+    const day = resolvePlanDate(params.day);
+    const meal = resolvePlanMeal(params.meal);
+
+    const addItem = useAddPlanItem();
+    const removeItem = useRemovePlanItem();
+    // Тік читається з самого плану — те саме джерело, що й у пікері.
+    const { data: planDays } = useGetPlan(day, day);
+    const plannedItems = useMemo(
+        () => (isPicker ? (planDays?.[0]?.slots.find(slot => slot.slot === meal)?.items ?? []) : []),
+        [isPicker, meal, planDays],
+    );
+    const plannedItemOf = useCallback(
+        (recipeId: string) => plannedItems.find(item => item.recipe.id === recipeId)?.id ?? null,
+        [plannedItems],
+    );
 
     // Сітка категорій лишається, доки відкладений запит порожній (594:43001);
     // очищення поля скидає результати одразу, без вікна дебаунсу.
     const debounced = useDebouncedValue(query);
     const debouncedQuery = query.length === 0 ? '' : debounced;
-    const normalized = debouncedQuery.trim().toLowerCase();
+    const normalized = debouncedQuery.trim();
 
-    const ingredientResults = useMemo(
-        () => MOCK_SEARCH_INGREDIENTS.filter(item => item.title.toLowerCase().includes(normalized)),
-        [normalized],
+    // У режимі категорії шукаємо по ній, інакше — за текстом. Обидва запити
+    // вимкнені, доки нема ні того, ні того: інакше відкриття екрана коштувало б
+    // повного читання каталогу.
+    const hasSearch = normalized.length > 0 || Boolean(category);
+
+    const { data: recipePages, isFetching: isFetchingRecipes } = useGetRecipes(
+        hasSearch
+            ? {
+                  ...(normalized ? { q: normalized } : {}),
+                  ...(category ? { categories: [category.id] } : {}),
+              }
+            : {},
     );
 
-    const dishResults = useMemo(() => {
-        if (category) return MOCK_CATEGORY_DISHES;
-        return MOCK_SEARCH_DISHES.filter(dish => dish.title.toLowerCase().includes(normalized));
-    }, [category, normalized]);
+    const { data: productPages, isFetching: isFetchingProducts } = useGetProducts(normalized ? { q: normalized } : {});
+
+    const dishResults: RecipeCard[] = useMemo(
+        () => (hasSearch ? (recipePages?.pages.flatMap(page => page.data) ?? []) : []),
+        [hasSearch, recipePages],
+    );
+
+    const ingredientResults: Product[] = useMemo(
+        () => (normalized ? (productPages?.pages.flatMap(page => page.data) ?? []) : []),
+        [normalized, productPages],
+    );
 
     const handleResultPress = useCallback(
         (_id: string) => {
-            // TODO: product details once designed.
+            // TODO: екран продукту ще не спроєктований.
             ToastService.info(t('common:states.coming-soon'));
         },
         [t],
@@ -76,46 +104,57 @@ export const useRecipeSearchScreen = () => {
         [isPicker, day, meal],
     );
 
-    // Той самий тогл, що й у пікері: тік читається зі стору.
+    // Той самий тогл, що й у пікері.
+    // Той самий замок, що й у пікері страв: див. useAddDishScreen.
+    const lock = useActionLock();
+
     const handleToggleSearchDish = useCallback(
-        (dish: SearchDishResult) => {
-            const planId = picked.lastPlanIdOf(dish.id);
-            if (planId !== null) {
-                removePlanDish(day, meal, planId);
+        (dish: RecipeCard) => {
+            if (!lock.acquire(dish.id)) return;
+
+            const itemId = plannedItemOf(dish.id);
+            if (itemId) {
+                removeItem.mutate(
+                    { date: day, itemId },
+                    {
+                        onError: () => ToastService.error(t('common:states.error')),
+                        onSettled: () => lock.release(dish.id),
+                    },
+                );
                 return;
             }
-            addPlanDishes(day, meal, [
-                buildPlanDish({
-                    id: pickedPlanId(dish.id),
-                    emoji: dish.emoji,
-                    name: dish.title,
-                    calories: dish.kcal,
-                    protein: dish.protein,
-                    fats: dish.fats,
-                    carbs: dish.carbs,
-                }),
-            ]);
+
+            addItem.mutate(
+                { date: day, slot: meal, recipeId: dish.id },
+                {
+                    onError: () => ToastService.error(t('common:states.error')),
+                    onSettled: () => lock.release(dish.id),
+                },
+            );
         },
-        [picked, addPlanDishes, removePlanDish, day, meal],
+        [addItem, day, lock, meal, plannedItemOf, removeItem, t],
     );
 
     return {
-        categoryKey: category,
-        categoryLabelKey: category ? `recipes:rail-categories.${category}` : undefined,
+        categoryKey: category?.id,
+        categoryLabel: category?.name,
+        categories: filterOptions?.categories ?? [],
         query,
         debouncedQuery,
         setQuery,
         ingredientResults,
         dishResults,
+        isSearching: isFetchingRecipes || isFetchingProducts,
         isPicker,
-        isAdded: picked.isAdded,
+        isAdded: (recipeId: string) => plannedItemOf(recipeId) !== null,
+        isAddBusy: (recipeId: string) => lock.isBusy(recipeId),
         handleToggleSearchDish,
         handleClear: () => setQuery(''),
         // Контекст пікера їде разом у режим категорії (594:41918).
-        handleCategoryPress: (key: string) =>
+        handleCategoryPress: (id: string) =>
             router.push({
                 pathname: '/(app)/recipe-search',
-                params: isPicker ? { category: key, picker: '1', day, meal } : { category: key },
+                params: isPicker ? { category: id, picker: '1', day, meal } : { category: id },
             }),
         handleFilterPress: () => router.push('/(app)/recipes-filter'),
         handleResultPress,

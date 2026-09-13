@@ -1,63 +1,56 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { formatFullDate } from '@/shared/helpers';
 import { useStore } from '@/state';
-
-import {
-    REFERRAL_FREE_MONTHS,
-    SUBSCRIPTION_PLANS,
-    TRIAL_DAYS,
-    type SubscriptionPlanId,
-} from '../subscription.constants';
-import { addMonths, chargedNow, daysBetween } from '../subscription.helpers';
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { useGetPlans, useGetSubscription } from '@/state/domains/subscription';
+import { useGetProfile } from '@/state/domains/user';
 
 export const useSubscriptionSuccessScreen = () => {
-    const profile = useStore(state => state.profileSetup);
-    const {
-        plan: planParam,
-        code,
-        trial,
-    } = useLocalSearchParams<{
-        plan?: SubscriptionPlanId;
+    const { data: profile } = useGetProfile();
+    const setupName = useStore(state => state.profileSetup.name);
+    const { code } = useLocalSearchParams<{
         /** Referral code the purchase was made with, when there was one. */
         code?: string;
-        /** '1' while the yearly trial was toggled on. */
-        trial?: string;
     }>();
 
-    const plan = useMemo(
-        () => SUBSCRIPTION_PLANS.find(item => item.id === planParam) ?? SUBSCRIPTION_PLANS[0]!,
-        [planParam],
-    );
+    /**
+     * The receipt reads the subscription the server just created, rather than
+     * deriving dates from «now»: a trial, a referral month and a plain
+     * purchase all end on different days, and only the server knows which.
+     */
+    const { data, isLoading, isError, refetch } = useGetSubscription();
+    const subscription = data?.subscription ?? null;
 
-    // TODO: the dates belong to the receipt — read them from the subscription
-    // the API returns instead of deriving them from "now".
-    const { start, end } = useMemo(() => {
-        const startedAt = new Date();
-        const paidUntil = addMonths(startedAt, plan.months);
-        if (trial === '1') paidUntil.setTime(paidUntil.getTime() + TRIAL_DAYS * MS_PER_DAY);
-        return { start: startedAt, end: paidUntil };
-    }, [plan.months, trial]);
-
-    const referralFreeMonths = code ? REFERRAL_FREE_MONTHS : 0;
-    const isFree = chargedNow(plan, referralFreeMonths) === 0;
+    // Перелік переваг і невідкинута ціна живуть у пейволі, а не в самій
+    // підписці — читаємо той самий довідник, що й екран вибору плану.
+    const { data: paywall } = useGetPlans();
+    const plan = paywall?.plans.find(item => item.id === subscription?.planId) ?? null;
 
     const handleDone = useCallback(() => {
         router.replace('/(app)/(tabs)/home');
     }, []);
 
     return {
-        name: profile.name,
-        plan,
-        referralCode: code ?? null,
-        isFree,
-        startDate: formatFullDate(start),
-        endDate: formatFullDate(end),
-        remainingDays: daysBetween(start, end),
+        name: profile?.name ?? setupName,
+        subscription,
+        isLoading,
+        isError,
+        handleRetry: refetch,
+        referralCode: subscription?.referralCode ?? code ?? null,
+        /** Nothing was charged — a referral month or a trial. */
+        isFree: (subscription?.pricePaidCents ?? 0) === 0,
+        startDate: subscription ? formatFullDate(new Date(subscription.startedAt)) : '',
+        endDate: subscription ? formatFullDate(new Date(subscription.expiresAt)) : '',
+        remainingDays: subscription?.daysRemaining ?? 0,
+        planName: subscription?.planName ?? '',
+        isYearly: subscription?.period === 'year',
+        pricePaidCents: subscription?.pricePaidCents ?? 0,
+        currency: subscription?.currency ?? 'USD',
+        /** Struck through only when something was actually taken off. */
+        fullPriceCents: subscription?.fullPriceCents ?? plan?.fullPriceCents ?? null,
+        features: paywall?.features ?? [],
         handleDone,
     };
 };

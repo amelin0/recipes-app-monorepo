@@ -2,51 +2,51 @@ import { useCallback, useMemo } from 'react';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { formatThousands } from '@/shared/helpers';
-
-import { MOCK_MEAL_DETAIL } from '../../recipe/recipe.constants';
-
-/** Daily calorie goal the remaining bar is measured against. */
-const GOAL_CALORIES = 2000;
+import { formatThousands, toIsoDay } from '@/shared/helpers';
+import { useGetDay } from '@/state/domains/nutrition';
 
 export const useMealLoggedScreen = () => {
-    // TODO: the logged portion arrives from the entry the API created; the
-    // remaining budget comes from the day's totals, not from a constant.
-    const { portions } = useLocalSearchParams<{ portions?: string }>();
-    const meal = MOCK_MEAL_DETAIL;
+    const params = useLocalSearchParams<{ id?: string; date?: string }>();
+    const date = typeof params.date === 'string' && params.date ? params.date : toIsoDay();
 
-    const logged = useMemo(() => {
-        const count = Number(portions) || 1;
-        const { grams, kcal, protein, fats, carbs } = meal.perPortion;
+    /**
+     * The receipt reads the entry the server created, and the remaining
+     * budget from the same day it landed in — deriving either from what the
+     * sheet last had on screen would let the two disagree with the ring the
+     * user sees a second later.
+     */
+    const { data: day, isLoading, isError, refetch } = useGetDay(date);
 
-        return {
-            grams: Math.round(grams * count),
-            calories: Math.round(kcal * count),
-            macros: {
-                protein: Math.round(protein * count),
-                fats: Math.round(fats * count),
-                carbs: Math.round(carbs * count),
-            },
-        };
-    }, [meal.perPortion, portions]);
+    const entry = useMemo(() => day?.meals.find(meal => meal.id === params.id), [day, params.id]);
 
-    const remaining = Math.max(GOAL_CALORIES - logged.calories, 0);
+    const goalCalories = day?.goal?.dailyCalories ?? 0;
+    const consumed = day?.consumed.calories ?? 0;
+    const remaining = Math.max(goalCalories - consumed, 0);
 
     const handleDone = useCallback(() => {
         router.dismissTo('/(app)/(tabs)/home');
     }, []);
 
     return {
+        isLoading,
+        isError,
+        handleRetry: refetch,
         dish: {
-            title: meal.title,
-            cuisine: meal.cuisine,
-            calories: formatThousands(logged.calories),
-            grams: logged.grams,
-            macros: logged.macros,
+            title: entry?.dishName ?? '',
+            // Кухня належить рецепту, а не запису журналу: запис — це знімок
+            // зʼїденого, і з часом рецепт може змінитись.
+            cuisine: '',
+            calories: formatThousands(Math.round(entry?.calories ?? 0)),
+            grams: Math.round(entry?.weightG ?? 0),
+            macros: {
+                protein: Math.round(entry?.proteinG ?? 0),
+                fats: Math.round(entry?.fatsG ?? 0),
+                carbs: Math.round(entry?.carbsG ?? 0),
+            },
         },
         remainingCalories: formatThousands(remaining),
-        goalCalories: formatThousands(GOAL_CALORIES),
-        goalProgress: GOAL_CALORIES > 0 ? logged.calories / GOAL_CALORIES : 0,
+        goalCalories: formatThousands(goalCalories),
+        goalProgress: goalCalories > 0 ? consumed / goalCalories : 0,
         handleDone,
     };
 };

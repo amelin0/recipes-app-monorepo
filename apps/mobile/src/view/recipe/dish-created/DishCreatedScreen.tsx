@@ -33,9 +33,11 @@ export const DishCreatedScreen = () => {
                         <AppText variant="titleMedium" style={styles.centered}>
                             {dish.title}
                         </AppText>
-                        <AppText variant="bodyMediumReg" style={[styles.centered, styles.muted]}>
-                            {dish.cuisine}
-                        </AppText>
+                        {dish.cuisine ? (
+                            <AppText variant="bodyMediumReg" style={[styles.centered, styles.muted]}>
+                                {dish.cuisine}
+                            </AppText>
+                        ) : null}
                     </View>
 
                     <NutritionSummaryRow
@@ -48,17 +50,22 @@ export const DishCreatedScreen = () => {
                         {t('recipes:dish-created.weight', { value: dish.weightGrams })}
                     </AppText>
 
-                    <View style={styles.timeBlock}>
-                        <AppText variant="bodyMediumReg" style={styles.muted}>
-                            {t('recipes:details.cook-time')}
-                        </AppText>
-                        <View style={styles.timerTag}>
-                            <TimerIcon width={16} height={16} color={theme.colors.semantic.negative} />
-                            <AppText variant="bodyMediumBold" style={styles.timerText}>
-                                {dish.cookTime}
+                    {/* `POST /recipes` не приймає часу приготування, тож у
+                        власних страв його немає — блок не малюємо, а не
+                        показуємо «0 хв». */}
+                    {dish.cookTimeMinutes ? (
+                        <View style={styles.timeBlock}>
+                            <AppText variant="bodyMediumReg" style={styles.muted}>
+                                {t('recipes:details.cook-time')}
                             </AppText>
+                            <View style={styles.timerTag}>
+                                <TimerIcon width={16} height={16} color={theme.colors.semantic.negative} />
+                                <AppText variant="bodyMediumBold" style={styles.timerText}>
+                                    {t('recipes:list.minutes', { count: dish.cookTimeMinutes })}
+                                </AppText>
+                            </View>
                         </View>
-                    </View>
+                    ) : null}
                 </AppCard>
             </ScrollView>
 

@@ -11,6 +11,3 @@ export const MEAL_REMINDERS = [
 
 /** The minute wheel steps in fives, as the design's 30/35/40 column shows. */
 export const REMINDER_MINUTE_STEP = 5;
-
-/** TODO: replace with the saved schedule — when the next weigh-in falls. */
-export const MOCK_WEIGH_IN_DATE = '23 жовтня 2026';

@@ -11,7 +11,8 @@ import { useSettingsRemindersScreen } from './useSettingsRemindersScreen';
 /** Meal and weigh-in reminders (804:24801). */
 export const SettingsRemindersScreen = () => {
     const { t } = useAppTranslation(['profile', 'onboarding']);
-    const { reminders, weighIn, toggle, toggleExpanded, timeColumnsFor, handleSave } = useSettingsRemindersScreen();
+    const { reminders, weighIn, weighInDate, toggle, toggleExpanded, timeColumnsFor, handleSave } =
+        useSettingsRemindersScreen();
 
     return (
         <AppScreen>
@@ -34,7 +35,7 @@ export const SettingsRemindersScreen = () => {
 
                 <ReminderCard
                     title={t('onboarding:setup.reminders.weigh-in.title')}
-                    caption={t('onboarding:setup.reminders.weigh-in.caption', { date: weighIn.nextDate })}
+                    caption={t('onboarding:setup.reminders.weigh-in.caption', { date: weighInDate })}
                     enabled={weighIn.enabled}
                     onToggle={value => toggle('weigh-in', value)}
                     value={t('onboarding:setup.reminders.weigh-in.cadence')}

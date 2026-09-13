@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
 
-import { AppScreen, AppText } from '@/shared/ui/components';
+import { AppScreen, AppText, QueryState } from '@/shared/ui/components';
 import { MealCard } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
 
@@ -18,11 +18,14 @@ export const MealPlanScreen = () => {
     const { t } = useAppTranslation(['meal-plan']);
     const {
         week,
-        weekRange,
         day,
+        isLoading,
+        isError,
+        handleRetry,
         selectedDayKey,
         setSelectedDayKey,
         hasDishes,
+        hasPendingForList,
         resolveDishAction,
         mealHasDetails,
         handleChangeGoal,
@@ -30,6 +33,7 @@ export const MealPlanScreen = () => {
         handleAddDish,
         handleToggleBasket,
         handleDeleteDish,
+        isDishBusy,
         handleAddAllToList,
         handleCopyPlan,
     } = useMealPlanScreen();
@@ -38,46 +42,48 @@ export const MealPlanScreen = () => {
         <AppScreen>
             <View style={styles.header}>
                 <AppText variant="titleMedium">{t('meal-plan:screen.title')}</AppText>
-                <AppText variant="bodyMediumReg" style={styles.subtitle}>
-                    {t('meal-plan:screen.week-subtitle', { range: weekRange })}
-                </AppText>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <WeekStrip days={week} selectedKey={selectedDayKey} onSelect={setSelectedDayKey} />
+            <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry}>
+                <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+                    <WeekStrip days={week} selectedKey={selectedDayKey} onSelect={setSelectedDayKey} />
 
-                {day ? <PlanGoalCard day={day} onChangeGoal={handleChangeGoal} /> : null}
+                    {day ? <PlanGoalCard day={day} onChangeGoal={handleChangeGoal} /> : null}
 
-                {day?.meals.map(meal => (
-                    <MealCard
-                        key={`${day.key}-${meal.key}`}
-                        title={t(`meal-plan:meals.${meal.key}`)}
-                        time={meal.time}
-                        dishes={meal.dishes}
-                        resolveDishAction={dish => resolveDishAction(dish.id)}
-                        dishSwipeAction="delete"
-                        onPress={mealHasDetails(meal.key) ? handleMealPress : undefined}
-                        onAdd={() => handleAddDish(meal.key)}
-                        onDishAction={handleToggleBasket}
-                        onDishSwipe={dishId => handleDeleteDish(meal.key, dishId)}
-                    />
-                ))}
+                    {day?.meals.map(meal => (
+                        <MealCard
+                            key={`${day.key}-${meal.key}`}
+                            title={t(`meal-plan:meals.${meal.key}`)}
+                            time={meal.time}
+                            dishes={meal.dishes}
+                            resolveDishAction={() => resolveDishAction()}
+                            dishSwipeAction="delete"
+                            onPress={mealHasDetails(meal.key) ? handleMealPress : undefined}
+                            onAdd={() => handleAddDish(meal.key)}
+                            onDishAction={handleToggleBasket}
+                            onDishSwipe={dishId => handleDeleteDish(meal.key, dishId)}
+                            isDishBusy={dish => isDishBusy(dish.id)}
+                        />
+                    ))}
 
-                <View style={styles.actions}>
-                    <PlanActionButton
-                        icon={BasketAddIcon}
-                        label={t('meal-plan:screen.add-to-list')}
-                        disabled={!hasDishes}
-                        onPress={handleAddAllToList}
-                    />
-                    <PlanActionButton
-                        icon={CopyIcon}
-                        label={t('meal-plan:screen.copy-to-days')}
-                        disabled={!hasDishes}
-                        onPress={handleCopyPlan}
-                    />
-                </View>
-            </ScrollView>
+                    <View style={styles.actions}>
+                        <PlanActionButton
+                            icon={BasketAddIcon}
+                            label={t('meal-plan:screen.add-to-list')}
+                            // Вимкнена, коли всі страви дня вже в списку; нова
+                            // страва знову вмикає її.
+                            disabled={!hasPendingForList}
+                            onPress={handleAddAllToList}
+                        />
+                        <PlanActionButton
+                            icon={CopyIcon}
+                            label={t('meal-plan:screen.copy-to-days')}
+                            disabled={!hasDishes}
+                            onPress={handleCopyPlan}
+                        />
+                    </View>
+                </ScrollView>
+            </QueryState>
         </AppScreen>
     );
 };
@@ -87,9 +93,6 @@ const styles = StyleSheet.create(theme => ({
         paddingHorizontal: theme.spacing[4],
         paddingBottom: theme.spacing[2],
         gap: theme.spacing[1],
-    },
-    subtitle: {
-        color: theme.colors.semantic.darkGrey,
     },
     scroll: {
         paddingHorizontal: theme.spacing[4],

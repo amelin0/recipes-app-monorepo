@@ -19,6 +19,9 @@ export const SignUpScreen = () => {
         setEmail,
         password,
         setPassword,
+        emailError,
+        passwordError,
+        isSubmitting,
         handleSignUp,
         handleTermsOfService,
         handlePrivacyPolicy,
@@ -41,17 +44,20 @@ export const SignUpScreen = () => {
                         autoCapitalize="none"
                         autoComplete="email"
                         autoCorrect={false}
+                        errorText={emailError}
                     />
                     <PasswordInput
                         placeholder={t('auth:sign-up.password-placeholder')}
                         value={password}
                         onChangeText={setPassword}
                         autoComplete="new-password"
+                        errorText={passwordError}
                     />
 
                     <AppButton
                         label={t('auth:sign-up.submit')}
                         onPress={handleSignUp}
+                        isLoading={isSubmitting}
                         fullWidth
                         style={styles.submit}
                     />

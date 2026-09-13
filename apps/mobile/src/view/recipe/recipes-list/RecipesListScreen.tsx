@@ -3,7 +3,16 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppScreen, AppText, CategoryTile, Chip, CountDot, SectionHeader, SegmentedTabs } from '@/shared/ui/components';
+import {
+    AppScreen,
+    AppText,
+    CategoryTile,
+    Chip,
+    CountDot,
+    QueryState,
+    SectionHeader,
+    SegmentedTabs,
+} from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import GridViewIcon from '../../../../assets/icons/grid-view.svg';
@@ -11,7 +20,7 @@ import ListViewIcon from '../../../../assets/icons/list-view.svg';
 import SearchIcon from '../../../../assets/icons/search.svg';
 import SortIcon from '../../../../assets/icons/sort.svg';
 import { RecipeCard } from '../components';
-import { RECIPE_RAIL_CATEGORIES } from '../recipe.constants';
+import { RAIL_CATEGORY_IMAGES, RECIPE_PLACEHOLDER_IMAGE } from '../recipe.constants';
 
 import { AddRecipeTile } from './components';
 
@@ -26,6 +35,11 @@ export const RecipesListScreen = () => {
         viewMode,
         setViewMode,
         recipes,
+        categories,
+        isLoading,
+        isError,
+        isEmpty,
+        handleRetry,
         sectionTitle,
         appliedFilters,
         filtersCount,
@@ -69,7 +83,7 @@ export const RecipesListScreen = () => {
                 <SegmentedTabs
                     items={[
                         { key: 'all', label: t('recipes:list.tabs.all') },
-                        { key: 'favorites', label: t('recipes:list.tabs.favorites') },
+                        { key: 'favorite', label: t('recipes:list.tabs.favorites') },
                         { key: 'own', label: t('recipes:list.tabs.own') },
                     ]}
                     activeKey={activeTab}
@@ -102,12 +116,12 @@ export const RecipesListScreen = () => {
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.categoriesRail}
                         >
-                            {RECIPE_RAIL_CATEGORIES.map(category => (
+                            {categories.map(category => (
                                 <CategoryTile
-                                    key={category.key}
-                                    image={category.image}
-                                    label={t(`recipes:rail-categories.${category.key}`)}
-                                    onPress={() => handleCategoryPress(category.key)}
+                                    key={category.id}
+                                    image={RAIL_CATEGORY_IMAGES[category.slug] ?? RECIPE_PLACEHOLDER_IMAGE}
+                                    label={category.name}
+                                    onPress={() => handleCategoryPress(category.id)}
                                 />
                             ))}
                         </ScrollView>
@@ -139,26 +153,31 @@ export const RecipesListScreen = () => {
                         </View>
                     </View>
 
-                    {recipes.length > 0 || activeTab === 'own' ? (
-                        <View style={styles.grid}>
-                            {recipes.map(recipe => (
-                                <RecipeCard
-                                    key={recipe.id}
-                                    recipe={recipe}
-                                    variant={viewMode}
-                                    onPress={() => handleRecipePress(recipe.id)}
-                                    onToggleFavorite={() => handleToggleFavorite(recipe.id)}
-                                />
-                            ))}
-                            {activeTab === 'own' ? (
-                                <AddRecipeTile fullWidth={viewMode === 'list'} onPress={handleAddRecipePress} />
-                            ) : null}
-                        </View>
-                    ) : (
-                        <AppText variant="bodyMediumReg" color="tertiary">
-                            {t('recipes:list.empty')}
-                        </AppText>
-                    )}
+                    <QueryState
+                        isLoading={isLoading}
+                        isError={isError}
+                        isEmpty={isEmpty && activeTab !== 'own'}
+                        emptyMessage={t('recipes:list.empty')}
+                        onRetry={handleRetry}
+                        style={styles.stateBox}
+                    >
+                        {recipes.length > 0 || activeTab === 'own' ? (
+                            <View style={styles.grid}>
+                                {recipes.map(recipe => (
+                                    <RecipeCard
+                                        key={recipe.id}
+                                        recipe={recipe}
+                                        variant={viewMode}
+                                        onPress={() => handleRecipePress(recipe.id)}
+                                        onToggleFavorite={() => handleToggleFavorite(recipe.id)}
+                                    />
+                                ))}
+                                {activeTab === 'own' ? (
+                                    <AddRecipeTile fullWidth={viewMode === 'list'} onPress={handleAddRecipePress} />
+                                ) : null}
+                            </View>
+                        ) : null}
+                    </QueryState>
                 </View>
             </ScrollView>
         </AppScreen>
@@ -173,6 +192,12 @@ const styles = StyleSheet.create(theme => ({
         minHeight: 72,
         paddingHorizontal: theme.spacing[4],
         paddingVertical: theme.spacing[2],
+    },
+    // Стани списку живуть усередині скрола, тож не мають розтягуватись на
+    // повну висоту — інакше «нічого не знайдено» падає під згин.
+    stateBox: {
+        flex: 0,
+        paddingVertical: theme.spacing[8],
     },
     headerTitle: {
         flex: 1,

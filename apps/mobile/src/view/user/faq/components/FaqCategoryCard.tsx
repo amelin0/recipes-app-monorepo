@@ -7,16 +7,16 @@ import { AppText } from '@/shared/ui/components';
 
 import ArrowRightIcon from '../../../../../assets/icons/arrow-right.svg';
 import ArrowUpIcon from '../../../../../assets/icons/arrow-up.svg';
-import type { FaqCategory } from '../../faq.constants';
+import type { FaqTopic } from '@/data';
 
 export interface FaqCategoryCardProps {
-    category: FaqCategory;
+    topic: FaqTopic;
     expanded: boolean;
     onToggle: () => void;
 }
 
 /** One FAQ section — header alone when collapsed, header + answers when open. */
-export const FaqCategoryCard = ({ category, expanded, onToggle }: FaqCategoryCardProps) => {
+export const FaqCategoryCard = ({ topic, expanded, onToggle }: FaqCategoryCardProps) => {
     const { theme } = useUnistyles();
     const Chevron = expanded ? ArrowUpIcon : ArrowRightIcon;
 
@@ -25,19 +25,19 @@ export const FaqCategoryCard = ({ category, expanded, onToggle }: FaqCategoryCar
             <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded }}
-                accessibilityLabel={category.title}
+                accessibilityLabel={topic.title}
                 onPress={onToggle}
                 style={styles.header}
             >
                 <AppText variant="bodyMediumBold" style={styles.title}>
-                    {category.title}
+                    {topic.title}
                 </AppText>
                 <Chevron width={16} height={16} color={theme.colors.elements.primary} />
             </Pressable>
 
             {expanded
-                ? category.items.map(item => (
-                      <View key={item.question} style={styles.item}>
+                ? topic.questions.map(item => (
+                      <View key={item.id} style={styles.item}>
                           <View style={styles.questionRow}>
                               <AppText variant="bodySmallReg" style={styles.bullet}>
                                   {'•'}

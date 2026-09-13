@@ -15,7 +15,7 @@ import { useSetupRemindersScreen } from './useSetupRemindersScreen';
 export const SetupRemindersScreen = () => {
     const { t } = useAppTranslation(['onboarding']);
     const { theme } = useUnistyles();
-    const { reminders, weighIn, toggle, toggleExpanded, timeColumnsFor, handleClose, handleSave } =
+    const { reminders, weighIn, weighInDate, toggle, toggleExpanded, timeColumnsFor, handleClose, handleSave } =
         useSetupRemindersScreen();
 
     return (
@@ -55,7 +55,7 @@ export const SetupRemindersScreen = () => {
 
                     <ReminderCard
                         title={t('onboarding:setup.reminders.weigh-in.title')}
-                        caption={t('onboarding:setup.reminders.weigh-in.caption', { date: weighIn.nextDate })}
+                        caption={t('onboarding:setup.reminders.weigh-in.caption', { date: weighInDate })}
                         enabled={weighIn.enabled}
                         onToggle={value => toggle('weigh-in', value)}
                         value={t('onboarding:setup.reminders.weigh-in.cadence')}

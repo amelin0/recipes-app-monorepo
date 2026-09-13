@@ -19,6 +19,7 @@ export const SignInScreen = () => {
         setEmail,
         password,
         setPassword,
+        isSubmitting,
         handleSignIn,
         handleForgotPassword,
         handleSignUp,
@@ -54,6 +55,7 @@ export const SignInScreen = () => {
                     <AppButton
                         label={t('auth:sign-in.submit')}
                         onPress={handleSignIn}
+                        isLoading={isSubmitting}
                         fullWidth
                         style={styles.submit}
                     />

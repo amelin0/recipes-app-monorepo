@@ -12,6 +12,7 @@ import {
     NutritionSummaryRow,
     SegmentedControl,
     Tag,
+    QueryState,
 } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
@@ -42,74 +43,81 @@ export const MealDetailsScreen = () => {
         handleShare,
         handleAddToPlan,
         handleLogMeal,
+        isLoading,
+        isError,
+        handleRetry,
     } = useMealDetailsScreen();
 
     return (
         <View style={styles.screen}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-                <Image source={meal.image} style={styles.hero} resizeMode="cover" />
+            <QueryState isLoading={isLoading} isError={isError} onRetry={handleRetry}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+                    <Image source={meal.image} style={styles.hero} resizeMode="cover" />
 
-                <View style={styles.sheet}>
-                    <View style={styles.titleRow}>
-                        <View style={styles.titleBlock}>
-                            <AppText variant="titleLarge">{meal.title}</AppText>
-                            <AppText variant="bodyLargeReg" color="tertiary">
-                                {meal.cuisine}
-                            </AppText>
+                    <View style={styles.sheet}>
+                        <View style={styles.titleRow}>
+                            <View style={styles.titleBlock}>
+                                <AppText variant="titleLarge">{meal.title}</AppText>
+                                <AppText variant="bodyLargeReg" color="tertiary">
+                                    {meal.cuisine}
+                                </AppText>
+                            </View>
+                            {meal.minutes > 0 ? (
+                                <Tag label={t('recipes:list.minutes', { count: meal.minutes })} tone="negative" />
+                            ) : null}
                         </View>
-                        <Tag label={t('recipes:list.minutes', { count: meal.minutes })} tone="negative" />
+
+                        <NutritionSummaryRow
+                            calories={meal.kcal.toLocaleString('en-US')}
+                            macros={{ protein: meal.protein, fats: meal.fats, carbs: meal.carbs }}
+                        />
+
+                        <SegmentedControl
+                            items={[
+                                { key: 'ingredients', label: t('recipes:details.tabs.ingredients') },
+                                { key: 'method', label: t('recipes:details.tabs.method') },
+                            ]}
+                            activeKey={activeTab}
+                            onChange={setActiveTab}
+                            equalWidths
+                        />
+
+                        {activeTab === 'ingredients' ? (
+                            <View style={styles.tabContent}>
+                                <AppText variant="bodyLargeBold" accessibilityRole="header">
+                                    {t('recipes:details.tabs.ingredients')}
+                                </AppText>
+                                {meal.ingredients.map(ingredient => (
+                                    <IngredientRow key={ingredient.id} ingredient={ingredient} />
+                                ))}
+                            </View>
+                        ) : (
+                            <MethodCard
+                                ingredients={meal.ingredients.map(ingredient => ingredient.name)}
+                                time={meal.minutes > 0 ? t('recipes:list.minutes', { count: meal.minutes }) : undefined}
+                                steps={meal.steps}
+                            />
+                        )}
+
+                        {/* CTA скролиться разом зі змістом (984:58839). */}
+                        {isPlanMode ? (
+                            <AppButton
+                                fullWidth
+                                label={t('recipes:details.add-to-ration')}
+                                onPress={handleAddToPlan}
+                                leftSlot={<AddIcon width={24} height={24} color={theme.colors.semantic.white} />}
+                            />
+                        ) : (
+                            <AppButton
+                                fullWidth
+                                label={t('recipes:details.log-meal')}
+                                onPress={handleLogMeal}
+                                leftSlot={<CutleryIcon width={24} height={24} color={theme.colors.semantic.white} />}
+                            />
+                        )}
                     </View>
-
-                    <NutritionSummaryRow
-                        calories={meal.kcal.toLocaleString('en-US')}
-                        macros={{ protein: meal.protein, fats: meal.fats, carbs: meal.carbs }}
-                    />
-
-                    <SegmentedControl
-                        items={[
-                            { key: 'ingredients', label: t('recipes:details.tabs.ingredients') },
-                            { key: 'method', label: t('recipes:details.tabs.method') },
-                        ]}
-                        activeKey={activeTab}
-                        onChange={setActiveTab}
-                        equalWidths
-                    />
-
-                    {activeTab === 'ingredients' ? (
-                        <View style={styles.tabContent}>
-                            <AppText variant="bodyLargeBold" accessibilityRole="header">
-                                {t('recipes:details.tabs.ingredients')}
-                            </AppText>
-                            {meal.ingredients.map(ingredient => (
-                                <IngredientRow key={ingredient.id} ingredient={ingredient} />
-                            ))}
-                        </View>
-                    ) : (
-                        <MethodCard
-                            ingredients={meal.ingredients.map(ingredient => ingredient.name)}
-                            time={t('recipes:list.minutes', { count: meal.minutes })}
-                            steps={meal.steps}
-                        />
-                    )}
-
-                    {/* CTA скролиться разом зі змістом (984:58839). */}
-                    {isPlanMode ? (
-                        <AppButton
-                            fullWidth
-                            label={t('recipes:details.add-to-ration')}
-                            onPress={handleAddToPlan}
-                            leftSlot={<AddIcon width={24} height={24} color={theme.colors.semantic.white} />}
-                        />
-                    ) : (
-                        <AppButton
-                            fullWidth
-                            label={t('recipes:details.log-meal')}
-                            onPress={handleLogMeal}
-                            leftSlot={<CutleryIcon width={24} height={24} color={theme.colors.semantic.white} />}
-                        />
-                    )}
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </QueryState>
 
             <View style={[styles.header, { top: insets.top + theme.spacing[2] }]}>
                 <CircleBackButton />
@@ -122,6 +130,8 @@ export const MealDetailsScreen = () => {
                             width={24}
                             height={24}
                             color={isFavorite ? theme.colors.semantic.negative : theme.colors.elements.primary}
+                            // Активне серце залите, не лише обведене.
+                            fill={isFavorite ? theme.colors.semantic.negative : 'none'}
                         />
                     </CircleIconButton>
                     <CircleIconButton accessibilityLabel={t('recipes:details.edit-a11y')} onPress={handleEdit}>

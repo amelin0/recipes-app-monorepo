@@ -28,6 +28,7 @@ export const FeedbackScreen = () => {
         email,
         setEmail,
         handleSubmit,
+        isSubmitting,
     } = useFeedbackScreen();
 
     return (
@@ -37,6 +38,13 @@ export const FeedbackScreen = () => {
             <ScrollView
                 contentContainerStyle={styles.content}
                 keyboardShouldPersistTaps="handled"
+                // Форма вища за екран (804:25464 — 375x1251), тож KAV сам по собі
+                // нічого не дасть: він лише стисне вьюпорт. Цей проп на iOS і
+                // додає нижній contentInset на висоту клавіатури, і докручує
+                // сфокусоване поле над нею (RCTScrollViewComponentView.mm).
+                // На Android це no-op — там працює windowSoftInputMode=adjustResize.
+                automaticallyAdjustKeyboardInsets
+                keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={false}
             >
                 <FormSection step={1} title={t('profile:feedback.kind-title')} required>
@@ -97,7 +105,12 @@ export const FeedbackScreen = () => {
             </ScrollView>
 
             <ScreenActions>
-                <AppButton label={t('profile:feedback.submit')} onPress={handleSubmit} fullWidth />
+                <AppButton
+                    label={t('profile:feedback.submit')}
+                    isLoading={isSubmitting}
+                    onPress={handleSubmit}
+                    fullWidth
+                />
             </ScreenActions>
         </AppScreen>
     );

@@ -1,160 +1,298 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { router } from 'expo-router';
 
-import { formatDayHeader } from '@/shared/helpers';
+import type { MealSlot, PlanDay } from '@/data';
+import { formatDayHeader, toIsoDay } from '@/shared/helpers';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import type { DishAction, MealDish } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
+import { useUnreadCount } from '@/state/domains/notification';
+import { useGetDay, useLogMeal, useLogWater, useDeleteMeal } from '@/state/domains/nutrition';
+import { useGetPlan } from '@/state/domains/meal-plan';
+import { useGetProfile, useGetReminders } from '@/state/domains/user';
 
 import type { MacroData } from './components';
+import { DEFAULT_SLOT_TIME, MEAL_SLOTS, SLOT_EMOJI, WATER_STEP_ML } from './home.constants';
 
-export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type MealKey = MealSlot;
 
-interface MealPlan {
+interface MealPlanCard {
     key: MealKey;
     time?: string;
     hasDetails: boolean;
     dishes: MealDish[];
-    /**
-     * Which trailing action each dish offers. The design ties it to where the
-     * meal sits relative to now: eaten meals show a tick, the meal happening
-     * now offers the cutlery action, later meals offer nothing (435:5993).
-     */
     dishAction: DishAction;
-    /** The meal happening now — the design outlines exactly one card. */
     current?: boolean;
+    /** Meal-entry ids for dishes already eaten — what un-marking deletes. */
+    eatenEntryIds: Record<string, string>;
 }
 
-const WATER_STEP_ML = 250;
-const WATER_TARGET_ML = 2000;
-const STEPS_TARGET = 15000;
+/**
+ * Prefix for a dish that exists only in the journal — eaten, but never
+ * planned. Keeps its id from colliding with a plan item's.
+ */
+const LOGGED_PREFIX = 'logged:';
+
+/** The water card has one button, so one key is enough to lock it. */
+const WATER_KEY = 'water';
+
+const toMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return (hours ?? 0) * 60 + (minutes ?? 0);
+};
+
+/**
+ * The meal happening now is the most recent one whose time has passed — the
+ * design outlines exactly one card, and «nearest upcoming» would leave the
+ * evening with none outlined all afternoon.
+ *
+ * Chosen by time, not by position: the slots render breakfast-lunch-dinner-
+ * snack, but the snack sits at 11:00, so «last in the list that has passed»
+ * would outline it all evening.
+ */
+const resolveCurrentSlot = (times: Record<MealSlot, string>, now: Date): MealSlot | null => {
+    const minutesNow = now.getHours() * 60 + now.getMinutes();
+
+    return MEAL_SLOTS.reduce<MealSlot | null>((current, slot) => {
+        const at = toMinutes(times[slot]);
+        if (at > minutesNow) return current;
+        return current === null || at > toMinutes(times[current]) ? slot : current;
+    }, null);
+};
 
 export const useHomeScreen = () => {
-    const { t } = useAppTranslation();
+    const { t } = useAppTranslation(['tracking', 'common']);
 
-    // TODO: replace mocks with API data (nutrition + meal-plan domains).
-    const [waterCurrent, setWaterCurrent] = useState(240);
-    const [stepsCurrent] = useState(13000);
+    // The device's own calendar day: a meal eaten at 01:00 belongs to the
+    // night before for the person eating it.
+    const today = useMemo(() => toIsoDay(), []);
 
-    const macros: MacroData[] = [
-        { key: 'protein', current: 120, target: 250 },
-        { key: 'fats', current: 4, target: 24 },
-        { key: 'carbs', current: 150, target: 180 },
-    ];
+    const { data: day, isLoading, isError, refetch } = useGetDay(today);
+    // Плану в денному зрізі поки немає — стенд віддає день без нього, тож
+    // «Раціон на сьогодні» читаємо з ендпоінта плану окремим запитом.
+    const { data: planDays } = useGetPlan(today, today);
+    const { data: profile } = useGetProfile();
+    const { data: reminders } = useGetReminders();
+    const { data: unread } = useUnreadCount();
 
-    // TODO: the plan for the day comes from the meal-plan endpoint; `dishAction`
-    // and `current` follow from each meal's time against the clock.
-    const meals: MealPlan[] = [
-        {
-            key: 'breakfast',
-            time: '11:00',
-            hasDetails: true,
-            dishAction: 'eaten',
-            dishes: [
-                {
-                    id: 'pancakes',
-                    emoji: '🥞',
-                    name: 'Панкейки',
-                    calories: 320,
-                    macros: [
-                        { key: 'protein', value: 150 },
-                        { key: 'fats', value: 120 },
-                        { key: 'carbs', value: 23 },
-                    ],
-                },
-            ],
-        },
-        {
-            key: 'lunch',
-            time: '14:00',
-            hasDetails: true,
-            current: true,
-            dishAction: 'eat',
-            dishes: [
-                {
-                    id: 'greek-salad',
-                    emoji: '🥗',
-                    name: 'Грецький салат',
-                    calories: 350,
-                    macros: [
-                        { key: 'protein', value: 150 },
-                        { key: 'fats', value: 0 },
-                        { key: 'carbs', value: 30 },
-                    ],
-                },
-                {
-                    id: 'salmon',
-                    emoji: '🐟',
-                    name: 'Смажений лосось',
-                    calories: 389,
-                    macros: [
-                        { key: 'protein', value: 150 },
-                        { key: 'fats', value: 120 },
-                        { key: 'carbs', value: 30 },
-                    ],
-                },
-            ],
-        },
-        {
-            key: 'dinner',
-            time: '19:00',
-            hasDetails: true,
-            dishAction: 'none',
-            dishes: [
-                {
-                    id: 'greek-salad-dinner',
-                    emoji: '🥗',
-                    name: 'Грецький салат',
-                    calories: 350,
-                    macros: [
-                        { key: 'protein', value: 150 },
-                        { key: 'fats', value: 0 },
-                        { key: 'carbs', value: 30 },
-                    ],
-                },
-                {
-                    id: 'salmon-dinner',
-                    emoji: '🐟',
-                    name: 'Смажений лосось',
-                    calories: 389,
-                    macros: [
-                        { key: 'protein', value: 150 },
-                        { key: 'fats', value: 120 },
-                        { key: 'carbs', value: 30 },
-                    ],
-                },
-            ],
-        },
-        { key: 'snack', hasDetails: false, dishAction: 'none', dishes: [] },
-    ];
+    const logMeal = useLogMeal();
+    const deleteMeal = useDeleteMeal();
+    const logWater = useLogWater();
+
+    const slotTimes = useMemo(() => {
+        const times = { ...DEFAULT_SLOT_TIME };
+        reminders?.forEach(reminder => {
+            if (reminder.type === 'weigh_in' || !reminder.time) return;
+            // Дизайн пише годину без нуля — «8:00», не «08:00».
+            times[reminder.type] = reminder.time.replace(/^0/, '');
+        });
+        return times;
+    }, [reminders]);
+
+    const currentSlot = useMemo(() => resolveCurrentSlot(slotTimes, new Date()), [slotTimes]);
+
+    const planDay: PlanDay | undefined = planDays?.[0];
+
+    const meals: MealPlanCard[] = useMemo(
+        () =>
+            MEAL_SLOTS.map(slot => {
+                const items = planDay?.slots.find(entry => entry.slot === slot)?.items ?? [];
+                const entries = day?.meals.filter(meal => meal.slot === slot) ?? [];
+
+                // Заплановану страву вважаємо зʼїденою, якщо в журналі дня є
+                // запис із тим самим рецептом і слотом — саме так сервер
+                // звʼязує позначку з кільцем калорій. Кожен запис закриває
+                // рівно одну позицію плану: дві однакові страви в слоті — це
+                // дві позначки, а не одна на двох.
+                const eatenEntryIds: Record<string, string> = {};
+                const matched = new Set<string>();
+                items.forEach(item => {
+                    const entry = entries.find(meal => meal.recipeId === item.recipe.id && !matched.has(meal.id));
+                    if (!entry) return;
+                    matched.add(entry.id);
+                    eatenEntryIds[item.id] = entry.id;
+                });
+
+                // Записи, яким не знайшлось позиції плану, — зʼїдене поза
+                // планом: страва з рецепта, довільна порція. Без них кільце
+                // рахує калорії, яких на екрані ніде немає, і прибрати
+                // помилковий запис нічим.
+                const unplanned = entries.filter(entry => !matched.has(entry.id));
+                unplanned.forEach(entry => {
+                    eatenEntryIds[`${LOGGED_PREFIX}${entry.id}`] = entry.id;
+                });
+
+                const dishes: MealDish[] = [
+                    ...items.map<MealDish>(item => ({
+                        id: item.id,
+                        emoji: SLOT_EMOJI[slot],
+                        photoUrl: item.recipe.photoUrl,
+                        name: item.recipe.title,
+                        calories: Math.round(item.recipe.perServing.calories),
+                        macros: [
+                            { key: 'protein', value: Math.round(item.recipe.perServing.proteinG) },
+                            { key: 'fats', value: Math.round(item.recipe.perServing.fatsG) },
+                            { key: 'carbs', value: Math.round(item.recipe.perServing.carbsG) },
+                        ],
+                    })),
+                    ...unplanned.map<MealDish>(entry => ({
+                        id: `${LOGGED_PREFIX}${entry.id}`,
+                        emoji: SLOT_EMOJI[slot],
+                        photoUrl: null,
+                        name: entry.dishName,
+                        calories: Math.round(entry.calories),
+                        macros: [
+                            { key: 'protein', value: Math.round(entry.proteinG) },
+                            { key: 'fats', value: Math.round(entry.fatsG) },
+                            { key: 'carbs', value: Math.round(entry.carbsG) },
+                        ],
+                    })),
+                ];
+
+                return {
+                    key: slot,
+                    time: slotTimes[slot],
+                    hasDetails: items.length > 0,
+                    dishAction: dishes.length === 0 ? 'none' : 'eat',
+                    current: slot === currentSlot,
+                    eatenEntryIds,
+                    dishes,
+                };
+            }),
+        [currentSlot, day, planDay, slotTimes],
+    );
+
+    const macros: MacroData[] = useMemo(
+        () => [
+            {
+                key: 'protein',
+                current: Math.round(day?.consumed.proteinG ?? 0),
+                target: day?.goal?.dailyProteinG ?? 0,
+            },
+            { key: 'fats', current: Math.round(day?.consumed.fatsG ?? 0), target: day?.goal?.dailyFatsG ?? 0 },
+            { key: 'carbs', current: Math.round(day?.consumed.carbsG ?? 0), target: day?.goal?.dailyCarbsG ?? 0 },
+        ],
+        [day],
+    );
 
     const comingSoon = useCallback(() => {
         ToastService.info(t('common:states.coming-soon'));
     }, [t]);
 
+    // `isPending` піднімається лише після ререндеру — два тапи в одному кадрі
+    // обидва читали старе `false`. Замок синхронний і на конкретну страву.
+    const lock = useActionLock();
+
     const handleAddWater = useCallback(() => {
-        setWaterCurrent(prev => Math.min(prev + WATER_STEP_ML, WATER_TARGET_ML));
-    }, []);
+        if (!lock.acquire(WATER_KEY)) return;
+        logWater.mutate(
+            { date: today, amountMl: WATER_STEP_ML },
+            {
+                onError: () => ToastService.error(t('common:states.error')),
+                onSettled: () => lock.release(WATER_KEY),
+            },
+        );
+    }, [lock, logWater, t, today]);
+
+    /**
+     * The cutlery button. Logging the dish is what marks it — the mark and
+     * the calorie ring read the same log, so there is no separate «eaten»
+     * flag that could disagree with the ring.
+     */
+    const handleDishAction = useCallback(
+        (slot: MealKey, dishId: string) => {
+            // Замок на страву, а не на весь екран: поки одна відмічається,
+            // інші лишаються натискними.
+            const key = `${slot}:${dishId}`;
+            if (!lock.acquire(key)) return;
+
+            const card = meals.find(meal => meal.key === slot);
+            const eatenEntryId = card?.eatenEntryIds[dishId];
+
+            if (eatenEntryId) {
+                deleteMeal.mutate(
+                    { date: today, id: eatenEntryId },
+                    {
+                        onError: () => ToastService.error(t('common:states.error')),
+                        onSettled: () => lock.release(key),
+                    },
+                );
+                return;
+            }
+
+            const item = planDay?.slots.find(entry => entry.slot === slot)?.items.find(entry => entry.id === dishId);
+            // Незапланований запис завжди зʼїдений — «відмітити» його нема як,
+            // тож сюди він не доходить.
+            if (!item) {
+                lock.release(key);
+                return;
+            }
+
+            logMeal.mutate(
+                {
+                    date: today,
+                    slot,
+                    recipeId: item.recipe.id,
+                    dishName: item.recipe.title,
+                    portions: 1,
+                    // Кнопка фіксує порцію цілком; частку задає окремий екран
+                    // порцій, який відкривається з деталей страви.
+                    eatenFraction: 1,
+                    perPortion: {
+                        calories: item.recipe.perServing.calories,
+                        proteinG: item.recipe.perServing.proteinG,
+                        fatsG: item.recipe.perServing.fatsG,
+                        carbsG: item.recipe.perServing.carbsG,
+                        weightG: item.recipe.perServing.weightG ?? 100,
+                    },
+                },
+                {
+                    onError: () => ToastService.error(t('common:states.error')),
+                    onSettled: () => lock.release(key),
+                },
+            );
+        },
+        [deleteMeal, lock, logMeal, meals, planDay, t, today],
+    );
 
     return {
-        initials: 'ОК',
-        notificationsCount: 4,
+        isLoading,
+        isError,
+        handleRetry: refetch,
+        initials: profile?.initials || (profile?.email?.charAt(0).toUpperCase() ?? ''),
+        notificationsCount: unread?.count ?? 0,
         dateLabel: formatDayHeader(new Date()),
-        calories: { current: 1000, target: 1850 },
+        calories: {
+            current: Math.round(day?.consumed.calories ?? 0),
+            target: day?.goal?.dailyCalories ?? 0,
+        },
         macros,
         meals,
-        water: { current: waterCurrent, target: WATER_TARGET_ML },
-        steps: { current: stepsCurrent, target: STEPS_TARGET },
+        /** Кожна страва несе свій стан: запланована й ще не зʼїдена — «eat»,
+            зʼїдена (запланована чи ні) — «eaten». */
+        resolveDishAction: (slot: MealKey, dishId: string): DishAction =>
+            meals.find(meal => meal.key === slot)?.eatenEntryIds[dishId] ? 'eaten' : 'eat',
+        /** Страва, чий запит зараз у дорозі: кнопка показує спінер і не тиснеться. */
+        isDishBusy: (slot: MealKey, dishId: string) => lock.isBusy(`${slot}:${dishId}`),
+        isWaterBusy: lock.isBusy(WATER_KEY),
+        water: { current: day?.consumed.waterMl ?? 0, target: day?.goal?.dailyWaterMl ?? 0 },
+        steps: { current: day?.steps ?? 0, target: day?.stepsTarget ?? 0 },
         handleAvatarPress: () => router.push('/(app)/profile'),
         handleNotificationsPress: () => router.push('/(app)/notifications'),
         handleGoalPress: () => router.push('/(app)/goal-setup'),
         handleMealPress: (_meal: MealKey) => comingSoon(),
-        handleAddMeal: (_meal: MealKey) => comingSoon(),
-        handleDishAction: (_meal: MealKey, _dishId: string) => comingSoon(),
-        handleWaterPress: comingSoon,
+        handleAddMeal: (meal: MealKey) => router.push({ pathname: '/(app)/add-dish', params: { slot: meal } }),
+        handleDishAction,
+        // Екрани деталей води й кроків уже є — ті самі, що відкриваються з
+        // «Прогресу». Шеврон вів у «Скоро буде доступно» просто тому, що його
+        // не звʼязали.
+        handleWaterPress: () => router.push({ pathname: '/(app)/metric-detail', params: { metric: 'water' } }),
         handleAddWater,
-        handleStepsPress: comingSoon,
-        handleAddSteps: comingSoon,
+        handleStepsPress: () => router.push({ pathname: '/(app)/metric-detail', params: { metric: 'steps' } }),
+        // Кроки — денний підсумок: той самий шит, що й на прогресі, лише
+        // повертає він на головну, звідки його відкрили.
+        handleAddSteps: () => router.push({ pathname: '/(app)/metric-add', params: { metric: 'steps', from: 'home' } }),
     };
 };
