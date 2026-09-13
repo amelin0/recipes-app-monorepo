@@ -259,9 +259,12 @@ export const useHomeScreen = () => {
         handleMealPress: (_meal: MealKey) => comingSoon(),
         handleAddMeal: (meal: MealKey) => router.push({ pathname: '/(app)/add-dish', params: { slot: meal } }),
         handleDishAction,
-        handleWaterPress: comingSoon,
+        // Екрани деталей води й кроків уже є — ті самі, що відкриваються з
+        // «Прогресу». Шеврон вів у «Скоро буде доступно» просто тому, що його
+        // не звʼязали.
+        handleWaterPress: () => router.push({ pathname: '/(app)/metric-detail', params: { metric: 'water' } }),
         handleAddWater,
-        handleStepsPress: comingSoon,
+        handleStepsPress: () => router.push({ pathname: '/(app)/metric-detail', params: { metric: 'steps' } }),
         // Кроки — денний підсумок: той самий шит, що й на прогресі, лише
         // повертає він на головну, звідки його відкрили.
         handleAddSteps: () => router.push({ pathname: '/(app)/metric-add', params: { metric: 'steps', from: 'home' } }),

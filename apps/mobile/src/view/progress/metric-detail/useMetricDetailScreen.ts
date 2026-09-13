@@ -410,8 +410,12 @@ export const useMetricDetailScreen = () => {
         setNutrientTab,
         format,
         // Daily metrics are logged from the home screen, not from here.
+        // Кроки — не вимір тіла, але вводяться тим самим шитом: денний
+        // підсумок замінюється цілком.
         handleAdd: () =>
-            isReading ? router.push({ pathname: '/(app)/metric-add', params: { metric } }) : comingSoon(),
+            isReading || metric === 'steps'
+                ? router.push({ pathname: '/(app)/metric-add', params: { metric } })
+                : comingSoon(),
         // Calories keep their own full goal screen; the rest edit in a sheet.
         handleEditGoal: () =>
             metric === 'calories'
