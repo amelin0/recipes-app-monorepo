@@ -7,7 +7,5 @@ import { queryClient, nutritionKeys } from '@/shared/services';
 export const useSetSteps = () =>
     useMutation({
         mutationFn: ({ date, steps }: { date: string; steps: number }) => NutritionApi.setSteps(date, { steps }),
-        onSuccess: (_void, variables) => {
-            queryClient.invalidateQueries({ queryKey: nutritionKeys.day(variables.date) });
-        },
+        onSuccess: (_void, variables) => queryClient.invalidateQueries({ queryKey: nutritionKeys.day(variables.date) }),
     });

@@ -33,6 +33,8 @@ export interface MealCardProps {
     dishAction?: DishAction;
     /** Per-dish override of `dishAction` (e.g. basket vs basket-added, 435:13191). */
     resolveDishAction?: (dish: MealDish) => DishAction;
+    /** Which dishes have their action in flight — those show a spinner. */
+    isDishBusy?: (dish: MealDish) => boolean;
     /** Swipe-left action for every dish (the plan's delete, 435:13566). */
     dishSwipeAction?: DishSwipeAction;
     onDishSwipe?: (dishId: string) => void;
@@ -50,6 +52,7 @@ export const MealCard = ({
     dishes,
     dishAction = 'none',
     resolveDishAction,
+    isDishBusy,
     dishSwipeAction,
     onDishSwipe,
     highlighted = false,
@@ -62,7 +65,7 @@ export const MealCard = ({
 
     return (
         <AppCard>
-            {highlighted ? <GradientOutline radius={CARD_RADIUS} /> : null}
+            {highlighted ? <GradientOutline radius={CARD_RADIUS} animated /> : null}
 
             <View style={styles.header}>
                 <Pressable accessibilityRole={onPress ? 'button' : 'none'} disabled={!onPress} onPress={onPress}>
@@ -97,6 +100,7 @@ export const MealCard = ({
                         macros={dish.macros}
                         action={resolveDishAction ? resolveDishAction(dish) : dishAction}
                         onActionPress={onDishAction ? () => onDishAction(dish.id) : undefined}
+                        isActionBusy={isDishBusy ? isDishBusy(dish) : false}
                         swipeAction={dishSwipeAction}
                         onSwipePress={onDishSwipe ? () => onDishSwipe(dish.id) : undefined}
                     />

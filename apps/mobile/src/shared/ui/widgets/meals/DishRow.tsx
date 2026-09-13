@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, View } from 'react-native';
 
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -54,6 +54,14 @@ export interface DishRowProps {
     action?: DishAction;
     onActionPress?: () => void;
     /**
+     * The action's request is in flight: the icon becomes a spinner and the
+     * button stops taking presses, both here and on the swipe.
+     *
+     * Without it a fast double-tap fired the mutation twice — the row looked
+     * idle the whole time, so there was nothing telling the user to wait.
+     */
+    isActionBusy?: boolean;
+    /**
      * Swipe-left action. Defaults to the home behavior: rows without an inline
      * button offer `eat` when an action handler is provided.
      */
@@ -91,6 +99,7 @@ export const DishRow = ({
     macros,
     action = 'none',
     onActionPress,
+    isActionBusy = false,
     swipeAction,
     onSwipePress,
 }: DishRowProps) => {
@@ -106,8 +115,15 @@ export const DishRow = ({
 
     const handleSwipeAction = () => {
         swipeable.current?.close();
+        if (isActionBusy) return;
         handleSwipe?.();
     };
+
+    /** The spinner keeps the icon's own colour, so the row does not flicker. */
+    const actionColor =
+        action === 'eaten' || action === 'basket-added'
+            ? theme.colors.semantic.positive
+            : theme.colors.elements.primary;
 
     const row = (
         <View style={styles.row}>
@@ -153,13 +169,19 @@ export const DishRow = ({
             {action === 'none' ? null : (
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityState={{ checked: action === 'eaten' || action === 'basket-added' }}
+                    accessibilityState={{
+                        checked: action === 'eaten' || action === 'basket-added',
+                        busy: isActionBusy,
+                        disabled: isActionBusy,
+                    }}
                     accessibilityLabel={t(ACTION_LABEL_KEY[action], { name })}
-                    disabled={!onActionPress}
+                    disabled={!onActionPress || isActionBusy}
                     onPress={onActionPress}
                     style={styles.action(action)}
                 >
-                    {action === 'eaten' ? (
+                    {isActionBusy ? (
+                        <ActivityIndicator size="small" color={actionColor} />
+                    ) : action === 'eaten' ? (
                         <TickCircleOutlineIcon width={20} height={20} color={theme.colors.semantic.positive} />
                     ) : action === 'basket-added' ? (
                         <BasketCheckIcon width={20} height={20} color={theme.colors.semantic.positive} />

@@ -15,10 +15,11 @@ export interface WaterCardProps {
     segments?: number;
     onPress?: () => void;
     onAdd: () => void;
+    isAddBusy?: boolean;
 }
 
 /** Water tracker — segmented bar, one segment per tenth of the target (435:6144). */
-export const WaterCard = ({ current, target, segments = 10, onPress, onAdd }: WaterCardProps) => {
+export const WaterCard = ({ current, target, segments = 10, onPress, onAdd, isAddBusy }: WaterCardProps) => {
     const { t } = useAppTranslation(['tracking']);
     // Fractional on purpose: 240 of 2,000 ml part-fills the second segment.
     const filled = target > 0 ? (current / target) * segments : 0;
@@ -32,6 +33,7 @@ export const WaterCard = ({ current, target, segments = 10, onPress, onAdd }: Wa
             })}
             onPress={onPress}
             onAdd={onAdd}
+            isAddBusy={isAddBusy}
         >
             <SegmentedProgressBar segments={segments} filled={filled} />
         </TrackerCard>

@@ -31,6 +31,8 @@ export const HomeScreen = () => {
         handleAddMeal,
         handleDishAction,
         resolveDishAction,
+        isDishBusy,
+        isWaterBusy,
         handleWaterPress,
         handleAddWater,
         handleStepsPress,
@@ -66,6 +68,7 @@ export const HomeScreen = () => {
                             dishes={meal.dishes}
                             dishAction={meal.dishAction}
                             resolveDishAction={dish => resolveDishAction(meal.key, dish.id)}
+                            isDishBusy={dish => isDishBusy(meal.key, dish.id)}
                             highlighted={meal.current}
                             onPress={meal.hasDetails ? () => handleMealPress(meal.key) : undefined}
                             onAdd={() => handleAddMeal(meal.key)}
@@ -77,6 +80,7 @@ export const HomeScreen = () => {
                         current={water.current}
                         target={water.target}
                         onPress={handleWaterPress}
+                        isAddBusy={isWaterBusy}
                         onAdd={handleAddWater}
                     />
 
