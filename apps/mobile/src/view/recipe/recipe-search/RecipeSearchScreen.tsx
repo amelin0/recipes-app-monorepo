@@ -52,6 +52,7 @@ export const RecipeSearchScreen = () => {
         isPicker,
         isAdded,
         handleToggleSearchDish,
+        isSearching,
         handleClear,
         handleCategoryPress,
         handleFilterPress,
@@ -63,11 +64,16 @@ export const RecipeSearchScreen = () => {
     const showCategories = !categoryKey && debouncedQuery.length === 0;
     const showQueryResults = !categoryKey && debouncedQuery.length > 0;
 
+    // Поки запит у дорозі, «Результати пошуку: 0» — неправда: нічого ще не
+    // шукали. Показуємо, що шукаємо.
+    const renderCount = (count: number) =>
+        isSearching ? t('recipes:search.searching') : t('recipes:search.results-count', { count });
+
     const renderSectionTitle = (title: string, count: number) => (
         <View style={styles.sectionTitleRow}>
             <SectionHeader title={title} style={styles.sectionTitle} />
             <AppText variant="buttonTab" style={styles.countText}>
-                {t('recipes:search.results-count', { count })}
+                {renderCount(count)}
             </AppText>
         </View>
     );
@@ -257,7 +263,7 @@ export const RecipeSearchScreen = () => {
                 {categoryKey ? (
                     <View style={styles.section}>
                         <AppText variant="buttonTab" style={styles.countText}>
-                            {t('recipes:search.results-count', { count: dishResults.length })}
+                            {renderCount(dishResults.length)}
                         </AppText>
                         {isPicker
                             ? dishResults.map(dish => (

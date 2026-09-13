@@ -89,7 +89,8 @@
         "results-count": "Результати пошуку: {{count}}",
         "ingredients-section": "Інгредієнти",
         "dishes-section": "Страви",
-        "clear-a11y": "Очистити"
+        "clear-a11y": "Очистити",
+        "searching": "Шукаємо…"
     },
     "details": {
         "tabs": {

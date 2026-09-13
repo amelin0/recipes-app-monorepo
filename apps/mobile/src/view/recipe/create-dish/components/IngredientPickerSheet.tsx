@@ -157,11 +157,15 @@ export const IngredientPickerSheet = ({ visible, selectedIds, onApply, onClose }
 };
 
 const styles = StyleSheet.create(theme => ({
+    // Затемнення лежить під шторкою, а не поруч: як сусід у колонці воно
+    // забирало всю висоту, обгортці лишався нуль, і шторка малювалась поза
+    // нею — знайдене зникало, а кнопка їхала під клавіатуру.
     scrim: {
-        flex: 1,
+        ...StyleSheet.absoluteFillObject,
         backgroundColor: theme.colors.background.overlay,
     },
     sheetWrap: {
+        flex: 1,
         justifyContent: 'flex-end',
     },
     sheet: {
@@ -189,8 +193,14 @@ const styles = StyleSheet.create(theme => ({
     subtitle: {
         color: theme.colors.semantic.darkGrey,
     },
+    // Без власної висоти ScrollView у шторці з maxHeight мірявся по-різному:
+    // на короткій видачі схлопувався в нуль і ховав знайдене, на довгій —
+    // показував два рядки з пʼяти. minHeight дає вікно, flexShrink дозволяє
+    // стиснути його, коли клавіатура забирає місце.
     list: {
         flexGrow: 0,
+        flexShrink: 1,
+        minHeight: 140,
     },
     listContent: {
         gap: theme.spacing[2],

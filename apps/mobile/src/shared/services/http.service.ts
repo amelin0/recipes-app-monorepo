@@ -116,10 +116,19 @@ function getOrStartRefresh(): Promise<string | null> {
     return pendingRefresh;
 }
 
-function formatRoute(config?: { method?: string; url?: string; baseURL?: string }): string {
+function formatRoute(config?: { method?: string; url?: string; baseURL?: string; params?: unknown }): string {
     const method = config?.method?.toUpperCase() ?? 'REQ';
     const url = config?.url ?? '';
-    return `${method} ${url}`;
+    // Пошук і фільтри живуть у query — без них у журналі два різні запити
+    // виглядають однаково, і не видно, з чим саме сервер не погодився.
+    const params = config?.params;
+    const query =
+        params instanceof URLSearchParams
+            ? params.toString()
+            : params && typeof params === 'object'
+              ? new URLSearchParams(params as Record<string, string>).toString()
+              : '';
+    return query ? `${method} ${url}?${query}` : `${method} ${url}`;
 }
 
 /**

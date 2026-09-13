@@ -139,7 +139,10 @@ const styles = StyleSheet.create(theme => ({
         flex: 1,
         justifyContent: 'flex-end',
     },
+    // Без flex: 1 обгортка міряється по вмісту, і шторка малюється поза її
+    // межами — на короткій видачі список зникав зовсім.
     sheetWrap: {
+        flex: 1,
         justifyContent: 'flex-end',
     },
     overlay: {
