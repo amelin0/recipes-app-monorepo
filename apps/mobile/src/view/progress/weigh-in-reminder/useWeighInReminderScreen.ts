@@ -4,17 +4,11 @@ import { router } from 'expo-router';
 
 import { formatFullDate } from '@/shared/helpers';
 import { ToastService } from '@/shared/services';
-import type { WheelPickerColumn } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useGetReminders, useUpdateReminders } from '@/state/domains/user';
 
-/** Minutes the wheel offers, matching the reminders step elsewhere. */
-const MINUTE_STEP = 5;
 /** Fallback cadence while the server has not said what it is. */
 const DEFAULT_CADENCE_DAYS = 14;
-
-const pad = (value: number) => String(value).padStart(2, '0');
-const range = (count: number) => Array.from({ length: count }, (_, index) => index);
 
 export const useWeighInReminderScreen = () => {
     const { t } = useAppTranslation(['common']);
@@ -24,8 +18,6 @@ export const useWeighInReminderScreen = () => {
     const weighIn = reminders?.find(reminder => reminder.type === 'weigh_in');
 
     const [enabled, setEnabled] = useState(true);
-    const [hour, setHour] = useState(14);
-    const [minute, setMinute] = useState(35);
 
     // Засіваємо раз: рефетч посеред прокручування колеса смикнув би його з-під
     // пальця.
@@ -35,24 +27,6 @@ export const useWeighInReminderScreen = () => {
         seeded.current = true;
         setEnabled(weighIn.enabled);
     }, [weighIn]);
-
-    const hours = useMemo(() => range(24), []);
-    const minutes = useMemo(() => range(60 / MINUTE_STEP).map(index => index * MINUTE_STEP), []);
-
-    const columns: WheelPickerColumn[] = [
-        {
-            key: 'hour',
-            items: hours.map(pad),
-            selectedIndex: hours.indexOf(hour),
-            onChange: index => setHour(hours[index] ?? hour),
-        },
-        {
-            key: 'minute',
-            items: minutes.map(pad),
-            selectedIndex: Math.max(minutes.indexOf(minute), 0),
-            onChange: index => setMinute(minutes[index] ?? minute),
-        },
-    ];
 
     const cadenceDays = weighIn?.periodicityDays ?? DEFAULT_CADENCE_DAYS;
 
@@ -89,7 +63,6 @@ export const useWeighInReminderScreen = () => {
         setEnabled,
         cadenceWeeks: Math.round(cadenceDays / 7),
         nextDate,
-        columns,
         isSaving: updateReminders.isPending,
         handleClose: () => router.back(),
         handleSave,

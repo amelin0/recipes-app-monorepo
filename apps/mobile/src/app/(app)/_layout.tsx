@@ -80,7 +80,9 @@ export default function AppLayout() {
                     name="weigh-in-reminder"
                     options={{
                         presentation: 'formSheet',
-                        sheetAllowedDetents: [0.72],
+                        // Висота по вмісту: без колеса часу шторка стала
+                        // вдвічі нижчою, і фіксований детент лишав діру.
+                        sheetAllowedDetents: 'fitToContents',
                         sheetCornerRadius: 24,
                         sheetGrabberVisible: false,
                     }}

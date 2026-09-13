@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { AppButton, AppSwitch, AppText, WheelPicker } from '@/shared/ui/components';
+import { AppButton, AppSwitch, AppText } from '@/shared/ui/components';
 import { useAppTranslation } from '@/shared/utils/translations';
 
 import CloseIcon from '../../../../assets/icons/close.svg';
@@ -14,7 +14,7 @@ import { useWeighInReminderScreen } from './useWeighInReminderScreen';
 export const WeighInReminderScreen = () => {
     const { t } = useAppTranslation(['progress', 'common']);
     const { theme } = useUnistyles();
-    const { enabled, setEnabled, cadenceWeeks, nextDate, columns, handleClose, handleSave } =
+    const { enabled, setEnabled, cadenceWeeks, nextDate, isSaving, handleClose, handleSave } =
         useWeighInReminderScreen();
 
     const cadenceLabel = t('progress:reminder.cadence', { count: cadenceWeeks });
@@ -55,17 +55,24 @@ export const WeighInReminderScreen = () => {
                     />
                 </View>
 
-                <WheelPicker columns={columns} separator=":" />
-
-                <AppButton fullWidth size="md" label={t('progress:reminder.save')} onPress={handleSave} />
+                {/* Годинника тут немає навмисно: нагадування про зважування
+                    несе періодичність, а не час доби, — сервер відмовляє на
+                    `time` для нього прямим текстом (reminders FR-004). */}
+                <AppButton
+                    fullWidth
+                    size="md"
+                    label={t('progress:reminder.save')}
+                    disabled={isSaving}
+                    onPress={handleSave}
+                />
             </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create(theme => ({
+    // Без flex: 1 — висоту задає вміст (sheetAllowedDetents: 'fitToContents').
     sheet: {
-        flex: 1,
         backgroundColor: theme.colors.semantic.white,
     },
     header: {
