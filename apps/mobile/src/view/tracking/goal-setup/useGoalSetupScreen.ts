@@ -101,7 +101,7 @@ export const useGoalSetupScreen = () => {
             router.push('/(app)/activity-edit');
             return;
         }
-        router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'reading' } });
+        router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'reading', from: 'goal-setup' } });
     }, []);
 
     const params = useMemo(() => {
@@ -174,7 +174,10 @@ export const useGoalSetupScreen = () => {
                 ToastService.info(t('common:states.coming-soon'));
                 return;
             }
-            router.push({ pathname: '/(app)/metric-add', params: { metric: key, mode: 'goal' } });
+            router.push({
+                pathname: '/(app)/metric-add',
+                params: { metric: key, mode: 'goal', from: 'goal-setup' },
+            });
         },
         [t],
     );

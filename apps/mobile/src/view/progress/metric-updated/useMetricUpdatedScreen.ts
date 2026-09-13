@@ -40,7 +40,17 @@ export const useMetricUpdatedScreen = () => {
     const waistBound = cards?.find(card => card.metric === 'waist')?.recommendedMax ?? null;
 
     const handleDone = useCallback(() => {
-        router.dismissTo(from === 'home' ? '/(app)/(tabs)/home' : '/(app)/(tabs)/progress');
+        // Квитанція повертає туди, звідки прийшли: інакше зміна ваги з екрана
+        // цілі викидала на «Прогрес» і закривала сам екран цілі.
+        if (from === 'home') {
+            router.dismissTo('/(app)/(tabs)/home');
+            return;
+        }
+        if (from === 'goal-setup') {
+            router.dismissTo('/(app)/goal-setup');
+            return;
+        }
+        router.dismissTo('/(app)/(tabs)/progress');
     }, [from]);
 
     const handleConfirmGoal = useCallback(() => {
