@@ -1,5 +1,7 @@
 import { users } from '../schema';
 
+import { accessTokenIssuedAt, tokenIssuedAtIsAccepted } from './session-marker';
+
 type UserRow = typeof users.$inferSelect;
 
 export class UserEntity {
@@ -51,25 +53,18 @@ export class UserEntity {
 
     /**
      * Whether an access token stamped with this `iat` still belongs to a live
-     * session (session FR-007, password-reset FR-005).
-     *
-     * **The second-resolution edge.** `iat` counts WHOLE SECONDS, while
-     * `sessions_valid_from` has sub-second precision, so for the one second a
-     * revocation lands in the claim cannot say which side of it a token is on.
-     * The comparison resolves that against the token: with a strict `<`, one
-     * minted 300 ms *after* the revocation carries the same floored `iat` as
-     * the second's start and is refused too. That costs its owner one extra
-     * sign-in inside a one-second window. Rounding the other way would let a
-     * token minted just *before* the revocation survive it — which is the bug
-     * this exists to close, so the ambiguity is spent on the safe side.
-     *
-     * A missing `iat` fails closed for the same reason: every token we sign
-     * carries one, so its absence is not owed the benefit of the doubt.
+     * session (session FR-007, password-reset FR-005). Strict about the second
+     * a revocation lands in — see `session-marker.ts`.
      */
     acceptsTokenIssuedAt(iatSeconds: number | undefined): boolean {
-        if (this.sessionsValidFrom === null) return true;
-        if (iatSeconds === undefined) return false;
+        return tokenIssuedAtIsAccepted(this.sessionsValidFrom, iatSeconds);
+    }
 
-        return iatSeconds * 1_000 >= this.sessionsValidFrom.getTime();
+    /**
+     * The `iat` an access token minted now must carry to be accepted — past
+     * the marker even when it was set earlier in this same second.
+     */
+    accessTokenIssuedAt(nowMs: number = Date.now()): number {
+        return accessTokenIssuedAt(this.sessionsValidFrom, nowMs);
     }
 }

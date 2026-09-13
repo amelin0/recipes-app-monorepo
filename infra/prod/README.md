@@ -137,8 +137,37 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
 # 2. Застосунок
 docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml up -d
 
-# 3. Спостережуваність
+# 3. Спостережуваність. Каталог — від користувача, під яким іде деплой:
+#    інакше Docker створить його root-ом, і deploy.sh не зможе туди писати.
+mkdir -p textfile
 docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml up -d
+```
+
+`deploy.sh` сам повідомляє про старт і результат у той самий Telegram-чат, що
+й алерти (токен — з `.env.obs`, chat id — з `contact-points.yml`), і пише
+результат у `textfile/deploy.prom`. З нього правило `dns-deploy-failed`
+нагадує про невдалий деплой, доки наступний не пройде. Обидва канали
+best-effort: без токена чи без каталогу деплой іде як завжди, лише мовчки.
+
+**Obs-стек живе в тому самому checkout, що й деплой** (`PROD_REPO` раннера).
+Після успішного деплою `deploy.sh` перестворює ті сервіси моніторингу, чиї
+конфіги змінились між попереднім і новим комітом, і перевіряє, що Grafana й
+Prometheus піднялись; результат — окремим рядком у повідомленні про деплой.
+Якщо стек запущено з іншої теки, скрипт нічого не чіпає і пише про це: саме
+так моніторинг на сервері відстав на 123 коміти, живучи в другому checkout,
+який ніхто не оновлював.
+
+Checkout належить користувачу раннера, і для решти тека закрита — це
+навмисна ізоляція, а не поломка. Керувати стеком руками — через `sudo` з
+абсолютними шляхами, без `cd` (compose нічого не створює на диску, тож root
+тут нічого не зіпсує):
+
+```bash
+P=/home/actions/recipes-app-monorepo/infra/prod
+O=(sudo docker compose -p dns-obs --project-directory $P --env-file $P/.env.obs -f $P/docker-compose.obs.yml)
+"${O[@]}" ps
+"${O[@]}" logs --tail 50 grafana
+"${O[@]}" up -d --force-recreate grafana
 ```
 
 `--env-file` обовʼязковий у **кожній** команді до цих стеків, включно з `ps`
@@ -166,7 +195,8 @@ docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml   --p
 кладе окремий сід:
 
 ```bash
-docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \n  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
+docker compose -p dns-prod --env-file .env.prod -f docker-compose.prod.yml \
+  --profile migrate run --rm migrator node_modules/.bin/tsx src/seeds/seed.ts
 ```
 
 Ідемпотентний — повторний запуск нічого не змінює. Це **риштування, не
@@ -351,14 +381,21 @@ docker compose -p dns-obs --env-file .env.obs -f docker-compose.obs.yml \
 Звичайний `up -d` зміни у файлі не помітить. Провізіонені правила й контактні
 точки в UI **тільки для читання** — редагувати тут, не там.
 
-Перевірити, що все піднялося (9 правил, 2 контактні точки):
+Перевірити, що все піднялося (10 правил, 2 контактні точки):
 
 ```bash
-curl -su admin:$GRAFANA_ADMIN_PASSWORD \
-  http://localhost:$GRAFANA_HTTP_PORT/api/v1/provisioning/alert-rules | jq length
-curl -su admin:$GRAFANA_ADMIN_PASSWORD \
-  http://localhost:$GRAFANA_HTTP_PORT/api/v1/provisioning/contact-points | jq '.[].name'
+P=/home/actions/recipes-app-monorepo/infra/prod
+sudo bash -c "source $P/.env.obs && curl -s -o /tmp/rules.json -w '%{http_code}\n' \
+  -u \$GRAFANA_ADMIN_USER:\$GRAFANA_ADMIN_PASSWORD \
+  http://localhost:\$GRAFANA_HTTP_PORT/api/v1/provisioning/alert-rules"       # 200
+sudo jq 'if type == "array" then {rules: length, titles: map(.title)} else . end' /tmp/rules.json
 ```
+
+**Спершу HTTP-код, потім лічба.** Користувач — `$GRAFANA_ADMIN_USER` з
+`.env.obs`, не `admin`. З чужим іменем Grafana відповідає `401` об'єктом
+помилки з п'ятьма ключами, і `jq length` рахує **ключі** — виходить
+правдоподібні «5 правил». Так цю перевірку двічі прочитали неправильно
+(2026-09-13).
 
 Кнопка «Test» на контактній точці недоступна (вона read-only) — щоб перевірити
 доставку, простіше зупинити `client-api` на дві хвилини й дочекатися

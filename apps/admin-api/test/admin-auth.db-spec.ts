@@ -534,13 +534,16 @@ describe('admin auth', () => {
         };
 
         /**
-         * `iat` counts whole seconds and the marker does not, so a token minted
-         * in the same second as a revocation is refused on purpose — see
-         * `AdminEntity.acceptsTokenIssuedAt`. A test proving «minted after it
-         * works» has to step past the second boundary first.
+         * The revocation marker `offsetMs` from now. Makes «issued in the
+         * revocation's second, after it» certain rather than a race with
+         * bcrypt, and stands for a real case too: Postgres stamps the marker,
+         * this process stamps `iat`.
          */
-        const nextSecond = (): Promise<void> =>
-            new Promise(resolve => setTimeout(resolve, 1_000 - (Date.now() % 1_000) + 50));
+        const stampMarkerAhead = async (adminId: string, offsetMs: number): Promise<void> => {
+            await context.db.execute(
+                sql`update admins set sessions_valid_from = ${new Date(Date.now() + offsetMs).toISOString()}::timestamptz where id = ${adminId}`,
+            );
+        };
 
         it('dies with logout-all, on every machine', async () => {
             const admin = await createAdmin();
@@ -556,15 +559,44 @@ describe('admin auth', () => {
             await expect(authenticate(browserB.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
         });
 
-        it('lets a session opened after the sign-out work normally', async () => {
+        // QA found this on the client API, and the staff side mirrors it: sign
+        // out everywhere, sign straight back in — 200, and a dead token.
+        it('lets a session opened right after the sign-out work, in the same second', async () => {
             const admin = await createAdmin();
             await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
             await tokenService.revokeAllForAdmin(admin.id);
 
-            await nextSecond();
             const fresh = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
 
             await expect(authenticate(fresh.accessToken)).resolves.toBeDefined();
+        });
+
+        it('lets a new session work when the marker is stamped just ahead of this clock', async () => {
+            const admin = await createAdmin();
+            await stampMarkerAhead(admin.id, 1_500);
+
+            const fresh = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            await expect(authenticate(fresh.accessToken)).resolves.toBeDefined();
+        });
+
+        it('lets a refreshed access token work in the revocation second too', async () => {
+            const admin = await createAdmin();
+            const session = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+            await stampMarkerAhead(admin.id, 1_500);
+
+            const rotated = await tokenService.rotate(session.refreshToken);
+
+            await expect(authenticate(rotated.accessToken)).resolves.toBeDefined();
+        });
+
+        it('does not stretch a token over a marker far ahead — it stays refused', async () => {
+            const admin = await createAdmin();
+            await stampMarkerAhead(admin.id, 5 * 60_000);
+
+            const fresh = await authService.login({ email: admin.email, password: PASSWORD }, CONTEXT);
+
+            await expect(authenticate(fresh.accessToken)).rejects.toBeInstanceOf(UnauthorizedException);
         });
 
         it('survives another browser signing itself out', async () => {

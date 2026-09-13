@@ -65,3 +65,6 @@ infra/prod/.env.obs
 
 # Локальний скретч: конфіги й дампи з сервера, не для репозиторію.
 tmp/
+
+# deploy.sh writes the last deploy outcome here for node-exporter.
+infra/prod/textfile/

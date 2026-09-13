@@ -155,6 +155,9 @@ export class AdminTokenService {
             // the row, not this claim — see AdminJwtStrategy.
             role: admin.role,
             type: 'access',
+            // Past the revocation marker even when it was set in this same
+            // second — see `session-marker.ts`. `exp` is counted from it.
+            iat: admin.accessTokenIssuedAt(),
         };
 
         return this.jwtService.signAsync(payload, {
