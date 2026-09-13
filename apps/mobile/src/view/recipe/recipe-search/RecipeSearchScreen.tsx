@@ -51,6 +51,7 @@ export const RecipeSearchScreen = () => {
         dishResults,
         isPicker,
         isAdded,
+        isAddBusy,
         handleToggleSearchDish,
         isSearching,
         handleClear,
@@ -251,6 +252,7 @@ export const RecipeSearchScreen = () => {
                                           fats={Math.round(dish.perServing.fatsG)}
                                           carbs={Math.round(dish.perServing.carbsG)}
                                           added={isAdded(dish.id)}
+                                          isAddBusy={isAddBusy(dish.id)}
                                           onAdd={() => handleToggleSearchDish(dish)}
                                           onPress={() => handleDishPress(dish.id)}
                                       />
@@ -278,6 +280,7 @@ export const RecipeSearchScreen = () => {
                                       fats={Math.round(dish.perServing.fatsG)}
                                       carbs={Math.round(dish.perServing.carbsG)}
                                       added={isAdded(dish.id)}
+                                      isAddBusy={isAddBusy(dish.id)}
                                       onAdd={() => handleToggleSearchDish(dish)}
                                       onPress={() => handleDishPress(dish.id)}
                                   />

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import type { RecipeTab } from '@/data';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
@@ -124,25 +125,36 @@ export const useAddDishScreen = () => {
         [plannedItems],
     );
 
+    // Замок на страву: `isPending` піднімається лише після ререндеру, і два
+    // тапи в одному кадрі планували ту саму страву двічі — а список покупок
+    // підсумовує план на кожному читанні, тож подвоювались і продукти.
+    const lock = useActionLock();
+
     const handleToggleDish = useCallback(
         (recipeId: string) => {
-            if (addItem.isPending || removeItem.isPending) return;
+            if (!lock.acquire(recipeId)) return;
 
             const itemId = plannedItemOf(recipeId);
             if (itemId) {
                 removeItem.mutate(
                     { date: day, itemId },
-                    { onError: () => ToastService.error(t('common:states.error')) },
+                    {
+                        onError: () => ToastService.error(t('common:states.error')),
+                        onSettled: () => lock.release(recipeId),
+                    },
                 );
                 return;
             }
 
             addItem.mutate(
                 { date: day, slot: meal, recipeId },
-                { onError: () => ToastService.error(t('common:states.error')) },
+                {
+                    onError: () => ToastService.error(t('common:states.error')),
+                    onSettled: () => lock.release(recipeId),
+                },
             );
         },
-        [addItem, day, meal, plannedItemOf, removeItem, t],
+        [addItem, day, lock, meal, plannedItemOf, removeItem, t],
     );
 
     return {
@@ -163,6 +175,7 @@ export const useAddDishScreen = () => {
         dishes,
         ingredients,
         isAdded: (recipeId: string) => plannedItemOf(recipeId) !== null,
+        isAddBusy: (recipeId: string) => lock.isBusy(recipeId),
         addedCount: plannedItems.length,
         handleToggleDish,
         // Тап по рядку — деталі страви з CTA «Додати до раціону» (984:58839).

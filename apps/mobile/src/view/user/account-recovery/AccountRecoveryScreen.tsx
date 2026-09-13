@@ -16,7 +16,7 @@ const MASCOT_SIZE = 200;
 /** Shown while a deletion request is still reversible (804:25371). */
 export const AccountRecoveryScreen = () => {
     const { t } = useAppTranslation(['profile']);
-    const { hasCountdown, countdown, handleRestore, handleLogout } = useAccountRecoveryScreen();
+    const { hasCountdown, countdown, isRestoring, handleRestore, handleLogout } = useAccountRecoveryScreen();
 
     return (
         <AppScreen>
@@ -39,7 +39,12 @@ export const AccountRecoveryScreen = () => {
             </ScrollView>
 
             <ScreenActions>
-                <AppButton label={t('profile:account-recovery.restore')} onPress={handleRestore} fullWidth />
+                <AppButton
+                    label={t('profile:account-recovery.restore')}
+                    isLoading={isRestoring}
+                    onPress={handleRestore}
+                    fullWidth
+                />
                 <AppButton
                     variant="secondary"
                     label={t('profile:account-recovery.logout')}

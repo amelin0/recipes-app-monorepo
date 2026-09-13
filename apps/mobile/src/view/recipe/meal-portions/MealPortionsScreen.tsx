@@ -26,6 +26,7 @@ export const MealPortionsScreen = () => {
         handleIncrease,
         handleClose,
         handleConfirm,
+        isSubmitting,
     } = useMealPortionsScreen();
 
     return (
@@ -89,7 +90,12 @@ export const MealPortionsScreen = () => {
                         {t('recipes:portions.grams-value', { value: totalGrams })}
                     </AppText>
                 </View>
-                <AppButton fullWidth label={t('recipes:portions.confirm')} onPress={handleConfirm} />
+                <AppButton
+                    fullWidth
+                    isLoading={isSubmitting}
+                    label={t('recipes:portions.confirm')}
+                    onPress={handleConfirm}
+                />
             </View>
         </View>
     );

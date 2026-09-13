@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import type { MeasurableMetric, PatchGoalPayload } from '@/data';
 import { formatThousands, toIsoDay } from '@/shared/helpers';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useGetDay, useGetNutritionGoal, usePatchNutritionGoal, useSetSteps } from '@/state/domains/nutrition';
@@ -133,10 +134,17 @@ export const useMetricAddScreen = () => {
         router.replace({ pathname: '/(app)/metric-updated', params: { metric, value, mode, from } });
     }, [from, isMacroGoal, metric, mode, value]);
 
-    const handleSave = useCallback(() => {
-        if (!isValid || isSaving) return;
+    // Один замок на всі чотири мутації за цією кнопкою. Успіх веде на
+    // квитанцію, тож відпускаємо лише на помилці.
+    const lock = useActionLock();
 
-        const onError = () => ToastService.error(t('common:states.error'));
+    const handleSave = useCallback(() => {
+        if (!isValid || !lock.acquire()) return;
+
+        const onError = () => {
+            ToastService.error(t('common:states.error'));
+            lock.release();
+        };
 
         if (!isGoal && metric === 'steps') {
             // Кроки пишуться в день, а не в таблицю вимірів: ендпоінт вимірів
@@ -171,7 +179,7 @@ export const useMetricAddScreen = () => {
     }, [
         finish,
         isGoal,
-        isSaving,
+        lock,
         isValid,
         metric,
         parsed,
@@ -192,7 +200,7 @@ export const useMetricAddScreen = () => {
         value,
         setValue,
         isValid,
-        isSaving,
+        isSaving: isSaving || lock.isBusy(),
         canDecrease: !Number.isNaN(parsed) && parsed > config.min,
         handleDecrease: () => nudge(-1),
         handleIncrease: () => nudge(1),

@@ -33,6 +33,7 @@ export const MealPlanScreen = () => {
         handleAddDish,
         handleToggleBasket,
         handleDeleteDish,
+        isDishBusy,
         handleAddAllToList,
         handleCopyPlan,
     } = useMealPlanScreen();
@@ -61,6 +62,7 @@ export const MealPlanScreen = () => {
                             onAdd={() => handleAddDish(meal.key)}
                             onDishAction={handleToggleBasket}
                             onDishSwipe={dishId => handleDeleteDish(meal.key, dishId)}
+                            isDishBusy={dish => isDishBusy(dish.id)}
                         />
                     ))}
 

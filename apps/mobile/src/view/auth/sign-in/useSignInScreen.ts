@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { router } from 'expo-router';
 
 import { useSignIn } from '@/state/domains/auth';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 
@@ -13,8 +14,11 @@ export const useSignInScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    // Два тапи в одному кадрі відкривали дві сесії; друга відкликала першу.
+    const lock = useActionLock();
+
     const handleSignIn = useCallback(() => {
-        if (signIn.isPending) return;
+        if (!lock.acquire()) return;
 
         signIn.mutate(
             { email: email.trim(), password },
@@ -42,7 +46,7 @@ export const useSignInScreen = () => {
                 },
             },
         );
-    }, [email, password, signIn, t]);
+    }, [email, lock, password, signIn, t]);
 
     const handleForgotPassword = useCallback(() => {
         router.push('/(app)/(auth)/forgot-password');
@@ -67,7 +71,7 @@ export const useSignInScreen = () => {
         setEmail,
         password,
         setPassword,
-        isSubmitting: signIn.isPending,
+        isSubmitting: signIn.isPending || lock.isBusy(),
         handleSignIn,
         handleForgotPassword,
         handleSignUp,

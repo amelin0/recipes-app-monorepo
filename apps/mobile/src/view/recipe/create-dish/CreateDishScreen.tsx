@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -61,6 +61,7 @@ export const CreateDishScreen = () => {
         handleStepsEditorClose,
         handleStepsSave,
         handleSavePress,
+        isSaving,
         handleConfirmSave,
         handleSaveSheetClose,
     } = useCreateDishScreen();
@@ -75,10 +76,21 @@ export const CreateDishScreen = () => {
                     {t('recipes:create-dish.title')}
                 </AppText>
                 <View style={[styles.headerSide, styles.headerSideEnd]}>
-                    <Pressable accessibilityRole="button" onPress={handleSavePress} style={styles.savePill}>
-                        <AppText variant="bodyMediumBold" numberOfLines={1}>
-                            {t('common:actions.save')}
-                        </AppText>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ busy: isSaving, disabled: isSaving }}
+                        accessibilityLabel={t('common:actions.save')}
+                        disabled={isSaving}
+                        onPress={handleSavePress}
+                        style={styles.savePill}
+                    >
+                        {isSaving ? (
+                            <ActivityIndicator size="small" color={theme.colors.elements.primary} />
+                        ) : (
+                            <AppText variant="bodyMediumBold" numberOfLines={1}>
+                                {t('common:actions.save')}
+                            </AppText>
+                        )}
                     </Pressable>
                 </View>
             </View>

@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 
 import type { Plan } from '@/data';
 import { formatThousands } from '@/shared/helpers';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { apiErrorStatus } from '@/shared/utils';
 import { useAppTranslation } from '@/shared/utils/translations';
@@ -113,8 +114,10 @@ export const usePaywallScreen = () => {
         router.replace('/(app)/(tabs)/home');
     }, [dismissPaywall]);
 
+    const lock = useActionLock();
+
     const handleSubscribe = useCallback(() => {
-        if (redeemCode.isPending) return;
+        if (!lock.acquire()) return;
 
         // Реферальний місяць не платить ніхто, тож підписку можна оформити тут
         // і зараз. Платний план вимагає квитанції магазину, а IAP-модуля в
@@ -128,14 +131,19 @@ export const usePaywallScreen = () => {
                             pathname: '/(app)/subscription-success',
                             params: { code: appliedCode },
                         }),
-                    onError: () => ToastService.error(t('common:states.error')),
+                    onError: () => {
+                        ToastService.error(t('common:states.error'));
+                        lock.release();
+                    },
                 },
             );
             return;
         }
 
+        // Платний план поки лише повідомляє — кнопку треба відпустити.
+        lock.release();
         ToastService.info(t('subscription:paywall.store-pending'));
-    }, [appliedCode, isFree, redeemCode, t]);
+    }, [appliedCode, isFree, lock, redeemCode, t]);
 
     return {
         isLoading,
@@ -157,7 +165,7 @@ export const usePaywallScreen = () => {
         codeDraft,
         setCodeDraft,
         isApplyingCode: describeCode.isPending,
-        isSubscribing: redeemCode.isPending,
+        isSubscribing: redeemCode.isPending || lock.isBusy(),
         selectPlan,
         toggleTrial,
         openCodeField,

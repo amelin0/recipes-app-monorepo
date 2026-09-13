@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { router } from 'expo-router';
 import { Platform } from 'react-native';
 
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { appBuild, appVersion } from '@/shared/utils';
 import { useAppTranslation } from '@/shared/utils/translations';
@@ -40,9 +41,12 @@ export const useFeedbackScreen = () => {
         setPhotos(prev => prev.filter(item => item !== uri));
     }, []);
 
+    // Після успіху не відпускаємо: екран іде на «Звернення надіслано».
+    const lock = useActionLock();
+
     const handleSubmit = useCallback(() => {
         setSubmitted(true);
-        if (!kind || trimmed.length < FEEDBACK_DESCRIPTION_MIN || sendFeedback.isPending) return;
+        if (!kind || trimmed.length < FEEDBACK_DESCRIPTION_MIN || !lock.acquire()) return;
 
         sendFeedback.mutate(
             {
@@ -62,10 +66,13 @@ export const useFeedbackScreen = () => {
             },
             {
                 onSuccess: () => router.replace('/(app)/feedback-sent'),
-                onError: () => ToastService.error(t('common:states.error')),
+                onError: () => {
+                    ToastService.error(t('common:states.error'));
+                    lock.release();
+                },
             },
         );
-    }, [email, kind, sendFeedback, t, trimmed]);
+    }, [email, kind, lock, sendFeedback, t, trimmed]);
 
     return {
         kinds: FEEDBACK_KINDS,
@@ -80,7 +87,7 @@ export const useFeedbackScreen = () => {
         removePhoto,
         email,
         setEmail,
-        isSubmitting: sendFeedback.isPending,
+        isSubmitting: sendFeedback.isPending || lock.isBusy(),
         handleSubmit,
     };
 };

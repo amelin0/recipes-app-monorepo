@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { router } from 'expo-router';
 
 import type { MealSlot, PlanDay } from '@/data';
 import { formatDayHeader, toIsoDay } from '@/shared/helpers';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import type { DishAction, MealDish } from '@/shared/ui/widgets';
 import { useAppTranslation } from '@/shared/utils/translations';
@@ -180,39 +181,20 @@ export const useHomeScreen = () => {
         ToastService.info(t('common:states.coming-soon'));
     }, [t]);
 
-    /**
-     * Which buttons are mid-request, and the synchronous lock behind them.
-     *
-     * `mutation.isPending` is not protection: it only flips after React
-     * re-renders, so two taps inside one frame both read the stale `false` and
-     * both fire — which is how one dish got logged twice. The ref answers
-     * immediately; the state exists only so the button can show a spinner.
-     */
-    const inFlight = useRef(new Set<string>());
-    const [busyKeys, setBusyKeys] = useState<string[]>([]);
-
-    const lock = useCallback((key: string) => {
-        if (inFlight.current.has(key)) return false;
-        inFlight.current.add(key);
-        setBusyKeys(current => (current.includes(key) ? current : [...current, key]));
-        return true;
-    }, []);
-
-    const unlock = useCallback((key: string) => {
-        inFlight.current.delete(key);
-        setBusyKeys(current => current.filter(item => item !== key));
-    }, []);
+    // `isPending` піднімається лише після ререндеру — два тапи в одному кадрі
+    // обидва читали старе `false`. Замок синхронний і на конкретну страву.
+    const lock = useActionLock();
 
     const handleAddWater = useCallback(() => {
-        if (!lock(WATER_KEY)) return;
+        if (!lock.acquire(WATER_KEY)) return;
         logWater.mutate(
             { date: today, amountMl: WATER_STEP_ML },
             {
                 onError: () => ToastService.error(t('common:states.error')),
-                onSettled: () => unlock(WATER_KEY),
+                onSettled: () => lock.release(WATER_KEY),
             },
         );
-    }, [lock, logWater, t, today, unlock]);
+    }, [lock, logWater, t, today]);
 
     /**
      * The cutlery button. Logging the dish is what marks it — the mark and
@@ -224,7 +206,7 @@ export const useHomeScreen = () => {
             // Замок на страву, а не на весь екран: поки одна відмічається,
             // інші лишаються натискними.
             const key = `${slot}:${dishId}`;
-            if (!lock(key)) return;
+            if (!lock.acquire(key)) return;
 
             const card = meals.find(meal => meal.key === slot);
             const eatenEntryId = card?.eatenEntryIds[dishId];
@@ -234,7 +216,7 @@ export const useHomeScreen = () => {
                     { date: today, id: eatenEntryId },
                     {
                         onError: () => ToastService.error(t('common:states.error')),
-                        onSettled: () => unlock(key),
+                        onSettled: () => lock.release(key),
                     },
                 );
                 return;
@@ -244,7 +226,7 @@ export const useHomeScreen = () => {
             // Незапланований запис завжди зʼїдений — «відмітити» його нема як,
             // тож сюди він не доходить.
             if (!item) {
-                unlock(key);
+                lock.release(key);
                 return;
             }
 
@@ -268,11 +250,11 @@ export const useHomeScreen = () => {
                 },
                 {
                     onError: () => ToastService.error(t('common:states.error')),
-                    onSettled: () => unlock(key),
+                    onSettled: () => lock.release(key),
                 },
             );
         },
-        [deleteMeal, lock, logMeal, meals, planDay, t, today, unlock],
+        [deleteMeal, lock, logMeal, meals, planDay, t, today],
     );
 
     return {
@@ -293,8 +275,8 @@ export const useHomeScreen = () => {
         resolveDishAction: (slot: MealKey, dishId: string): DishAction =>
             meals.find(meal => meal.key === slot)?.eatenEntryIds[dishId] ? 'eaten' : 'eat',
         /** Страва, чий запит зараз у дорозі: кнопка показує спінер і не тиснеться. */
-        isDishBusy: (slot: MealKey, dishId: string) => busyKeys.includes(`${slot}:${dishId}`),
-        isWaterBusy: busyKeys.includes(WATER_KEY),
+        isDishBusy: (slot: MealKey, dishId: string) => lock.isBusy(`${slot}:${dishId}`),
+        isWaterBusy: lock.isBusy(WATER_KEY),
         water: { current: day?.consumed.waterMl ?? 0, target: day?.goal?.dailyWaterMl ?? 0 },
         steps: { current: day?.steps ?? 0, target: day?.stepsTarget ?? 0 },
         handleAvatarPress: () => router.push('/(app)/profile'),

@@ -38,6 +38,7 @@ export const MetricAddScreen = () => {
         value,
         setValue,
         isValid,
+        isSaving,
         canDecrease,
         handleDecrease,
         handleIncrease,
@@ -83,6 +84,7 @@ export const MetricAddScreen = () => {
                     fullWidth
                     size="md"
                     label={t(isGoal ? 'progress:entry.save-goal' : 'progress:entry.save')}
+                    isLoading={isSaving}
                     disabled={!isValid}
                     onPress={handleSave}
                 />

@@ -28,6 +28,7 @@ export const FeedbackScreen = () => {
         email,
         setEmail,
         handleSubmit,
+        isSubmitting,
     } = useFeedbackScreen();
 
     return (
@@ -104,7 +105,12 @@ export const FeedbackScreen = () => {
             </ScrollView>
 
             <ScreenActions>
-                <AppButton label={t('profile:feedback.submit')} onPress={handleSubmit} fullWidth />
+                <AppButton
+                    label={t('profile:feedback.submit')}
+                    isLoading={isSubmitting}
+                    onPress={handleSubmit}
+                    fullWidth
+                />
             </ScreenActions>
         </AppScreen>
     );

@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { router } from 'expo-router';
 
 import { shiftIsoDay, toIsoDay } from '@/shared/helpers';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useStore } from '@/state';
@@ -59,18 +60,23 @@ export const useMealPlanScreen = () => {
 
     const hasDishes = (day?.meals ?? []).some(meal => meal.dishes.length > 0);
 
+    // Без замка два тапи по кошику давали «Страву видалено» і «Помилка» поруч
+    // — два тости, що суперечать одне одному про дію, яка вдалася.
+    const lock = useActionLock();
+
     const handleDeleteDish = useCallback(
         (_mealKey: PlanMealKey, itemId: string) => {
-            if (!day) return;
+            if (!day || !lock.acquire(itemId)) return;
             removeItem.mutate(
                 { date: day.key, itemId },
                 {
                     onSuccess: () => ToastService.success(t('meal-plan:screen.dish-deleted')),
                     onError: () => ToastService.error(t('common:states.error')),
+                    onSettled: () => lock.release(itemId),
                 },
             );
         },
-        [day, removeItem, t],
+        [day, lock, removeItem, t],
     );
 
     /**
@@ -100,6 +106,7 @@ export const useMealPlanScreen = () => {
         isError,
         handleRetry: refetch,
         hasDishes,
+        isDishBusy: (itemId: string) => lock.isBusy(itemId),
         /** Чи лишилось що додавати до списку покупок цього дня. */
         hasPendingForList: hasDishes && !importsIntoList,
         resolveDishAction: () => (importsIntoList ? ('basket-added' as const) : ('basket' as const)),

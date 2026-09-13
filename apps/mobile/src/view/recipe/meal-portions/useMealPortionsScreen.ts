@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { toIsoDay } from '@/shared/helpers';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useGetRecipe } from '@/state/domains/catalog';
@@ -50,8 +51,12 @@ export const useMealPortionsScreen = () => {
         };
     }, [per, portions, share]);
 
+    // Замок лишається взятим і після успіху: екран іде на квитанцію, і пізній
+    // другий тап стріляв би в уже залишений екран.
+    const lock = useActionLock();
+
     const handleConfirm = useCallback(() => {
-        if (!recipe || logMeal.isPending) return;
+        if (!recipe || !lock.acquire()) return;
 
         const slot: PlanMealKey = resolvePlanMeal(params.slot);
         const date = typeof params.date === 'string' && params.date ? params.date : toIsoDay();
@@ -80,17 +85,20 @@ export const useMealPortionsScreen = () => {
                         pathname: '/(app)/meal-logged',
                         params: { id: entry.id, date },
                     }),
-                onError: () => ToastService.error(t('common:states.error')),
+                onError: () => {
+                    ToastService.error(t('common:states.error'));
+                    lock.release();
+                },
             },
         );
-    }, [logMeal, params.date, params.slot, per, portions, recipe, share, t]);
+    }, [lock, logMeal, params.date, params.slot, per, portions, recipe, share, t]);
 
     return {
         image: recipe?.photoUrl ? { uri: recipe.photoUrl } : RECIPE_PLACEHOLDER_IMAGE,
         isLoading,
         isError,
         handleRetry: refetch,
-        isSubmitting: logMeal.isPending,
+        isSubmitting: logMeal.isPending || lock.isBusy(),
         portions,
         share,
         setShare,

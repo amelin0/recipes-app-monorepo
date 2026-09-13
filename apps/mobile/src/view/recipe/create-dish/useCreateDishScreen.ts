@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import type { CreateRecipeStepPayload, Product, Reference } from '@/data';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useCreateRecipe, useGetRecipeFilters } from '@/state/domains/catalog';
@@ -108,9 +109,13 @@ export const useCreateDishScreen = () => {
             step.minutes > 1,
     );
 
+    // Три кнопки ведуть в один обробник — замок один на всі три. Після успіху
+    // лишається взятим: екран іде на квитанцію створеної страви.
+    const lock = useActionLock();
+
     const handleConfirmSave = useCallback(() => {
         setSaveSheetVisible(false);
-        if (createRecipe.isPending) return;
+        if (!lock.acquire()) return;
 
         const filled = steps.filter(step => step.title.trim().length > 0 || step.description.trim().length > 0);
 
@@ -144,9 +149,12 @@ export const useCreateDishScreen = () => {
                     params: { id: recipe.id, day: params.day ?? '', meal: params.meal ?? '' },
                 });
             },
-            onError: () => ToastService.error(t('common:states.error')),
+            onError: () => {
+                ToastService.error(t('common:states.error'));
+                lock.release();
+            },
         });
-    }, [createRecipe, cuisineId, ingredients, name, params.day, params.meal, photo, steps, t]);
+    }, [createRecipe, cuisineId, ingredients, lock, name, params.day, params.meal, photo, steps, t]);
 
     const handleSavePress = () => {
         // «Назва страви*» — єдине обовʼязкове поле форми.
@@ -180,7 +188,7 @@ export const useCreateDishScreen = () => {
         photo,
         ingredients,
         steps,
-        isSaving: createRecipe.isPending,
+        isSaving: createRecipe.isPending || lock.isBusy(),
         stepsEditorVisible,
         imageSheetVisible,
         photoModalVisible,

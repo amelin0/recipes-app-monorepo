@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import type { Product, RecipeCard } from '@/data';
-import { useDebouncedValue } from '@/shared/hooks';
+import { useDebouncedValue, useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useGetProducts, useGetRecipeFilters, useGetRecipes } from '@/state/domains/catalog';
@@ -105,25 +105,34 @@ export const useRecipeSearchScreen = () => {
     );
 
     // Той самий тогл, що й у пікері.
+    // Той самий замок, що й у пікері страв: див. useAddDishScreen.
+    const lock = useActionLock();
+
     const handleToggleSearchDish = useCallback(
         (dish: RecipeCard) => {
-            if (addItem.isPending || removeItem.isPending) return;
+            if (!lock.acquire(dish.id)) return;
 
             const itemId = plannedItemOf(dish.id);
             if (itemId) {
                 removeItem.mutate(
                     { date: day, itemId },
-                    { onError: () => ToastService.error(t('common:states.error')) },
+                    {
+                        onError: () => ToastService.error(t('common:states.error')),
+                        onSettled: () => lock.release(dish.id),
+                    },
                 );
                 return;
             }
 
             addItem.mutate(
                 { date: day, slot: meal, recipeId: dish.id },
-                { onError: () => ToastService.error(t('common:states.error')) },
+                {
+                    onError: () => ToastService.error(t('common:states.error')),
+                    onSettled: () => lock.release(dish.id),
+                },
             );
         },
-        [addItem, day, meal, plannedItemOf, removeItem, t],
+        [addItem, day, lock, meal, plannedItemOf, removeItem, t],
     );
 
     return {
@@ -138,6 +147,7 @@ export const useRecipeSearchScreen = () => {
         isSearching: isFetchingRecipes || isFetchingProducts,
         isPicker,
         isAdded: (recipeId: string) => plannedItemOf(recipeId) !== null,
+        isAddBusy: (recipeId: string) => lock.isBusy(recipeId),
         handleToggleSearchDish,
         handleClear: () => setQuery(''),
         // Контекст пікера їде разом у режим категорії (594:41918).

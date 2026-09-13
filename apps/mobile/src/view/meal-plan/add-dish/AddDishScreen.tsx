@@ -47,6 +47,7 @@ export const AddDishScreen = () => {
         dishes,
         ingredients,
         isAdded,
+        isAddBusy,
         addedCount,
         handleToggleDish,
         handleDishPress,
@@ -185,6 +186,7 @@ export const AddDishScreen = () => {
                             fats={Math.round(dish.perServing.fatsG)}
                             carbs={Math.round(dish.perServing.carbsG)}
                             added={isAdded(dish.id)}
+                            isAddBusy={isAddBusy(dish.id)}
                             onAdd={() => handleToggleDish(dish.id)}
                             onPress={() => handleDishPress(dish.id)}
                         />

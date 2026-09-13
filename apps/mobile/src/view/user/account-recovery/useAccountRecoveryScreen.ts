@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
 
 import { AccountStorage } from '@/data/local/domains/user';
+import { useActionLock } from '@/shared/hooks';
 import { ToastService } from '@/shared/services';
 import { useAppTranslation } from '@/shared/utils/translations';
 import { useGetCurrentUser, useSignOut } from '@/state/domains/auth';
@@ -37,8 +38,11 @@ export const useAccountRecoveryScreen = () => {
     const minutes = Math.floor(left / (60 * SECOND)) % 60;
     const seconds = Math.floor(left / SECOND) % 60;
 
+    // Обидві гілки лишають екран, тож замок не відпускається зовсім.
+    const lock = useActionLock();
+
     const handleRestore = useCallback(() => {
-        if (cancelDeletion.isPending) return;
+        if (!lock.acquire()) return;
 
         cancelDeletion.mutate(undefined, {
             onSuccess: () => router.replace('/(app)/account-restored'),
@@ -47,7 +51,7 @@ export const useAccountRecoveryScreen = () => {
                 router.replace('/(app)/account-restore-failed');
             },
         });
-    }, [cancelDeletion, t]);
+    }, [cancelDeletion, lock, t]);
 
     return {
         /** Без строку відлік не малюємо — вигадана цифра гірша за її відсутність. */
@@ -57,7 +61,7 @@ export const useAccountRecoveryScreen = () => {
             clock: `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`,
             count: days,
         }),
-        isRestoring: cancelDeletion.isPending,
+        isRestoring: cancelDeletion.isPending || lock.isBusy(),
         handleRestore,
         handleLogout: () => void signOut(),
     };
