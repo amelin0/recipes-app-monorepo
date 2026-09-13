@@ -74,9 +74,17 @@ export const useEmailVerifyScreen = () => {
                 return;
             }
 
-            // Успіх сам піднімає гард — `useVerifyEmail` кладе токени й
-            // перемикає сесію, тож маршрут сюди не потрібен.
-            verifyEmail.mutate({ email, code: submitted }, { onError: handleFailure });
+            verifyEmail.mutate(
+                { email, code: submitted },
+                {
+                    // Гард сам по собі показує захищену групу, але відкриває її
+                    // на першому екрані — вкладках. Кореневий `/` вирішує, куди
+                    // насправді пускати, і без цього переходу свіжий акаунт
+                    // потрапляв на порожню головну замість анкети.
+                    onSuccess: () => router.replace('/'),
+                    onError: handleFailure,
+                },
+            );
         },
         [email, flow, handleFailure, isPending, verifyEmail, verifyReset],
     );

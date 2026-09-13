@@ -19,6 +19,10 @@ export const useSignInScreen = () => {
         signIn.mutate(
             { email: email.trim(), password },
             {
+                // Той самий перехід, що й після підтвердження пошти: гард
+                // відкриває захищену групу на вкладках, а куди саме пускати —
+                // вирішує кореневий `/` (анкета, відновлення чи головна).
+                onSuccess: () => router.replace('/'),
                 onError: (error: unknown) => {
                     const failure = error as { statusCode?: number; code?: string } | undefined;
 
