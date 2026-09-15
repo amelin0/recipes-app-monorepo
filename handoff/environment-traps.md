@@ -25,6 +25,15 @@
   [`apps/client-api/CLAUDE.md`](../apps/client-api/CLAUDE.md).
 - Той самий ефект псує heredoc-скрипти з кирилицею й тире у цій же консолі —
   довгі україномовні файли надійніше писати редактором, а не через `cat <<EOF`.
+- **Мертвий ранер — це тиша, а не помилка.** Служба
+  `actions.runner.amelin0-recipes-app-monorepo.dns-dev` була `enabled`, але
+  `inactive dead` — джоби висіли «Waiting for a runner» годинами, і жодного
+  сигналу: Telegram шле сам `deploy.sh`, який не запускався, а метрика
+  `deploy.prom` оновлюється теж тільки з нього. 2026-09-15 так простояли три
+  пуші поспіль. Перевірка: `systemctl is-active
+  'actions.runner.amelin0-*'` на Pi; лік — `systemctl start`. У сусіднього
+  11am-app є `actions-runner-watchdog.timer` — у dns-dev такого немає, і це
+  кандидат на виправлення.
 - **macOS: локальний postgres на 127.0.0.1:5432 перехоплює `localhost` у
   докерівського.** `docker compose up -d postgres` успішно біндить `*:5432`,
   але `DATABASE_URL=…@localhost:5432` йде в **хостовий** postgres (там
