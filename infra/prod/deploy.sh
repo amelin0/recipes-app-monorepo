@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
 # Build, migrate, swap, verify — and put the previous images back if the new
-# ones do not come up healthy.
+# ones do not come up healthy. When the deployed range also changed the admin
+# panel (apps/web), the panel is rebuilt and republished afterwards through
+# publish-web.sh — best-effort, after the APIs are already healthy.
 #
 #   ./infra/prod/deploy.sh                 # pull, build from HEAD, deploy
 #   ./infra/prod/deploy.sh --no-pull       # deploy the working tree as it is
@@ -178,6 +180,7 @@ write_deploy_state() {
 OUTCOME=''
 REASON=''
 OBS_NOTE=''
+WEB_NOTE=''
 STEP='start'
 TAG=''
 STARTED_AT="$(date +%s)"
@@ -188,7 +191,7 @@ on_exit() {
     case "$OUTCOME" in
         deployed)
             write_deploy_state 1
-            notify "✅ Deployed $label (was $was, $(($(date +%s) - STARTED_AT))s)${OBS_NOTE:+$'\n'$OBS_NOTE}" ;;
+            notify "✅ Deployed $label (was $was, $(($(date +%s) - STARTED_AT))s)${OBS_NOTE:+$'\n'$OBS_NOTE}${WEB_NOTE:+$'\n'$WEB_NOTE}" ;;
         migrations-failed)
             write_deploy_state 0
             notify "❌ Deploy $label failed: migrations. Nothing was swapped — $was is still serving." ;;
@@ -466,13 +469,62 @@ sync_observability() {
     fi
 }
 
+# ── 5b. admin panel ──────────────────────────────────────────────────────
+# The panel is static files published by publish-web.sh, not a container —
+# the swap above never touches it. Rebuilt only when the range that just
+# deployed actually moved it: a web build is minutes of CPU, and most API
+# deploys do not change the panel at all.
+#
+# Best-effort, like monitoring: the APIs are already serving, and a broken
+# panel build must not roll them back. Until a rebuild succeeds, nginx keeps
+# serving the previous release — stale, not broken — and the note on the
+# success message says so.
+#
+# publish-web.sh escalates its /var/www and nginx steps through sudo. Under
+# the Actions runner that sudo has no TTY to ask a password on, so the runner
+# user needs passwordless sudo for it — without that the publish fails fast
+# and cleanly, it does not hang (register-actions-runner runbook).
+publish_web() {
+    local range_ok=0
+    if [ -n "$PREVIOUS_TAG" ] && git cat-file -e "$PREVIOUS_TAG^{commit}" 2>/dev/null; then
+        range_ok=1
+    fi
+    # Without a range to compare (first deploy, a hand-reset box) everything
+    # counts as changed — a needless rebuild is cheap, a skipped one leaves a
+    # stale panel with nothing saying so.
+    web_changed() { [ "$range_ok" -eq 0 ] || ! git diff --quiet "$PREVIOUS_TAG" "$TAG" -- "$@"; }
+
+    # The lockfile is in the list because a dependency bump changes what the
+    # build produces just as surely as a source edit does.
+    web_changed apps/web infra/prod/publish-web.sh pnpm-lock.yaml || return 0
+
+    echo "── web: the panel changed in $PREVIOUS_TAG..$TAG — rebuilding"
+
+    # A moved lockfile with yesterday's store fails the build on a missing
+    # module; installing only then keeps the common case fast.
+    if web_changed pnpm-lock.yaml; then
+        if ! pnpm install --frozen-lockfile; then
+            WEB_NOTE='⚠️ Web publish failed at pnpm install — the panel still serves the previous release.'
+            return
+        fi
+    fi
+
+    if bash "$PROD/publish-web.sh"; then
+        WEB_NOTE='🌐 Admin panel rebuilt and published.'
+    else
+        WEB_NOTE='⚠️ Web publish failed — the panel still serves the previous release. Run infra/prod/publish-web.sh by hand.'
+    fi
+}
+
 # --tag deploys an image without moving the checkout, so the files on disk
-# are not that build's — restarting monitoring against them would be wrong.
-# Called through `||`, which also switches errexit off inside it: an
-# unexpected error there becomes a note on the success message, not a
-# «deploy failed» about an application that is up and healthy.
+# are not that build's — restarting monitoring against them would be wrong,
+# and so would publishing a panel built from them. Called through `||`, which
+# also switches errexit off inside: an unexpected error there becomes a note
+# on the success message, not a «deploy failed» about an application that is
+# up and healthy.
 if [ -z "$EXPLICIT_TAG" ]; then
     sync_observability || OBS_NOTE='⚠️ Monitoring update errored — check the obs stack.'
+    publish_web || WEB_NOTE='⚠️ Web publish errored — the panel still serves the previous release.'
 fi
 
 # ── 6. done ──────────────────────────────────────────────────────────────
