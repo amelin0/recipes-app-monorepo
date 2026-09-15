@@ -12,6 +12,7 @@ export { RecipeApi, toSaveParams } from './recipe'
 export type {
   ImportReport,
   Recipe,
+  RecipeAccess,
   RecipeDetail,
   RecipeFilters,
   RecipeIngredient,

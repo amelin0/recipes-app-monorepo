@@ -1,0 +1,328 @@
+<title>Структура рецептів та імпорт — гайд для редактора</title>
+<style>
+  :root {
+    --paper: #FBFAF7;
+    --surface: #F3F1EA;
+    --ink: #26291F;
+    --muted: #6E7263;
+    --olive: #5F8233;
+    --olive-soft: #EDF1E3;
+    --peach: #B06F3E;
+    --peach-soft: #F7EBDF;
+    --line: #E3E1D8;
+    --mono-bg: #EFEDE4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1C1E18;
+      --surface: #23261E;
+      --ink: #E8E6DD;
+      --muted: #A3A796;
+      --olive: #9DBE6C;
+      --olive-soft: #2A3122;
+      --peach: #DDA97F;
+      --peach-soft: #322A21;
+      --line: #383B30;
+      --mono-bg: #2A2D24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1C1E18;
+    --surface: #23261E;
+    --ink: #E8E6DD;
+    --muted: #A3A796;
+    --olive: #9DBE6C;
+    --olive-soft: #2A3122;
+    --peach: #DDA97F;
+    --peach-soft: #322A21;
+    --line: #383B30;
+    --mono-bg: #2A2D24;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 3.5rem 1.25rem 5rem;
+  }
+
+  h1, h2, h3 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    line-height: 1.25;
+    text-wrap: balance;
+    font-weight: 600;
+  }
+  h1 { font-size: 2.1rem; margin: 0.75rem 0 0.5rem; }
+  h2 { font-size: 1.45rem; margin: 0 0 0.75rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--olive);
+  }
+  .lede { color: var(--muted); font-size: 1.05rem; margin: 0; }
+
+  section { border-top: 1px solid var(--line); padding-top: 2rem; margin-top: 2.5rem; }
+  header.doc { padding-bottom: 0.5rem; }
+
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.35rem; }
+  li { margin-bottom: 0.4rem; }
+  strong { font-weight: 600; }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--mono-bg);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+
+  .tablebox { overflow-x: auto; margin: 0 0 1rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.5rem 0.75rem; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th {
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--line);
+  }
+  td:first-child { white-space: nowrap; }
+  tr.req td:first-child::after { content: " •"; color: var(--olive); }
+
+  .note {
+    background: var(--surface);
+    border-left: 3px solid var(--olive);
+    padding: 0.85rem 1.1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 0 0 1rem;
+  }
+  .note.warn { border-left-color: var(--peach); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .flow {
+    display: flex; align-items: stretch; gap: 0.75rem; flex-wrap: wrap;
+    margin: 1.25rem 0;
+  }
+  .flow .step {
+    flex: 1 1 14rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+  }
+  .flow .step b { display: block; margin-bottom: 0.25rem; }
+  .flow .step small { color: var(--muted); }
+  .flow .arrow { align-self: center; color: var(--muted); font-size: 1.3rem; }
+
+  .pills { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0 1.25rem; }
+  .pill {
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--line);
+  }
+  .pill b { display: block; font-size: 0.95rem; }
+  .pill small { color: var(--muted); }
+  .pill.paid { background: var(--peach-soft); border-color: var(--peach); }
+  .pill.free { background: var(--olive-soft); border-color: var(--olive); }
+
+  .legend { font-size: 0.8rem; color: var(--muted); margin-top: -0.5rem; }
+  .legend .dot { color: var(--olive); }
+
+  footer {
+    border-top: 1px solid var(--line);
+    margin-top: 3rem; padding-top: 1.25rem;
+    color: var(--muted); font-size: 0.85rem;
+  }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <p class="eyebrow">RationFit · каталог рецептів</p>
+    <h1>Структура рецептів та імпорт</h1>
+    <p class="lede">Як влаштовані продукти й рецепти, як підготувати файли для масового
+    завантаження — і чому система поводиться саме так. Для редактора, без технічних деталей.</p>
+  </header>
+
+  <section>
+    <p class="eyebrow">Головна ідея</p>
+    <h2>Дві таблиці, суворий порядок</h2>
+    <p>Каталог складається з <strong>продуктів</strong> (інгредієнтів із поживністю) та
+    <strong>рецептів</strong> (страв, зібраних із цих продуктів). Завантажуються вони двома
+    файлами, і порядок важливий:</p>
+    <div class="flow">
+      <div class="step"><b>1. products.csv</b><small>спершу — продукти, яких бракує в каталозі</small></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>2. recipes.csv</b><small>потім — самі рецепти</small></div>
+    </div>
+    <div class="note">
+      <p>Рецепт <strong>ніколи не створює продукт сам</strong>. Рядок із незнайомим
+      інгредієнтом відхиляється з поясненням. Це навмисно: продукт «на льоту» не мав би
+      поживності, страва стала б непорахованою, і помилка спливла б цифрою на чиємусь
+      телефоні за тижні — а так її видно одразу, у звіті імпорту.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Довідник інгредієнтів</p>
+    <h2>Продукт</h2>
+    <div class="tablebox">
+      <table>
+        <tr><th>Поле</th><th>Що це</th></tr>
+        <tr class="req"><td>Назва англійською</td><td><strong>Ідентичність продукту.</strong> За нею рецепти знаходять інгредієнт; вона має бути унікальною</td></tr>
+        <tr class="req"><td>Назва українською</td><td>Те, що бачить користувач</td></tr>
+        <tr class="req"><td>Калорії, Б/Ж/В</td><td>Завжди <strong>на 100 грамів</strong> — єдина цифра, яку система зберігає</td></tr>
+        <tr><td>Група</td><td>Молочне, риба, борошняне, фрукти, крупи, м'ясо, солодке, овочі</td></tr>
+        <tr><td>Вага порції, г</td><td>Скільки важить одна типова порція</td></tr>
+        <tr><td>Підпис порції</td><td>«1 скибочка», «1 ч. л», «1 банка» — двома мовами</td></tr>
+        <tr><td>Швидкий вибір</td><td>Чи показувати серед чипсів швидкого вибору у фільтрі</td></tr>
+      </table>
+    </div>
+    <p class="legend"><span class="dot">•</span> — обов'язкове поле</p>
+
+    <h3>Як працює порція</h3>
+    <p>Підпис завжди описує <strong>рівно одну</strong> порцію. Кілька порцій — це множник:
+    користувач обирає «3», система рахує 3 × вага порції в грамах, а далі всі цифри — з
+    розрахунку на 100 г. «3 скибочки» ніде не зберігається. Продукт <em>без</em> порції —
+    теж нормальний стан (гречка, капуста): тоді інтерфейс пропонує лише грами.</p>
+
+    <h3>Захист від одруків</h3>
+    <p>Рядок продукту відхиляється, якщо: калорій понад 900 на 100 г (більше, ніж у чистого
+    жиру — отже, помилка на порядок), будь-який макрос понад 100 г, або
+    білки + жири + вуглеводи разом перевищують 100 г.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Страва</p>
+    <h2>Рецепт</h2>
+    <div class="tablebox">
+      <table>
+        <tr><th>Поле</th><th>Що це</th></tr>
+        <tr class="req"><td>Ключ імпорту</td><td><strong>Ідентичність рецепта</strong>: латиницею через дефіс, як <code>korean-kimbap</code></td></tr>
+        <tr class="req"><td>Назва українською</td><td>Основна мова — на неї відкочується все інше</td></tr>
+        <tr class="req"><td>Кількість порцій</td><td>Ціле число</td></tr>
+        <tr class="req"><td>Склад</td><td>Список «продукт: грами»</td></tr>
+        <tr><td>Назва англійською</td><td></td></tr>
+        <tr><td>Категорія</td><td>Одна: солоний/солодкий сніданок, обід, вечеря, боули, салати, паста, снеки, десерти, випічка, смузі</td></tr>
+        <tr><td>Кухня</td><td>Одна: азійська, грузинська, грецька, італійська, мексиканська, українська</td></tr>
+        <tr><td>Дієти</td><td>Скільки завгодно: веган, кето, без глютену, високобілкова…</td></tr>
+        <tr><td>Час приготування</td><td>Хвилини</td></tr>
+        <tr><td>Фото</td><td>Посилання на зображення</td></tr>
+        <tr><td>Кроки</td><td>Українською; англійською за бажанням — але рівно стільки ж кроків</td></tr>
+        <tr><td>Тривалість кроків</td><td>Хвилини по кожному кроку</td></tr>
+        <tr><td>Доступ</td><td>Платний / безкоштовний / невизначено — розділ нижче</td></tr>
+      </table>
+    </div>
+
+    <h3>Ключ імпорту — це пам'ять системи</h3>
+    <p>Повторне завантаження файлу з тим самим ключем <strong>оновлює</strong> страву, а не
+    створює копію. Тому ключі мають бути стабільними: виправили одрук у назві — ключ
+    лишається той самий. Двічі один ключ в одному файлі — другий рядок відхиляється, щоб
+    він тихо не переписав перший.</p>
+
+    <h3>Склад: тільки грами, тільки англійські назви</h3>
+    <ul>
+      <li><strong>Грами</strong> — бо страва, чиї калорії мають сходитися, не може містити
+      «1 склянку». Штуки й ложки переводяться в грами автором файлу
+      (2 листи норі ≈ 6 г, 1 ст. л соку ≈ 15 г) — вага порції в картці продукту якраз для цього.</li>
+      <li><strong>Англійська назва</strong> — бо саме вона унікальна в каталозі й однозначно
+      вказує на продукт.</li>
+      <li>Те, що не впливає на калорії — сіль, спеції, «на смак», — у склад не вноситься:
+      воно лишається текстом кроку. Діапазони («15–50 г») не підтримуються — одне число.</li>
+    </ul>
+
+    <div class="note">
+      <p><strong>Калорії та БЖВ рецепта не задаються — вони рахуються.</strong> Якщо на
+      картці «357 ккал», а система показує інше — це не помилка імпорту: розходяться цифри
+      якогось продукту зі складу, і виправляти треба продукт. Так цифра на картці страви
+      завжди дорівнює сумі списку інгредієнтів під нею.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Підписка</p>
+    <h2>Позначка доступу: три стани</h2>
+    <div class="pills">
+      <div class="pill paid"><b>Платний</b><small>у файлі <code>paid</code> — замкнений без підписки</small></div>
+      <div class="pill free"><b>Безкоштовний</b><small>у файлі <code>free</code> — відкритий усім</small></div>
+      <div class="pill"><b>Невизначено</b><small>порожня клітинка — рішення ще не ухвалене</small></div>
+    </div>
+    <ol>
+      <li><strong>Порожньо — це стан, а не помилка.</strong> «Ще не вирішили» відрізняється
+      від «вирішили, що безкоштовний», і система їх не плутає.</li>
+      <li><strong>Одрук не прощається.</strong> Слово, що не є ні <code>paid</code>, ні
+      <code>free</code> (наприклад, <code>payed</code>), відхиляє рядок — інакше одрук тихо
+      став би «невизначено», і страва загубила б позначку без сліду.</li>
+      <li><strong>Повторне завантаження перезаписує позначку.</strong> Файл без колонки
+      доступу скине позначки своїх рецептів у «невизначено»: файл завжди описує страву
+      цілком, як вона має бути.</li>
+    </ol>
+    <p>Позначку так само можна поставити чи змінити прямо в адмін-панелі, у картці рецепта.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Мови</p>
+    <h2>Переклади</h2>
+    <p>Файл везе дві мови: українську (обов'язкову) та англійську (за бажанням). Якщо
+    англійські кроки є, їх має бути рівно стільки ж, скільки українських: переклад, що
+    з'їхав на крок, гірший за відсутній. Третьої мови у файлі не буде — коли мов стане
+    більше, з'явиться окремий файл перекладів.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Процес</p>
+    <h2>Як відбувається завантаження</h2>
+    <ol>
+      <li>У панелі: <strong>Products → Import CSV</strong>, потім <strong>Recipes → Import CSV</strong>.</li>
+      <li>Файл обробляється <strong>порядково</strong>: кожен рецепт зберігається або
+      відхиляється окремо. Один поганий рядок не зупиняє інші 499.</li>
+      <li>У відповідь приходить <strong>звіт</strong>: скільки створено, оновлено, пропущено —
+      і список помилок, де в кожної вказано <strong>номер рядка, який видно в Excel</strong>
+      (заголовок — рядок 1), та зрозуміла причина.</li>
+      <li>Виправляєте відхилені рядки й заливаєте файл ще раз: повтор оновлює вже створене,
+      дублікатів не буде.</li>
+    </ol>
+    <div class="note warn">
+      <p>Помилка <strong>файлу</strong> — інша річ: якщо бракує обов'язкових колонок або
+      файл порожній, він відхиляється цілком одразу, без порядкового звіту.</p>
+    </div>
+
+    <h3>Типові причини відхилення рядка</h3>
+    <div class="tablebox">
+      <table>
+        <tr><th>Причина</th><th>Що зробити</th></tr>
+        <tr><td>Немає ключа або назви українською</td><td>Заповнити</td></tr>
+        <tr><td>Порцій нуль або не число</td><td>Ціле число від 1</td></tr>
+        <tr><td>Інгредієнт не знайдено</td><td>Додати продукт у products.csv і залити його першим</td></tr>
+        <tr><td>Незнайома категорія / кухня / дієта</td><td>Звірити зі списками вище — «Сніданок» не категорія, категорія — «солоний сніданок»</td></tr>
+        <tr><td>Кроків англійською не стільки ж</td><td>Вирівняти кількість</td></tr>
+        <tr><td>Тривалостей не стільки, скільки кроків</td><td>Вирівняти кількість</td></tr>
+        <tr><td>Один ключ двічі у файлі</td><td>Лишити один рядок</td></tr>
+        <tr><td>Стороннє слово в колонці доступу</td><td>Тільки <code>paid</code>, <code>free</code> або порожньо</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">З чого почати</p>
+    <h2>Зразки</h2>
+    <p>У репозиторії, в теці <code>data/samples/</code>, лежать три готові файли:
+    <code>products.csv</code> — 15 продуктів; <code>recipes.csv</code> — три справжні
+    рецепти (сендвіч — безкоштовний, гречка — без позначки, кімбап — платний);
+    <code>recipes-broken.csv</code> — дев'ять рядків, кожен зламаний по-своєму, щоб
+    подивитись, як виглядає звіт про помилки.</p>
+  </section>
+
+  <footer>
+    Digital Nutrition Studio · Гайд з імпорту каталогу · Текстова версія:
+    <code>docs/guides/recipe-import-guide.md</code>
+  </footer>
+</div>

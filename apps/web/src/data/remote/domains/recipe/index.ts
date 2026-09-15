@@ -3,6 +3,7 @@ export { toSaveParams } from './recipe.helpers'
 export type {
   ImportReport,
   Recipe,
+  RecipeAccess,
   RecipeDetail,
   RecipeFilters,
   RecipeIngredient,

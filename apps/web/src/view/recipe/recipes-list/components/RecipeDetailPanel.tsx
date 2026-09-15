@@ -4,10 +4,11 @@ import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ExternalLink, ImageIcon, Pencil, Plus, Trash2, X } from 'lucide-react'
 
-import { toSaveParams, type Product, type RecipeDetail, type SaveRecipeParams, type Tag } from '@/data'
+import { toSaveParams, type Product, type RecipeAccess, type RecipeDetail, type SaveRecipeParams, type Tag } from '@/data'
 import { Badge } from '@/shared/ui/components/badge'
 import { Button } from '@/shared/ui/components/button'
 import { Input } from '@/shared/ui/components/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/components/select'
 import { Separator } from '@/shared/ui/components/separator'
 import { SheetHeader, SheetTitle } from '@/shared/ui/components/sheet'
 import { useCreateRecipe, useSearchProducts, useUpdateRecipe, useUploadRecipeImage } from '@/state/domains/recipe'
@@ -23,6 +24,17 @@ const LANGUAGES = [
   { code: 'uk', label: 'Українська', required: true },
   { code: 'en', label: 'English', required: false },
 ] as const
+
+/**
+ * Three states, not two: `null` is «undecided» — nobody has marked the dish
+ * yet — and it must stay distinguishable from an explicit «free».
+ */
+const ACCESS_UNDECIDED = '_undecided'
+const ACCESS_OPTIONS: { value: RecipeAccess | typeof ACCESS_UNDECIDED; label: string }[] = [
+  { value: ACCESS_UNDECIDED, label: 'Undecided' },
+  { value: 'free', label: 'Free' },
+  { value: 'paid', label: 'Paid' },
+]
 
 // ─── Detail panel (view / edit an existing recipe) ───
 
@@ -84,6 +96,9 @@ function ViewMode({ recipe, onEdit }: { recipe: RecipeDetail; onEdit: () => void
       <SheetHeader className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant={recipe.access === 'paid' ? 'default' : 'outline'} className="text-xs">
+              {recipe.access === 'paid' ? 'Paid' : recipe.access === 'free' ? 'Free' : 'Access: undecided'}
+            </Badge>
             {taxonomy.map(id => (
               <Badge key={id} variant="outline" className="text-xs">
                 {tags.find(tag => tag.id === id)?.name ?? id}
@@ -240,6 +255,7 @@ function RecipeForm({
   const [categoryId, setCategoryId] = useState<string | null>(recipe?.categoryId ?? null)
   const [cuisineId, setCuisineId] = useState<string | null>(recipe?.cuisineId ?? null)
   const [dietIds, setDietIds] = useState<string[]>(recipe?.dietIds ?? [])
+  const [access, setAccess] = useState<RecipeAccess | null>(recipe?.access ?? null)
 
   const [ingredients, setIngredients] = useState<IngredientRow[]>(
     recipe?.ingredients.map(line => ({
@@ -270,6 +286,7 @@ function RecipeForm({
 
     const payload: SaveRecipeParams = {
       importKey: recipe?.importKey ?? null,
+      access,
       categoryId,
       cuisineId,
       dietIds,
@@ -331,6 +348,23 @@ function RecipeForm({
             <Input type="number" min={1} value={cookTime} onChange={e => setCookTime(e.target.value)} />
           </Field>
         </div>
+        <Field label="Access — paid / free / undecided">
+          <Select
+            value={access ?? ACCESS_UNDECIDED}
+            onValueChange={value => setAccess(value === ACCESS_UNDECIDED ? null : (value as RecipeAccess))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ACCESS_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
       </section>
 
       <Separator />
