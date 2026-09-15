@@ -1,0 +1,6 @@
+[Unit]
+Description=Watchdog for the dns-dev GitHub Actions runner - starts a dead unit, restarts a stuck listener
+
+[Service]
+Type=oneshot
+ExecStart=/home/actions/actions-runner/watchdog.sh
