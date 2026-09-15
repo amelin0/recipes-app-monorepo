@@ -13,7 +13,7 @@ import { truncateAdminRecipeTables } from './support/db';
 import { AdminTestContext, createAdminTestContext } from './support/testing-module';
 
 const HEADER =
-    'import_key,title_uk,title_en,category,cuisine,diets,servings,cook_time_minutes,ingredients,steps_uk,step_durations';
+    'import_key,title_uk,title_en,category,cuisine,diets,servings,cook_time_minutes,ingredients,steps_uk,step_durations,access';
 
 describe('admin recipe catalogue', () => {
     let context: AdminTestContext;
@@ -341,8 +341,8 @@ describe('admin recipe catalogue', () => {
 
     describe('import', () => {
         const csv = (...rows: string[]): string => [HEADER, ...rows].join('\n');
-        const line = (key: string, title = 'Салат', ingredients = 'Tomatoes:250'): string =>
-            `${key},${title},Salad,salads,greek,vegan,2,15,${ingredients},Наріжте,8`;
+        const line = (key: string, title = 'Салат', ingredients = 'Tomatoes:250', access = ''): string =>
+            `${key},${title},Salad,salads,greek,vegan,2,15,${ingredients},Наріжте,8,${access}`;
 
         it('creates the rows it can and reports the ones it cannot', async () => {
             const report = await importService.import(
@@ -366,6 +366,18 @@ describe('admin recipe catalogue', () => {
             const page = await recipeService.list({ language: DEFAULT_LANGUAGE, page: 1, limit: 20 } as never);
             expect(page.total).toBe(1);
             expect(page.items[0]?.title).toBe('Оновлена назва');
+        });
+
+        it('carries the access mark to the dish, and a re-import without it resets to «undecided»', async () => {
+            await importService.import(csv(line('one', 'Салат', 'Tomatoes:250', 'paid')), 2000);
+
+            const id = await recipeRepository.findIdByImportKey('one');
+            expect((await recipeService.findById(id!)).access).toBe('paid');
+
+            // The body is replaced wholesale, like everything else in it — an
+            // absent column is a reset, not a «keep what was there».
+            await importService.import(csv(line('one')), 2000);
+            expect((await recipeService.findById(id!)).access).toBeNull();
         });
 
         it('gives imported dishes the same derived macros a hand-made one gets', async () => {

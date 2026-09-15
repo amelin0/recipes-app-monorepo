@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { DEFAULT_LANGUAGE, isSupportedLanguage } from '@dns/constants';
+import { RecipeAccess } from '@dns/shared-types';
 
 const languageSchema = z.string().refine(isSupportedLanguage, value => ({ message: `Unsupported language: ${value}` }));
 
@@ -51,6 +52,15 @@ const recipeBodySchema = z.object({
         .trim()
         .min(1)
         .max(200)
+        .nullish()
+        .transform(value => value ?? null),
+    /**
+     * Editorial paid/free mark; absent means «undecided» (free-tier spec,
+     * Q-1). Like everything else in this body it is replaced wholesale on
+     * update — leaving it out resets the mark, it does not preserve it.
+     */
+    access: z
+        .nativeEnum(RecipeAccess)
         .nullish()
         .transform(value => value ?? null),
     categoryId: z

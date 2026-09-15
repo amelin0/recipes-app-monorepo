@@ -3,7 +3,7 @@ import { SQL, and, asc, desc, eq, exists, ilike, inArray, sql } from 'drizzle-or
 import { alias } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_LANGUAGE } from '@dns/constants';
-import { ContentSource } from '@dns/shared-types';
+import { ContentSource, RecipeAccess } from '@dns/shared-types';
 
 import {
     cuisines,
@@ -40,6 +40,7 @@ export interface AdminRecipeListItem {
     servings: number;
     cookTimeMinutes: number | null;
     importKey: string | null;
+    access: RecipeAccess | null;
     favoritesCount: number;
     categorySlug: string | null;
     cuisineSlug: string | null;
@@ -66,6 +67,7 @@ export interface AdminRecipeIngredientInput {
 
 export interface WriteRecipeInput {
     importKey: string | null;
+    access: RecipeAccess | null;
     categoryId: string | null;
     cuisineId: string | null;
     photoUrl: string | null;
@@ -85,6 +87,7 @@ export interface WriteRecipeInput {
 export interface AdminRecipeDetail {
     id: string;
     importKey: string | null;
+    access: RecipeAccess | null;
     photoUrl: string | null;
     servings: number;
     cookTimeMinutes: number | null;
@@ -143,6 +146,7 @@ export class AdminRecipeRepository extends BaseRepository {
                 servings: recipes.servings,
                 cookTimeMinutes: recipes.cookTimeMinutes,
                 importKey: recipes.importKey,
+                access: recipes.access,
                 categorySlug: dishCategories.slug,
                 cuisineSlug: cuisines.slug,
                 updatedAt: recipes.updatedAt,
@@ -243,6 +247,7 @@ export class AdminRecipeRepository extends BaseRepository {
         return {
             id: recipe.id,
             importKey: recipe.importKey,
+            access: recipe.access,
             photoUrl: recipe.photoUrl,
             servings: recipe.servings,
             cookTimeMinutes: recipe.cookTimeMinutes,
@@ -285,6 +290,7 @@ export class AdminRecipeRepository extends BaseRepository {
                     source: ContentSource.Global,
                     createdBy: null,
                     importKey: input.importKey,
+                    access: input.access,
                     categoryId: input.categoryId,
                     cuisineId: input.cuisineId,
                     photoUrl: input.photoUrl,
@@ -321,6 +327,7 @@ export class AdminRecipeRepository extends BaseRepository {
                 .update(recipes)
                 .set({
                     importKey: input.importKey,
+                    access: input.access,
                     categoryId: input.categoryId,
                     cuisineId: input.cuisineId,
                     photoUrl: input.photoUrl,

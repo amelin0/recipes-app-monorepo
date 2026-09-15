@@ -10,6 +10,19 @@ export enum ContentSource {
     Custom = 'custom',
 }
 
+/**
+ * The editorial paid/free mark on a catalogue dish (free-tier spec, Q-1).
+ *
+ * Deliberately two values, not three: «undecided» is the column being NULL,
+ * so a dish nobody has marked yet is distinguishable from one somebody
+ * decided is free. What NULL means to the mobile app is the free-tier
+ * feature's decision, not this enum's.
+ */
+export enum RecipeAccess {
+    Free = 'free',
+    Paid = 'paid',
+}
+
 /** The three cuts of the same collection the catalog tab offers (recipes-list FR-001). */
 export enum RecipeTab {
     All = 'all',

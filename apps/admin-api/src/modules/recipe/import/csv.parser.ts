@@ -9,7 +9,7 @@
  * half of the import that can be tested exhaustively without one.
  */
 
-import { Language } from '@dns/shared-types';
+import { Language, RecipeAccess } from '@dns/shared-types';
 
 export const REQUIRED_COLUMNS = ['import_key', 'title_uk', 'servings', 'ingredients'] as const;
 
@@ -24,6 +24,8 @@ export interface ParsedRecipeRow {
     row: number;
     importKey: string;
     titles: { language: Language; title: string }[];
+    /** `paid` / `free`, or null when the column is absent or empty — «undecided». */
+    access: RecipeAccess | null;
     categorySlug: string | null;
     cuisineSlug: string | null;
     dietSlugs: string[];
@@ -200,6 +202,7 @@ function parseRow(row: number, importKey: string, get: (column: string) => strin
         row,
         importKey,
         titles,
+        access: parseAccess(get('access')),
         categorySlug: get('category') || null,
         cuisineSlug: get('cuisine') || null,
         dietSlugs: splitList(get('diets'), ';'),
@@ -215,6 +218,20 @@ function parseRow(row: number, importKey: string, get: (column: string) => strin
             return { translations, durationMinutes: durations[index] ?? null };
         }),
     };
+}
+
+/**
+ * Empty is a value here, not an omission: it keeps the dish «undecided»
+ * (free-tier spec, Q-1). Only a word that is neither of the two known ones is
+ * an error — a typo like `payed` must not quietly become «undecided».
+ */
+function parseAccess(raw: string): RecipeAccess | null {
+    if (!raw) return null;
+
+    const value = raw.toLowerCase();
+    if (value === RecipeAccess.Paid || value === RecipeAccess.Free) return value;
+
+    throw new Error(`access must be "${RecipeAccess.Paid}", "${RecipeAccess.Free}" or empty, got "${raw}"`);
 }
 
 /** `Tomatoes:250;Feta:120` — English product name, colon, grams. */

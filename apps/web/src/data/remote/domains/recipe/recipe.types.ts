@@ -37,11 +37,19 @@ export interface Recipe {
   cookTimeMinutes: number | null
   /** Set only on dishes that arrived through an import. */
   importKey: string | null
+  /** Editorial paid/free mark; `null` is «undecided». */
+  access: RecipeAccess | null
   favoritesCount: number
   categorySlug: string | null
   cuisineSlug: string | null
   updatedAt: string
 }
+
+/**
+ * The editorial paid/free mark (free-tier spec, Q-1). `null` is «undecided» —
+ * a real third state, not a missing value.
+ */
+export type RecipeAccess = 'free' | 'paid'
 
 export interface RecipeTranslation {
   language: string
@@ -69,6 +77,8 @@ export interface RecipeStep {
 export interface RecipeDetail {
   id: string
   importKey: string | null
+  /** Editorial paid/free mark; `null` is «undecided». */
+  access: RecipeAccess | null
   photoUrl: string | null
   servings: number
   cookTimeMinutes: number | null
@@ -109,6 +119,7 @@ export interface RecipeStepInput {
  */
 export interface SaveRecipeParams {
   importKey?: string | null
+  access?: RecipeAccess | null
   categoryId?: string | null
   cuisineId?: string | null
   dietIds?: string[]

@@ -25,6 +25,12 @@
   [`apps/client-api/CLAUDE.md`](../apps/client-api/CLAUDE.md).
 - Той самий ефект псує heredoc-скрипти з кирилицею й тире у цій же консолі —
   довгі україномовні файли надійніше писати редактором, а не через `cat <<EOF`.
+- **macOS: локальний postgres на 127.0.0.1:5432 перехоплює `localhost` у
+  докерівського.** `docker compose up -d postgres` успішно біндить `*:5432`,
+  але `DATABASE_URL=…@localhost:5432` йде в **хостовий** postgres (там
+  «role "dns" does not exist» — виглядає як зіпсута база, а це чужа). Лікує
+  `POSTGRES_PORT=5434` (5433 теж бував зайнятий) у локальному `.env` разом із
+  портом у `DATABASE_URL`. Хто слухає: `lsof -nP -iTCP:5432 -sTCP:LISTEN`.
 - **Не запускати `pnpm format` на весь монорепо.** Prettier переформатував
   ~470 файлів у `.claude/` і `docs/`, які до зрізу не мають стосунку.
   Форматувати цілеспрямовано: `pnpm --filter <pkg> exec prettier --write <шлях>`.

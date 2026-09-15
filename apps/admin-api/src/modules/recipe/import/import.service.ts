@@ -120,6 +120,7 @@ export class RecipeImportService {
 
         return {
             importKey: row.importKey,
+            access: row.access,
             categoryId,
             cuisineId,
             dietIds,

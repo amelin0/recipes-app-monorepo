@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { AdminRecipeDetail, AdminRecipeListItem } from '@dns/database';
+import { RecipeAccess } from '@dns/shared-types';
 
 /** One row of the catalogue table. */
 export class AdminRecipeListItemView {
@@ -26,6 +27,9 @@ export class AdminRecipeListItemView {
     @ApiProperty({ nullable: true, description: 'Set only on dishes that arrived through an import.' })
     readonly importKey: string | null;
 
+    @ApiProperty({ enum: RecipeAccess, nullable: true, description: 'Editorial paid/free mark; null is «undecided».' })
+    readonly access: RecipeAccess | null;
+
     @ApiProperty({ description: 'How many users have hearted it.' })
     readonly favoritesCount: number;
 
@@ -47,6 +51,7 @@ export class AdminRecipeListItemView {
         this.servings = row.servings;
         this.cookTimeMinutes = row.cookTimeMinutes;
         this.importKey = row.importKey;
+        this.access = row.access;
         this.favoritesCount = row.favoritesCount;
         this.categorySlug = row.categorySlug;
         this.cuisineSlug = row.cuisineSlug;
@@ -68,6 +73,10 @@ export class AdminRecipeListItemView {
 export class AdminRecipeDetailView {
     @ApiProperty({ format: 'uuid' }) readonly id: string;
     @ApiProperty({ nullable: true }) readonly importKey: string | null;
+
+    @ApiProperty({ enum: RecipeAccess, nullable: true, description: 'Editorial paid/free mark; null is «undecided».' })
+    readonly access: RecipeAccess | null;
+
     @ApiProperty({ nullable: true }) readonly photoUrl: string | null;
     @ApiProperty() readonly servings: number;
     @ApiProperty({ nullable: true }) readonly cookTimeMinutes: number | null;
@@ -102,6 +111,7 @@ export class AdminRecipeDetailView {
     private constructor(recipe: AdminRecipeDetail) {
         this.id = recipe.id;
         this.importKey = recipe.importKey;
+        this.access = recipe.access;
         this.photoUrl = recipe.photoUrl;
         this.servings = recipe.servings;
         this.cookTimeMinutes = recipe.cookTimeMinutes;

@@ -1,10 +1,25 @@
 import { relations, sql } from 'drizzle-orm';
-import { index, integer, numeric, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+    index,
+    integer,
+    numeric,
+    pgEnum,
+    pgTable,
+    primaryKey,
+    text,
+    timestamp,
+    uniqueIndex,
+    uuid,
+} from 'drizzle-orm/pg-core';
+
+import { RecipeAccess } from '@dns/shared-types';
 
 import { cuisines } from './cuisines.schema';
 import { dishCategories } from './dish-categories.schema';
 import { contentSourceEnum } from './products.schema';
 import { users } from './users.schema';
+
+export const recipeAccessEnum = pgEnum('recipe_access', [RecipeAccess.Free, RecipeAccess.Paid]);
 
 /**
  * A dish — ours or the user's own.
@@ -49,6 +64,15 @@ export const recipes = pgTable(
          * exactly that reason — NULLs must not collide with each other.
          */
         importKey: text('import_key'),
+
+        /**
+         * The editorial paid/free mark (free-tier spec, Q-1). NULL is
+         * «undecided» — a real state, not a missing one: most of the
+         * catalogue predates the mark, and treating absence as either answer
+         * would silently decide Q-1 for the product owner. Always NULL on a
+         * user's own dish.
+         */
+        access: recipeAccessEnum('access'),
 
         cookTimeMinutes: integer('cook_time_minutes'),
 

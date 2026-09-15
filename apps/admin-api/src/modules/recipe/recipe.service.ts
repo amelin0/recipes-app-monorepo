@@ -101,6 +101,7 @@ export class AdminRecipeService {
 
         return {
             importKey: input.importKey,
+            access: input.access,
             categoryId: input.categoryId,
             cuisineId: input.cuisineId,
             photoUrl: input.photoUrl,

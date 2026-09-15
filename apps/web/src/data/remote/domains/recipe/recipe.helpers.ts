@@ -13,6 +13,10 @@ import type { RecipeDetail, SaveRecipeParams } from './recipe.types'
 export function toSaveParams(recipe: RecipeDetail, changes: Partial<SaveRecipeParams> = {}): SaveRecipeParams {
   return {
     importKey: recipe.importKey,
+    // Carried over even though the form has no control for it yet: the PUT
+    // replaces the whole dish, so leaving it out would reset the mark to
+    // «undecided» on every unrelated edit.
+    access: recipe.access,
     categoryId: recipe.categoryId,
     cuisineId: recipe.cuisineId,
     dietIds: recipe.dietIds,

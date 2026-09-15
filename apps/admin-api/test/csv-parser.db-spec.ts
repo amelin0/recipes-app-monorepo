@@ -7,7 +7,7 @@ import { CsvFormatError, parseCsv, parseRecipeCsv } from '../src/modules/recipe/
  */
 
 const HEADER =
-    'import_key,title_uk,title_en,category,cuisine,diets,servings,cook_time_minutes,ingredients,steps_uk,steps_en,step_durations';
+    'import_key,title_uk,title_en,category,cuisine,diets,servings,cook_time_minutes,ingredients,steps_uk,steps_en,step_durations,access';
 
 const row = (cells: Partial<Record<string, string>>): string =>
     [
@@ -23,6 +23,7 @@ const row = (cells: Partial<Record<string, string>>): string =>
         cells.steps_uk ?? 'Наріжте овочі|Додайте фету',
         cells.steps_en ?? 'Chop the vegetables|Add the feta',
         cells.step_durations ?? '8;3',
+        cells.access ?? '',
     ].join(',');
 
 const file = (...rows: string[]): string => [HEADER, ...rows].join('\n');
@@ -74,6 +75,24 @@ describe('recipe csv', () => {
         ]);
         expect(recipe.steps).toHaveLength(2);
         expect(recipe.steps[0]?.durationMinutes).toBe(8);
+    });
+
+    it('reads the access mark, and an empty cell stays «undecided»', () => {
+        const { rows, errors } = parseRecipeCsv(
+            file(row({ access: 'paid' }), row({ import_key: 'second', access: 'Free' }), row({ import_key: 'third' })),
+        );
+
+        expect(errors).toHaveLength(0);
+        expect(rows.map(r => r.access)).toEqual(['paid', 'free', null]);
+    });
+
+    it('rejects an access value that is neither of the two known words', () => {
+        // A typo must not quietly become «undecided» — that would decide the
+        // dish's tier without anyone noticing.
+        const { rows, errors } = parseRecipeCsv(file(row({ access: 'payed' })));
+
+        expect(rows).toHaveLength(0);
+        expect(errors[0]?.message).toMatch(/access must be/);
     });
 
     it('cites the row number an editor sees in the spreadsheet', () => {
